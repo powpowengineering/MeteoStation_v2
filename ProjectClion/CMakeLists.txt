@@ -33,8 +33,8 @@ add_compile_definitions(STM32L1XX_MD)
 
 set(FREERTOS_DIR FreeRTOS/Source/)
 
-file(GLOB_RECURSE USER_SOURCES "Users/src/*.c")
-file(GLOB_RECURSE HAL_SOURCES "c:/Users/Pavel/Documents/MeteoStation_v2/STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/src/*.c")
+file(GLOB_RECURSE USER_SOURCES "${CMAKE_SOURCE_DIR}/Users/src/*.c")
+file(GLOB_RECURSE HAL_SOURCES "${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/src/*.c")
 file(
         GLOB_RECURSE
         FREERTOS_SOURCES
@@ -50,13 +50,10 @@ file(
 )
 
 
-include_directories(Users/inc)
-include_directories("c:/Users/Pavel/Documents/MeteoStation_v2/STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/inc")
-#include_directories("/../../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Device/ST/STM32L1xx/Include")
-include_directories("c:/Users/Pavel/Documents/MeteoStation_v2/STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Device/ST/STM32L1xx/Include")
-#include_directories("/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Include")
-include_directories("c:/Users/Pavel/Documents/MeteoStation_v2/STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Include")
-#include_directories("/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Device/ST/STM32L1xx/Include")
+include_directories(${CMAKE_SOURCE_DIR}/Users/inc)
+include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/inc")
+include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Include")
+include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Device/ST/STM32L1xx/Include")
 
 include_directories(${FREERTOS_DIR})
 include_directories(${FREERTOS_DIR}/include)
