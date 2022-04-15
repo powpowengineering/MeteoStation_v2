@@ -20,7 +20,7 @@ set(CMAKE_EXECUTABLE_SUFFIX ".elf")
 # Linker script file
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/Config/STM32L151XB_FLASH.ld)
 # Set startup file
-set(STARTUP_FILE ${CMAKE_SOURCE_DIR}/StartUp/startup_stm32l151xb.s)
+set(STARTUP_FILE ${CMAKE_SOURCE_DIR}/StartUp/startup_stm32l151xb.s OneWire/oneWire.c OneWire/oneWire.h OneWire/oneWire_cfg.h)
 
 # Adding compiler/linker options
 include(compiler.cmake)
