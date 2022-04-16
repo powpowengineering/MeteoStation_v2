@@ -1,6 +1,7 @@
 #include "stm32l1xx.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "OneWire.h"
 
 extern void Init(void);
 extern void vTask(void *pvParameters);
@@ -63,6 +64,19 @@ void SWO_PrintString(const char *s)
 void main(void)
 {
    Init();
+   // Init OneWire
+   ONE_WIRE_init();
+
+   uint8_t presence=0;
+   while(1)
+   {
+       //presence = ONE_WIRE_reset();
+       //ONE_WIRE_readBit();
+       //ONE_WIRE_writeBit(1);
+       //ONE_WIRE_readByte();
+       ONE_WIRE_writeByte(0xaa);
+       INIT_Delay(10000);
+   }
 
     /* Enable trace in core debug */
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
