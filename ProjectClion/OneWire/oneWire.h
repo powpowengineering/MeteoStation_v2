@@ -23,12 +23,20 @@
 
 #include "stm32l1xx.h"
 
+#include "OneWire_cfg.h"
 
 //**************************************************************************************************
 // Declarations of global (public) data types
 //**************************************************************************************************
 
-// None.
+// Presence slaves
+typedef enum
+{
+    // presence
+    ONE_WIRE_PRESENCE=0,
+    // not presence
+    ONE_WIRE_NOT_PRESENCE
+}enONE_WIRE_PRESENCE;
 
 
 //**************************************************************************************************
@@ -51,8 +59,10 @@
 
 // Init one wire
 extern void ONE_WIRE_init(void);
+// Reset
+extern enONE_WIRE_PRESENCE ONE_WIRE_reset(void);
 // Read bit
-uint8_t ONE_WIRE_readBit(void);
+extern uint8_t ONE_WIRE_readBit(void);
 // Write bit
 extern void ONE_WIRE_writeBit(uint8_t bitVal);
 // Read byte
@@ -60,7 +70,7 @@ extern uint8_t ONE_WIRE_readByte(void);
 // Write byte
 extern void ONE_WIRE_writeByte(uint8_t byteVal);
 // Delay in us
-extern void ONE_WIRE_delay(uint32_t us);
+extern void ONE_WIRE_Delay(uint32_t us);
 
 #endif // #ifndef ONE_WIRE_H
 
