@@ -20,7 +20,7 @@ set(CMAKE_EXECUTABLE_SUFFIX ".elf")
 # Linker script file
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/Config/STM32L151XB_FLASH.ld)
 # Set startup file
-set(STARTUP_FILE ${CMAKE_SOURCE_DIR}/StartUp/startup_stm32l151xb.s OneWire/oneWire.c OneWire/oneWire.h OneWire/oneWire_cfg.h)
+set(STARTUP_FILE ${CMAKE_SOURCE_DIR}/StartUp/startup_stm32l151xb.s OneWire/OneWire.c OneWire/OneWire.h OneWire/OneWire_cfg.h)
 
 # Adding compiler/linker options
 include(compiler.cmake)
@@ -34,6 +34,7 @@ add_compile_definitions(STM32L1XX_MD)
 set(FREERTOS_DIR FreeRTOS/Source/)
 
 file(GLOB_RECURSE USER_SOURCES "${CMAKE_SOURCE_DIR}/Users/src/*.c")
+file(GLOB_RECURSE ONE_WIRE_SOURCES "${CMAKE_SOURCE_DIR}/OneWire/OneWire.c")
 file(GLOB_RECURSE HAL_SOURCES "${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/src/*.c")
 file(
         GLOB_RECURSE
@@ -51,6 +52,7 @@ file(
 
 
 include_directories(${CMAKE_SOURCE_DIR}/Users/inc)
+include_directories(${CMAKE_SOURCE_DIR}/OneWire)
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/inc")
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Include")
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Device/ST/STM32L1xx/Include")
@@ -63,7 +65,7 @@ include_directories(${FREERTOS_DIR}/portable/MemMang)
 #include_directories(${FREERTOS_DIR}/portable/Common)
 
 
-add_executable(${PROJECT_NAME} ${STARTUP_FILE} ${USER_SOURCES} ${HAL_SOURCES} ${FREERTOS_SOURCES})
+add_executable(${PROJECT_NAME} ${STARTUP_FILE} ${USER_ONE_WIRE} ${USER_SOURCES} ${HAL_SOURCES} ${FREERTOS_SOURCES})
 
 
 
