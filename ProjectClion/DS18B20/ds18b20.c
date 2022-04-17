@@ -1,6 +1,6 @@
 //**************************************************************************************************
-// @Module        ONE_WIRE
-// @Filename      oneWire.c
+// @Module        DS18B20
+// @Filename      ds18b20.c
 //--------------------------------------------------------------------------------------------------
 // @Platform      stm32
 //--------------------------------------------------------------------------------------------------
@@ -14,18 +14,10 @@
 //
 //
 //                Global (public) functions:
-//                  ONE_WIRE_init()
-//                  ONE_WIRE_reset()
-//                  ONE_WIRE_readBit()
-//                  ONE_WIRE_writeBit()
-//                  ONE_WIRE_readByte()
-//                  ONE_WIRE_writeByte()
+
 //
 //                Local (private) functions:
-//                  ONE_WIRE_GpioInit()
-//                  ONE_WIRE_DQLow()
-//                  ONE_WIRE_DQInput()
-//                  ONE_WIRE_DQGetValue()
+
 //
 //--------------------------------------------------------------------------------------------------
 // @Version       1.0.0
@@ -43,6 +35,8 @@
 //**************************************************************************************************
 
 // Native header
+#include "ds18b20.h"
+// Add 1-wire interface
 #include "OneWire.h"
 
 
@@ -71,20 +65,39 @@
 // Definitions of local (private) constants
 //**************************************************************************************************
 
-// time of RESET PULSE in us
-#define ONE_WIRE_RESET_PULSE_TIME_US                      (600U)
-// time for PRESENCE PULSE in us
-#define ONE_WIRE_PRESENCE_PULSE_TIME_US                   (100U)
-// time for detect time slot in us
-#define ONE_WIRE_DETECT_TIME_US                           (ONE_WIRE_RESET_PULSE_TIME_US+60U+240U+180U)
-// master sample time
-#define ONE_WIRE_MASTER_SAMPLE_TIME_US                    (13U)
-// read time slot
-#define ONE_WIRE_READ_TIME_SLOT_US                        (60U)
-// master write time
-#define ONE_WIRE_WRITE_SAMPLE_TIME_US                     (60U)
-// rest time slot
-#define ONE_WIRE_REST_TIME_SLOT_US                        (2U)
+// ROM function Commands
+// Read ROM
+#define DS18B20_READ_ROM_CMD                (0x33U)
+// Match ROM
+#define DS18B20_MATCH_ROM_CMD               (0x55U)
+// Skip ROM
+#define DS18B20_SKIP_ROM_CMD                (0xCCU)
+// Search ROM
+#define DS18B20_SEARCH_ROM_CMD              (0xF0U)
+// Alarm search
+#define DS18B20_ALARM_SEARCH_CMD            (0xECU)
+
+// Memory command functions
+// Write scratchpad
+#define DS18B20_WRITE_SCRATCHPAD            (0x4EU)
+// Read scratchpad
+#define DS18B20_READ_SCRATCHPAD             (0xBEU)
+// Copy scratchpad
+#define DS18B20_COPY_SCRATCHPAD             (0x48U)
+// Convert T
+#define DS18B20_CONVERT_T                   (0x44U)
+// Recall E2
+#define DS18B20_RECALL_E2                   (0xB8U)
+// Read power supply
+#define DS18B20_READ_POWER_SUPPLY           (0xB4U)
+
+#define DS18B20_CONVERSION_TIME_US          (1000000U)
+// Size scratchpad
+#define DS18B20_SCRATCHPAD_SIZE             (9U)
+// number bits temperature data
+#define DS18B20_NUM_BITS_TEMPERATURE        (11U)
+// number bytes ID
+#define DS18B20_SIZE_ID_BYTES               (8U)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -96,16 +109,18 @@
 //**************************************************************************************************
 // Declarations of local (private) functions
 //**************************************************************************************************
-
-// Init gpio
-static void ONE_WIRE_GpioInit(void);
-// Set low level on DQ pin
-static void ONE_WIRE_DQLow(void);
-// DQ configuration as input
-static void ONE_WIRE_DQInput(void);
-// Get value on DQ input
-static uint8_t ONE_WIRE_DQGetValue(void);
-
+// Match ROM function
+static void DS18B20_MatchID(uint64_t ID);
+// Skip ROM function
+static void DS18B20_SkipID(void);
+// Read scratchpad
+static void DS18B20_ReadScratchPad(uint8_t* data);
+// Start convert T
+static STD_RESULT DS18B20_ConvertT(void);
+// Get temperature value from scratchpad
+static float DS18B20_GetTemFromScratchpad(const uint8_t* scratchpad);
+// Calculate CRC
+static uint8_t DS18B20_CalculateCRC(uint8_t* data, uint8_t len);
 
 //**************************************************************************************************
 //==================================================================================================
@@ -114,184 +129,116 @@ static uint8_t ONE_WIRE_DQGetValue(void);
 //**************************************************************************************************
 
 //**************************************************************************************************
-// @Function      ONE_WIRE_init()
+// @Function      DS18B20_GetID()
 //--------------------------------------------------------------------------------------------------
-// @Description   Init one wire interface
+// @Description   Get ID DS18B20 sensor
 //--------------------------------------------------------------------------------------------------
-// @Notes         None.
+// @Notes         Only one sensor can be on the bus to correct get ID
 //--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
+// @ReturnValue   RESULT_OK - crc correct and sensor presence
+//                RESULT_NOT_OK - crc doesn't correct or sensor doesn't presence
 //--------------------------------------------------------------------------------------------------
-// @Parameters    None.
+// @Parameters    ID - pointer data to store ID
 //**************************************************************************************************
-void ONE_WIRE_init(void)
+STD_RESULT DS18B20_GetID(uint64_t *const ID)
 {
-    // Gpio init
-    ONE_WIRE_GpioInit();
+    STD_RESULT result = RESULT_NOT_OK;
+    uint8_t crc=0;
 
-}// end of ONE_WIRE_init()
-
-
-
-//**************************************************************************************************
-// @Function      ONE_WIRE_reset()
-//--------------------------------------------------------------------------------------------------
-// @Description   Detect slaves
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-enONE_WIRE_PRESENCE ONE_WIRE_reset(void)
-{
-    enONE_WIRE_PRESENCE result = ONE_WIRE_NOT_PRESENCE;
-
-    //pull DQ line low
-    ONE_WIRE_DQLow();
-    // leave it low for RESET_PULSE
-    ONE_WIRE_Delay(ONE_WIRE_RESET_PULSE_TIME_US);
-    // allow line to return high
-    ONE_WIRE_DQInput();
-    // wait for presence
-    ONE_WIRE_Delay(ONE_WIRE_PRESENCE_PULSE_TIME_US);
-    // get presence signal
-    if (ONE_WIRE_DQGetValue() == 0)
+    // Reset 1-wire
+    if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
     {
-        result = ONE_WIRE_PRESENCE;
+        // Send command READ ROM
+        ONE_WIRE_writeByte(DS18B20_READ_ROM_CMD);
+        // Read 8 bytes
+        for (int i=0;i<DS18B20_SIZE_ID_BYTES;i++)
+        {
+            *ID |= ((uint64_t)ONE_WIRE_readByte()) << i*8;
+        }
+        crc = DS18B20_CalculateCRC((uint8_t*)ID, DS18B20_SIZE_ID_BYTES-1);
+        if (crc == (uint8_t)(*ID >> (DS18B20_SIZE_ID_BYTES*8-8)))
+        {
+            result = RESULT_OK;
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+        }
     }
     else
     {
-        result = ONE_WIRE_NOT_PRESENCE;
+        result = RESULT_NOT_OK;
     }
-    // wait for end of timeslot
-    ONE_WIRE_Delay(ONE_WIRE_DETECT_TIME_US - ONE_WIRE_RESET_PULSE_TIME_US - ONE_WIRE_PRESENCE_PULSE_TIME_US);
-
     return result;
 }
-// end of ONE_WIRE_reset()
+//end of DS18B20_GetID()
 
 
 
 //**************************************************************************************************
-// @Function      ONE_WIRE_readBit()
+// @Function      DS18B20_GetTemperature()
 //--------------------------------------------------------------------------------------------------
-// @Description   Read bit
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   Bit value: 0,1
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
- uint8_t ONE_WIRE_readBit(void)
-{
-    uint8_t result=0;
-    // pull DQ low to start timeslot
-    ONE_WIRE_DQLow();
-    // wait before leave pin
-    //ONE_WIRE_Delay(1);
-    // allow line to return high
-    ONE_WIRE_DQInput();
-    // wait master sample time
-    ONE_WIRE_Delay(ONE_WIRE_MASTER_SAMPLE_TIME_US - 1);
-    // read DQ
-    result = ONE_WIRE_DQGetValue();
-    // wait end of read time slot
-    ONE_WIRE_Delay(ONE_WIRE_READ_TIME_SLOT_US - ONE_WIRE_MASTER_SAMPLE_TIME_US - 1);
-    return result;
-}
-//end of ONE_WIRE_readBit()
-
-
-
-//**************************************************************************************************
-// @Function      ONE_WIRE_writeBit()
-//--------------------------------------------------------------------------------------------------
-// @Description   Write bit
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   Bit value: 0,1
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-void ONE_WIRE_writeBit(uint8_t bitVal)
-{
-    // pull DQ low to start timeslot
-    ONE_WIRE_DQLow();
-
-    if (1 == bitVal)
-    {
-        // allow line to return high
-        ONE_WIRE_DQInput();
-    }
-    // wait master write time
-    ONE_WIRE_Delay(ONE_WIRE_WRITE_SAMPLE_TIME_US);
-    // allow line to return high
-    ONE_WIRE_DQInput();
-}
-//end of ONE_WIRE_writeBit()
-
-
-
-//**************************************************************************************************
-// @Function      ONE_WIRE_readByte()
-//--------------------------------------------------------------------------------------------------
-// @Description   Read byte
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   Return byte read in one wire
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-uint8_t ONE_WIRE_readByte(void)
-{
-    uint8_t result = 0;
-
-    for (int i=0;i<8;i++)
-    {
-        if (ONE_WIRE_readBit() == 1)
-        {
-            result |= 0x01 << i;
-        }
-        // wait for rest of timeslot
-        ONE_WIRE_Delay(ONE_WIRE_REST_TIME_SLOT_US);
-    }
-
-    return result;
-}
-//end of ONE_WIRE_readByte()
-
-
-//**************************************************************************************************
-// @Function      ONE_WIRE_writeByte()
-//--------------------------------------------------------------------------------------------------
-// @Description   Write byte
+// @Description   Read scratchpad
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
 // @ReturnValue   None.
 //--------------------------------------------------------------------------------------------------
-// @Parameters    None.
+// @Parameters    *t - Pointer data to store temperature
+//                ID - ID of sensor
 //**************************************************************************************************
-void ONE_WIRE_writeByte(uint8_t byteVal)
+STD_RESULT DS18B20_GetTemperature(float* t, uint64_t ID)
 {
-    uint8_t temp = 0;
-    for(int i=0;i<8;i++)
+    STD_RESULT result = RESULT_NOT_OK;
+    uint8_t scratchpad[DS18B20_SCRATCHPAD_SIZE];
+    uint8_t crc = 0;
+
+    // Detect sensor/sensors
+    if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
     {
-        temp = byteVal >> i;
-        temp &= 0x01;
-        ONE_WIRE_writeBit(temp);
-        // wait for rest of timeslot
-        ONE_WIRE_Delay(ONE_WIRE_REST_TIME_SLOT_US);
+        // Match ROM ID
+        DS18B20_MatchID(ID);
+        // Convert T
+        if (RESULT_OK == DS18B20_ConvertT())
+        {
+            // Detect sensor/sensors
+            if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
+            {
+                // Match ROM ID
+                DS18B20_MatchID(ID);
+                // read scratchpad
+                DS18B20_ReadScratchPad(scratchpad);
+                // calculate crc
+                crc = DS18B20_CalculateCRC(scratchpad, DS18B20_SCRATCHPAD_SIZE-1);
+                if (crc == scratchpad[8])
+                {
+                    // Get temperature
+                    *t = DS18B20_GetTemFromScratchpad(scratchpad);
+                    result = RESULT_OK;
+                }
+                else
+                {
+                    result = RESULT_NOT_OK;
+                }
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+            }
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+        }
     }
+    else
+    {
+        result = RESULT_NOT_OK;
+    }
+
+    return result;
 }
-//end of ONE_WIRE_writeByte()
-
-
+// end of DS18B20_GetTemperature
 
 //**************************************************************************************************
 //==================================================================================================
@@ -299,97 +246,185 @@ void ONE_WIRE_writeByte(uint8_t byteVal)
 //==================================================================================================
 //**************************************************************************************************
 
-
-
 //**************************************************************************************************
-// @Function      ONE_WIRE_GpioInit()
+// @Function      DS18B20_MatchID()
 //--------------------------------------------------------------------------------------------------
-// @Description   Init gpio for one wire
+// @Description   Match ID. The user must reset before.
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
+// @ReturnValue   Return 1 if ID matched, otherwise 0.
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static void ONE_WIRE_GpioInit(void)
+static void DS18B20_MatchID(uint64_t ID)
 {
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN);
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(ONE_WIRE_GPIO_PORT, &GPIO_InitStruct);
+    uint8_t temp=0;
 
-}// end of ONE_WIRE_GpioInit()
+    // Send command MATCH ROM
+    ONE_WIRE_writeByte(DS18B20_MATCH_ROM_CMD);
 
-
-
-//**************************************************************************************************
-// @Function      ONE_WIRE_DQLow()
-//--------------------------------------------------------------------------------------------------
-// @Description   Set low level on DQ pin
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static void ONE_WIRE_DQLow(void)
-{
-    // Config DQ as OUT
-    ONE_WIRE_GPIO_PORT->MODER |= GPIO_MODER_MODER0_0 << (ONE_WIRE_PIN*2);
-    // set DQ low
-    ONE_WIRE_GPIO_PORT->BSRRH = GPIO_Pin_10;
-}// end of ONE_WIRE_DQLow()
-
-
-
-//**************************************************************************************************
-// @Function      ONE_WIRE_DQInput()
-//--------------------------------------------------------------------------------------------------
-// @Description   DQ configuration as input
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static void ONE_WIRE_DQInput(void)
-{
-    // Config DQ as INPUT
-    ONE_WIRE_GPIO_PORT->MODER &= ~(GPIO_MODER_MODER0 << (ONE_WIRE_PIN*2));
-}// end of ONE_WIRE_DQInput()
-
-
-
-//**************************************************************************************************
-// @Function      ONE_WIRE_DQGetValue()
-//--------------------------------------------------------------------------------------------------
-// @Description   Get value on DQ input
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static uint8_t ONE_WIRE_DQGetValue(void)
-{
-    // Get value
-    uint8_t bitstatus=0;
-    if ((ONE_WIRE_GPIO_PORT->IDR & (1<<ONE_WIRE_PIN)) != (uint32_t)Bit_RESET)
+    for(int i=0;i<64;i++)
     {
-        bitstatus = (uint8_t)Bit_SET;
+        temp = ID >> i;
+        temp &= 0x01;
+        ONE_WIRE_writeBit(temp);
+    }
+}
+//end of DS18B20_MatchID()
+
+
+
+//**************************************************************************************************
+// @Function      DS18B20_SkipID()
+//--------------------------------------------------------------------------------------------------
+// @Description   Skip ROM function.The user must reset before.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void DS18B20_SkipID(void)
+{
+    // Send command SKIP ROM
+    ONE_WIRE_writeByte(DS18B20_SKIP_ROM_CMD);
+}
+//end of DS18B20_SkipID()
+
+
+
+//**************************************************************************************************
+// @Function      DS18B20_ReadScratchPad()
+//--------------------------------------------------------------------------------------------------
+// @Description   Read scratchpad
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    Pointer data to store 8 bytes
+//**************************************************************************************************
+static void DS18B20_ReadScratchPad(uint8_t* data)
+{
+    // Send command READ SCRATCHPAD
+    ONE_WIRE_writeByte(DS18B20_READ_SCRATCHPAD);
+    for(int i=0;i<DS18B20_SCRATCHPAD_SIZE;i++)
+    {
+        *data = ONE_WIRE_readByte();
+        data++;
+    }
+}
+// end of DS18B20_ReadScratchPad()
+
+
+
+//**************************************************************************************************
+// @Function      DS18B20_ConvertT()
+//--------------------------------------------------------------------------------------------------
+// @Description   Start conversion temperature.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static STD_RESULT DS18B20_ConvertT(void)
+{
+    STD_RESULT result = RESULT_NOT_OK;
+    // Send command Convert T
+    ONE_WIRE_writeByte(DS18B20_CONVERT_T);
+    // Delay conversion
+    DS18B20_Delay(DS18B20_CONVERSION_TIME_US);
+    if (LOGIC_1 == ONE_WIRE_readBit())
+    {
+        result = RESULT_OK;
     }
     else
     {
-        bitstatus = (uint8_t)Bit_RESET;
+        result = RESULT_NOT_OK;
     }
-    return bitstatus;
-}// end of ONE_WIRE_DQGetValue()
+    return result;
+}
+//end of DS18B20_ConvertT()
+
+
+
+//**************************************************************************************************
+// @Function      DS18B20_GetTemFromScratchpad()
+//--------------------------------------------------------------------------------------------------
+// @Description   Start conversion temperature.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static float DS18B20_GetTemFromScratchpad(const uint8_t* scratchpad)
+{
+    uint16_t tempScratchPad = 0;
+    float temperature = 0.0f;
+
+    tempScratchPad = *scratchpad;
+    scratchpad++;
+    tempScratchPad |= ((uint16_t)*scratchpad) << 8;
+
+    temperature += ((tempScratchPad & 0x01) == 0x01) ? 1.0f/16.0f : 0.0f;
+    temperature += ((tempScratchPad & 0x02) == 0x02) ? 1.0f/8.0f : 0.0f;
+    temperature += ((tempScratchPad & 0x04) == 0x04) ? 1.0f/4.0f : 0.0f;
+    temperature += ((tempScratchPad & 0x08) == 0x08) ? 1.0f/2.0f : 0.0f;
+    temperature += ((tempScratchPad & 0x10) == 0x10) ? 1.0f : 0.0f;
+    temperature += ((tempScratchPad & 0x20) == 0x20) ? 2.0f : 0.0f;
+    temperature += ((tempScratchPad & 0x40) == 0x40) ? 4.0f : 0.0f;
+    temperature += ((tempScratchPad & 0x80) == 0x80) ? 8.0f : 0.0f;
+    temperature += ((tempScratchPad & 0x100) == 0x100) ? 16.0f : 0.0f;
+    temperature += ((tempScratchPad & 0x200) == 0x200) ? 32.0f : 0.0f;
+    temperature += ((tempScratchPad & 0x400) == 0x400) ?
+                   (((tempScratchPad & 0x800) == 0x800) ? -64.0f : 64.0f) : 0.0f;
+
+    return temperature;
+}
+// end of DS18B20_GetTemFromScratchpad()
+
+
+
+//**************************************************************************************************
+// @Function      DS18B20_CalculateCRC()
+//--------------------------------------------------------------------------------------------------
+// @Description   Calculate CRC
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters   data - pointer data to calculate CRC
+//               len - length data
+//**************************************************************************************************
+static uint8_t DS18B20_CalculateCRC(uint8_t* data, uint8_t len)
+{
+    uint8_t crc = 0;
+    while(len !=0)
+    {
+        uint8_t i = 8;
+        uint8_t b = *data;
+        do {
+            if ((b ^ crc) & 0x01) {
+                crc = ((crc ^ 0x18) >> 1) | 0x80;
+            } else {
+                crc >>= 1;
+            }
+            b >>= 1;
+        } while (--i);
+        len--;
+        data++;
+    }
+    return crc;
+}
+// end of DS18B20_CalculateCRC()
+
 
 //****************************************** end of file *******************************************
+

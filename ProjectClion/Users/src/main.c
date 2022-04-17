@@ -2,8 +2,9 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "OneWire.h"
+#include "Init.h"
+#include "ds18b20.h"
 
-extern void Init(void);
 extern void vTask(void *pvParameters);
 
 void SWO_PrintChar  (char c);
@@ -68,14 +69,17 @@ void main(void)
    ONE_WIRE_init();
 
    uint8_t presence=0;
-   while(1)
+   //uint64_t ID=0x28176280122101d5U;
+   uint64_t ID=0;//=0xd501211280621728U;
+    STD_RESULT result = RESULT_NOT_OK;
+    float t = 0.0f;
+    result = DS18B20_GetID(&ID);
+    while(1)
    {
        //presence = ONE_WIRE_reset();
-       //ONE_WIRE_readBit();
-       //ONE_WIRE_writeBit(1);
-       //ONE_WIRE_readByte();
-       ONE_WIRE_writeByte(0xaa);
-       INIT_Delay(10000);
+       //ID = DS18B20_GetID();
+       result = DS18B20_GetTemperature(&t,ID);
+       INIT_Delay(100000);
    }
 
     /* Enable trace in core debug */

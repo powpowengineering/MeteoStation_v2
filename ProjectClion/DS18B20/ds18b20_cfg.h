@@ -1,8 +1,8 @@
 //**************************************************************************************************
-// @Module        INIT
-// @Filename      init_cfg.h
+// @Module        DS18B20
+// @Filename      ds18b20_cfg.h
 //--------------------------------------------------------------------------------------------------
-// @Description   Configuration of the required functionality of the INIT module.
+// @Description   Configuration of the required functionality of the DS18B20 module.
 //
 //--------------------------------------------------------------------------------------------------
 // @Version       1.0.0
@@ -13,10 +13,10 @@
 // XX.XX.XXXX     1.0.0    XXX         First release.
 //**************************************************************************************************
 
-#ifndef INIT_CFG_H
-#define INIT_CFG_H
+#ifndef DS18B20_CFG_H
+#define DS18B20_CFG_H
 
-
+#include "Init.h"
 
 //**************************************************************************************************
 // Definitions of global (public) constants
@@ -33,15 +33,11 @@
 #define MODULE_INTERNAL_DIAGNOSTICS             (OFF)
 
 
-// User specify Timer for one wire delay
-#define INIT_TIMER_DELAY                          TIM6
-// User specify prescaler for one wire delay timer
-// Valid value: [0,0xFF]
-#define INIT_PSC_TIMER_DELAY                      (31U)
-// User specify period for one wire delay timer
-// Valid value: [0,0xFF]
-#define INIT_PERIOD_TIMER_DELAY                   (0xFFFFU)
+// User specify pointer delay function
+#define DS18B20_Delay                          (INIT_Delay)
 
-#endif // #ifndef INIT_CFG_H
+
+
+#endif // #ifndef DS18B20_CFG_H
 
 //****************************************** end of file *******************************************

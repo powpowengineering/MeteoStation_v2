@@ -193,11 +193,11 @@ void Init(void)
 
     /*Init TIM6 for OneWire delay*/
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
-    TIM_TimeBaseInitStruct.TIM_Period = INIT_PERIOD_TIMER_DELAY_ONE_WIRE;
-    TIM_TimeBaseInitStruct.TIM_Prescaler = INIT_PSC_TIMER_DELAY_ONE_WIRE;
+    TIM_TimeBaseInitStruct.TIM_Period = INIT_PERIOD_TIMER_DELAY;
+    TIM_TimeBaseInitStruct.TIM_Prescaler = INIT_PSC_TIMER_DELAY;
     TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit(INIT_TIMER_DELAY_ONE_WIRE, &TIM_TimeBaseInitStruct);
+    TIM_TimeBaseInit(INIT_TIMER_DELAY, &TIM_TimeBaseInitStruct);
 
 }
 // end of Init()
@@ -221,20 +221,44 @@ void Init(void)
 //--------------------------------------------------------------------------------------------------
 // @ReturnValue   None.
 //--------------------------------------------------------------------------------------------------
-// @Parameters    None.
+// @Parameters    us - microseconds,[0..2^32-1]
 //**************************************************************************************************
 void INIT_Delay(uint32_t us)
 {
+    uint32_t nPeriods = 0;
+
+    if (us > INIT_PERIOD_TIMER_DELAY) {
+        nPeriods = us / (uint32_t)INIT_PERIOD_TIMER_DELAY;
+        // Set auto-reload register
+        INIT_TIMER_DELAY->ARR = INIT_PERIOD_TIMER_DELAY;
+
+        for (int i = 0; i < nPeriods; i++) {
+            /* Disable the TIM Counter */
+            INIT_TIMER_DELAY->CR1 &= (uint16_t) (~((uint16_t) TIM_CR1_CEN));
+            /* Clear the flags */
+            INIT_TIMER_DELAY->SR = (uint16_t) ~TIM_FLAG_Update;
+            /* Clear counter */
+            INIT_TIMER_DELAY->CNT = 0;
+            /* Enable the TIM Counter */
+            INIT_TIMER_DELAY->CR1 |= TIM_CR1_CEN;
+            // wait
+            while ((INIT_TIMER_DELAY->SR & TIM_FLAG_Update) != TIM_FLAG_Update);
+        }
+    }
+
     /* Disable the TIM Counter */
-    INIT_TIMER_DELAY_ONE_WIRE->CR1 &= (uint16_t)(~((uint16_t)TIM_CR1_CEN));
+    INIT_TIMER_DELAY->CR1 &= (uint16_t) (~((uint16_t) TIM_CR1_CEN));
+    /* Clear the flags */
+    INIT_TIMER_DELAY->SR = (uint16_t) ~TIM_FLAG_Update;
+    // Set auto-reload register
+    INIT_TIMER_DELAY->ARR = us - (nPeriods * INIT_PERIOD_TIMER_DELAY);
     /* Clear counter */
-    INIT_TIMER_DELAY_ONE_WIRE->CNT = 0;
+    INIT_TIMER_DELAY->CNT = 0;
     /* Enable the TIM Counter */
-    INIT_TIMER_DELAY_ONE_WIRE->CR1 |= TIM_CR1_CEN;
+    INIT_TIMER_DELAY->CR1 |= TIM_CR1_CEN;
     // wait
-    while (INIT_TIMER_DELAY_ONE_WIRE->CNT < us);
-    /* Disable the TIM Counter */
-    INIT_TIMER_DELAY_ONE_WIRE->CR1 &= (uint16_t)(~((uint16_t)TIM_CR1_CEN));
+    while ((INIT_TIMER_DELAY->SR & TIM_FLAG_Update) != TIM_FLAG_Update);
+
 }
 // end of INIT_Delay()
 

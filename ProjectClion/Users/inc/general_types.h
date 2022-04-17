@@ -1,37 +1,64 @@
 //**************************************************************************************************
-// @Module        INIT
-// @Filename      Init.h
+// @Module        General types
+// @Filename      general_types.h
 //--------------------------------------------------------------------------------------------------
-// @Description   Init module for configuration MCU
-//
+// @Description   Interface of the General types module.
 //--------------------------------------------------------------------------------------------------
-// @Version       1.0.0
+// @Version       3.5.1
 //--------------------------------------------------------------------------------------------------
-// @Date          xx.xx.xxxx
+// @Date          23.06.2021
 //--------------------------------------------------------------------------------------------------
-// @History       Version  Author      Comment
-// XX.XX.XXXX     1.0.0    KPS         First release.
-//**************************************************************************************************
 
-#ifndef INIT_H
-#define INIT_H
+#ifndef GENERAL_TYPES_H
+#define GENERAL_TYPES_H
+
 
 
 //**************************************************************************************************
 // Project Includes
 //**************************************************************************************************
 
-#include "stm32l1xx.h"
+// None.
 
-#include "general_types.h"
 
-#include "Init_cfg.h"
 
 //**************************************************************************************************
 // Declarations of global (public) data types
 //**************************************************************************************************
 
-// None.
+// True/False definition
+#ifndef FALSE
+#define FALSE               (0U)
+#endif
+#ifndef TRUE
+#define TRUE                (1U)
+#endif
+
+// On/Off definition
+#ifndef OFF
+#define OFF                 (0U)
+#endif
+#ifndef ON
+#define ON                  (1U)
+#endif
+
+// Logical signal state definitions
+#ifndef LOGIC_0
+#define LOGIC_0             (0U)
+#endif
+#ifndef LOGIC_1
+#define LOGIC_1             (1U)
+#endif
+
+
+// Standard result type
+typedef enum STD_RESULT_enum
+{
+    RESULT_OK     = (uint8_t)0U, // Function succeeded
+    RESULT_NOT_OK = (uint8_t)1U  // Function not succeeded
+
+} STD_RESULT;
+
 
 
 //**************************************************************************************************
@@ -41,6 +68,7 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of global (public) variables
 //**************************************************************************************************
@@ -48,14 +76,23 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of global (public) functions
 //**************************************************************************************************
 
-// Init MCU
-extern void Init(void);
-// Delay function
-extern void INIT_Delay(uint32_t us);
-#endif // #ifndef INIT_H
+// None.
+
+
+
+//**************************************************************************************************
+// Declarations of interrupt service routines
+//**************************************************************************************************
+
+// None.
+
+
+
+#endif // #ifndef GENERAL_TYPES_H
 
 //****************************************** end of file *******************************************

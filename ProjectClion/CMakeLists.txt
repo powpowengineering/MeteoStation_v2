@@ -35,6 +35,7 @@ set(FREERTOS_DIR FreeRTOS/Source/)
 
 file(GLOB_RECURSE USER_SOURCES "${CMAKE_SOURCE_DIR}/Users/src/*.c")
 file(GLOB_RECURSE ONE_WIRE_SOURCES "${CMAKE_SOURCE_DIR}/OneWire/OneWire.c")
+file(GLOB_RECURSE DS18B20_SOURCES "${CMAKE_SOURCE_DIR}/DS18B20/ds18b20.c")
 file(GLOB_RECURSE HAL_SOURCES "${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/src/*.c")
 file(
         GLOB_RECURSE
@@ -53,6 +54,7 @@ file(
 
 include_directories(${CMAKE_SOURCE_DIR}/Users/inc)
 include_directories(${CMAKE_SOURCE_DIR}/OneWire)
+include_directories(${CMAKE_SOURCE_DIR}/DS18B20)
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/inc")
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Include")
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Device/ST/STM32L1xx/Include")
@@ -65,9 +67,8 @@ include_directories(${FREERTOS_DIR}/portable/MemMang)
 #include_directories(${FREERTOS_DIR}/portable/Common)
 
 
-add_executable(${PROJECT_NAME} ${STARTUP_FILE} ${USER_ONE_WIRE} ${USER_SOURCES} ${HAL_SOURCES} ${FREERTOS_SOURCES})
-
-
+add_executable(${PROJECT_NAME} ${STARTUP_FILE} ${USER_ONE_WIRE} ${USER_SOURCES}
+               ${DS18B20_SOURCES} ${HAL_SOURCES} ${FREERTOS_SOURCES})
 
 
 #=== Post-Build operations ===#

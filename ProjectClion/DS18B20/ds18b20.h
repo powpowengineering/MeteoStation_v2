@@ -1,8 +1,8 @@
 //**************************************************************************************************
-// @Module        INIT
-// @Filename      Init.h
+// @Module        DS18B20
+// @Filename      ds18b20.h
 //--------------------------------------------------------------------------------------------------
-// @Description   Init module for configuration MCU
+// @Description   Interface of the ds18b20 sensor interface.
 //
 //--------------------------------------------------------------------------------------------------
 // @Version       1.0.0
@@ -13,8 +13,8 @@
 // XX.XX.XXXX     1.0.0    KPS         First release.
 //**************************************************************************************************
 
-#ifndef INIT_H
-#define INIT_H
+#ifndef DS18B20_H
+#define DS18B20_H
 
 
 //**************************************************************************************************
@@ -25,7 +25,7 @@
 
 #include "general_types.h"
 
-#include "Init_cfg.h"
+#include "ds18b20_cfg.h"
 
 //**************************************************************************************************
 // Declarations of global (public) data types
@@ -52,10 +52,13 @@
 // Declarations of global (public) functions
 //**************************************************************************************************
 
-// Init MCU
-extern void Init(void);
-// Delay function
-extern void INIT_Delay(uint32_t us);
-#endif // #ifndef INIT_H
+// Read ROM ID
+STD_RESULT DS18B20_GetID(uint64_t *const ID);
+// Get temperature
+STD_RESULT DS18B20_GetTemperature(float* t, uint64_t ID);
+// Delay in us
+void DS18B20_Delay(uint32_t us);
+
+#endif // #ifndef DS18B20_H
 
 //****************************************** end of file *******************************************
