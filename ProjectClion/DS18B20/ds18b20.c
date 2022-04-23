@@ -94,6 +94,14 @@
 #define DS18B20_CONVERSION_TIME_US          (1000000U)
 // Size scratchpad
 #define DS18B20_SCRATCHPAD_SIZE             (9U)
+// Size scratchpad allow writing
+#define DS18B20_SCRATCHPAD_WRITE_SIZE       (3U)
+// Addr scratchpad TH
+#define DS18B20_SCRATCHPAD_TH_ADDR          (2U)
+// Addr scratchpad TL
+#define DS18B20_SCRATCHPAD_TL_ADDR          (3U)
+// Addr scratchpad CONFIG
+#define DS18B20_SCRATCHPAD_TL_CONFIG        (4U)
 // number bits temperature data
 #define DS18B20_NUM_BITS_TEMPERATURE        (11U)
 // number bytes ID
@@ -121,6 +129,8 @@ static STD_RESULT DS18B20_ConvertT(void);
 static float DS18B20_GetTemFromScratchpad(const uint8_t* scratchpad);
 // Calculate CRC
 static uint8_t DS18B20_CalculateCRC(uint8_t* data, uint8_t len);
+// Write scratchpad
+static void DS18B20_WriteScratchPad(uint8_t TL, uint8_t TH, uint8_t resolution);
 
 //**************************************************************************************************
 //==================================================================================================
@@ -317,6 +327,34 @@ static void DS18B20_ReadScratchPad(uint8_t* data)
     }
 }
 // end of DS18B20_ReadScratchPad()
+
+
+
+//**************************************************************************************************
+// @Function      DS18B20_WriteScratchPad()
+//--------------------------------------------------------------------------------------------------
+// @Description   Read scratchpad
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    TL - threshold high temperature
+//                TL - threshold low temperature
+//                config -
+//**************************************************************************************************
+static void DS18B20_WriteScratchPad( uint8_t TL,uint8_t TH, uint8_t resolution)
+{
+    // Send command WRITE SCRATCHPAD
+    ONE_WIRE_writeByte(DS18B20_WRITE_SCRATCHPAD);
+    // write TL
+    ONE_WIRE_writeByte(TL);
+    // write TH
+    ONE_WIRE_writeByte(TH);
+    // write config
+    ONE_WIRE_writeByte(resolution);
+}
+// end of DS18B20_WriteScratchPad()
 
 
 

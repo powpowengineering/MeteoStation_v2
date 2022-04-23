@@ -38,7 +38,11 @@
 // Definitions of global (public) constants
 //**************************************************************************************************
 
-// None.
+// DS18B20 resolution
+#define DS18B20_RESOLUTION_9_BIT                (0U)
+#define DS18B20_RESOLUTION_10_BIT               (1U << 5)
+#define DS18B20_RESOLUTION_11_BIT               (2U << 5)
+#define DS18B20_RESOLUTION_12_BIT               (3U << 5)
 
 
 //**************************************************************************************************
