@@ -197,7 +197,7 @@ STD_RESULT DS18B20_GetID(uint64_t *const ID)
 // @Parameters    *t - Pointer data to store temperature
 //                ID - ID of sensor
 //**************************************************************************************************
-STD_RESULT DS18B20_GetTemperature(float* t, uint64_t ID)
+STD_RESULT DS18B20_GetTemperature(float *const t, const uint64_t *const ID)
 {
     STD_RESULT result = RESULT_NOT_OK;
     uint8_t scratchpad[DS18B20_SCRATCHPAD_SIZE];
@@ -207,7 +207,7 @@ STD_RESULT DS18B20_GetTemperature(float* t, uint64_t ID)
     if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
     {
         // Match ROM ID
-        DS18B20_MatchID(ID);
+        DS18B20_MatchID(*ID);
         // Convert T
         if (RESULT_OK == DS18B20_ConvertT())
         {
@@ -215,7 +215,7 @@ STD_RESULT DS18B20_GetTemperature(float* t, uint64_t ID)
             if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
             {
                 // Match ROM ID
-                DS18B20_MatchID(ID);
+                DS18B20_MatchID(*ID);
                 // read scratchpad
                 DS18B20_ReadScratchPad(scratchpad);
                 // calculate crc
@@ -249,6 +249,52 @@ STD_RESULT DS18B20_GetTemperature(float* t, uint64_t ID)
     return result;
 }
 // end of DS18B20_GetTemperature
+
+
+
+//**************************************************************************************************
+// @Function      DS18B20_SetResolution()
+//--------------------------------------------------------------------------------------------------
+// @Description   Set resolution
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    resolution - pointer data resolution
+//**************************************************************************************************
+STD_RESULT DS18B20_SetResolution(const uint8_t* ID, const uint8_t* resolution)
+{
+    STD_RESULT result = RESULT_NOT_OK;
+    uint8_t scratchPad[DS18B20_SCRATCHPAD_SIZE];
+
+    if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
+    {
+        // Match ID
+        DS18B20_MatchID(*ID);
+        // Read TH and TL
+        DS18B20_ReadScratchPad(scratchPad);
+        if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
+        {
+            // Match ID
+            DS18B20_MatchID(*ID);
+            // Set new resolution
+            DS18B20_WriteScratchPad( scratchPad[DS18B20_SCRATCHPAD_TL_ADDR],scratchPad[DS18B20_SCRATCHPAD_TH_ADDR], *resolution);
+            result = RESULT_OK;
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+        }
+    }
+    else
+    {
+        result = RESULT_NOT_OK;
+    }
+
+    return result;
+}
+// end of DS18B20_SetResolution()
 
 //**************************************************************************************************
 //==================================================================================================

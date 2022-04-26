@@ -39,10 +39,10 @@
 //**************************************************************************************************
 
 // DS18B20 resolution
-#define DS18B20_RESOLUTION_9_BIT                (0U)
-#define DS18B20_RESOLUTION_10_BIT               (1U << 5)
-#define DS18B20_RESOLUTION_11_BIT               (2U << 5)
-#define DS18B20_RESOLUTION_12_BIT               (3U << 5)
+#define DS18B20_RESOLUTION_9_BIT                (uint8_t)(0U)
+#define DS18B20_RESOLUTION_10_BIT               (uint8_t)(1U << 5)
+#define DS18B20_RESOLUTION_11_BIT               (uint8_t)(2U << 5)
+#define DS18B20_RESOLUTION_12_BIT               (uint8_t)(3U << 5)
 
 
 //**************************************************************************************************
@@ -59,7 +59,9 @@
 // Read ROM ID
 STD_RESULT DS18B20_GetID(uint64_t *const ID);
 // Get temperature
-STD_RESULT DS18B20_GetTemperature(float* t, uint64_t ID);
+STD_RESULT DS18B20_GetTemperature(float *const t,  const uint64_t *const ID);
+// Set Resolution
+STD_RESULT DS18B20_SetResolution(const uint8_t* ID,const uint8_t* resolution);
 // Delay in us
 void DS18B20_Delay(uint32_t us);
 
