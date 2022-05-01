@@ -6,9 +6,12 @@
 #include "ds18b20.h"
 
 extern void vTask(void *pvParameters);
+#define DS18B20_ONE_WIRE_CH             (0U)
+
 
 void SWO_PrintChar  (char c);
 void SWO_PrintString(const char *s);
+
 
 /*********************************************************************
 * Определения для блока отладки (debug unit) Cortex-M
@@ -73,12 +76,12 @@ void main(void)
    uint64_t ID=0;//=0xd501211280621728U;
     STD_RESULT result = RESULT_NOT_OK;
     float t = 0.0f;
-    result = DS18B20_GetID(&ID);
+    result = DS18B20_GetID(DS18B20_ONE_WIRE_CH,&ID);
     while(1)
    {
        //presence = ONE_WIRE_reset();
        //ID = DS18B20_GetID();
-       result = DS18B20_GetTemperature(&t,ID);
+       result = DS18B20_GetTemperature(DS18B20_ONE_WIRE_CH,&ID,&t);
        INIT_Delay(100000);
    }
 
