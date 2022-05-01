@@ -85,6 +85,9 @@
 #define ONE_WIRE_WRITE_SAMPLE_TIME_US                     (60U)
 // rest time slot
 #define ONE_WIRE_REST_TIME_SLOT_US                        (2U)
+// channel number
+#define ONE_WIRE_CH0                                      (0U)
+#define ONE_WIRE_CH1                                      (1U)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -100,11 +103,11 @@
 // Init gpio
 static void ONE_WIRE_GpioInit(void);
 // Set low level on DQ pin
-static void ONE_WIRE_DQLow(void);
+static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh);
 // DQ configuration as input
-static void ONE_WIRE_DQInput(void);
+static STD_RESULT ONE_WIRE_DQInput(uint8_t nCh);
 // Get value on DQ input
-static uint8_t ONE_WIRE_DQGetValue(void);
+static STD_RESULT ONE_WIRE_DQGetValue(uint8_t nCh, uint8_t *const bitStatus);
 
 
 //**************************************************************************************************
@@ -140,33 +143,55 @@ void ONE_WIRE_init(void)
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
+// @ReturnValue   RESULT_OK - function completed successfully
+//                RESULT_NOT_OK - function didn't complete successfully
 //--------------------------------------------------------------------------------------------------
-// @Parameters    None.
+// @Parameters    nCh - number of channel
+//                status - one wire presence pulse or not
 //**************************************************************************************************
-enONE_WIRE_PRESENCE ONE_WIRE_reset(void)
+STD_RESULT ONE_WIRE_reset(uint8_t nCh, enONE_WIRE_PRESENCE *const status)
 {
-    enONE_WIRE_PRESENCE result = ONE_WIRE_NOT_PRESENCE;
+    STD_RESULT result = RESULT_NOT_OK;
 
     //pull DQ line low
-    ONE_WIRE_DQLow();
-    // leave it low for RESET_PULSE
-    ONE_WIRE_Delay(ONE_WIRE_RESET_PULSE_TIME_US);
-    // allow line to return high
-    ONE_WIRE_DQInput();
-    // wait for presence
-    ONE_WIRE_Delay(ONE_WIRE_PRESENCE_PULSE_TIME_US);
-    // get presence signal
-    if (ONE_WIRE_DQGetValue() == 0)
+    if (RESULT_OK == ONE_WIRE_DQLow(nCh))
     {
-        result = ONE_WIRE_PRESENCE;
+        // leave it low for RESET_PULSE
+        ONE_WIRE_Delay(ONE_WIRE_RESET_PULSE_TIME_US);
+        // allow line to return high
+        if (RESULT_OK == ONE_WIRE_DQInput(nCh))
+        {
+            // wait for presence
+            ONE_WIRE_Delay(ONE_WIRE_PRESENCE_PULSE_TIME_US);
+            // get presence signal
+            uint8_t bitStatus = 0;
+            if (RESULT_OK == ONE_WIRE_DQGetValue(nCh,&bitStatus))
+            {
+                if ( 0 == bitStatus)
+                {
+                    *status = ONE_WIRE_PRESENCE;
+                }
+                else
+                {
+                    *status = ONE_WIRE_NOT_PRESENCE;
+                }
+                // wait for end of timeslot
+                ONE_WIRE_Delay(ONE_WIRE_DETECT_TIME_US - ONE_WIRE_RESET_PULSE_TIME_US - ONE_WIRE_PRESENCE_PULSE_TIME_US);
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+            }
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+        }
     }
     else
     {
-        result = ONE_WIRE_NOT_PRESENCE;
+        result = RESULT_NOT_OK;
     }
-    // wait for end of timeslot
-    ONE_WIRE_Delay(ONE_WIRE_DETECT_TIME_US - ONE_WIRE_RESET_PULSE_TIME_US - ONE_WIRE_PRESENCE_PULSE_TIME_US);
 
     return result;
 }
@@ -181,25 +206,48 @@ enONE_WIRE_PRESENCE ONE_WIRE_reset(void)
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
-// @ReturnValue   Bit value: 0,1
+// @ReturnValue   RESULT_OK - function completed successfully
+//                RESULT_NOT_OK - function didn't complete successfully
 //--------------------------------------------------------------------------------------------------
-// @Parameters    None.
+// @Parameters    nCh - number of channel
+//                bitVal - read value
 //**************************************************************************************************
- uint8_t ONE_WIRE_readBit(void)
+STD_RESULT ONE_WIRE_readBit(uint8_t nCh, uint8_t *const bitVal)
 {
-    uint8_t result=0;
+    STD_RESULT result = RESULT_NOT_OK;
+
     // pull DQ low to start timeslot
-    ONE_WIRE_DQLow();
-    // wait before leave pin
-    //ONE_WIRE_Delay(1);
-    // allow line to return high
-    ONE_WIRE_DQInput();
-    // wait master sample time
-    ONE_WIRE_Delay(ONE_WIRE_MASTER_SAMPLE_TIME_US - 1);
-    // read DQ
-    result = ONE_WIRE_DQGetValue();
-    // wait end of read time slot
-    ONE_WIRE_Delay(ONE_WIRE_READ_TIME_SLOT_US - ONE_WIRE_MASTER_SAMPLE_TIME_US - 1);
+    if (RESULT_OK == ONE_WIRE_DQLow(nCh))
+    {
+        // wait before leave pin
+        //ONE_WIRE_Delay(1);
+        // allow line to return high
+        if (RESULT_OK == ONE_WIRE_DQInput(nCh))
+        {
+            // wait master sample time
+            ONE_WIRE_Delay(ONE_WIRE_MASTER_SAMPLE_TIME_US - 1);
+            // read DQ
+            if (RESULT_OK == ONE_WIRE_DQGetValue(nCh, bitVal))
+            {
+                result = RESULT_OK;
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+            }
+            // wait end of read time slot
+            ONE_WIRE_Delay(ONE_WIRE_READ_TIME_SLOT_US - ONE_WIRE_MASTER_SAMPLE_TIME_US - 1);
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+        }
+    }
+    else
+    {
+        result = RESULT_NOT_OK;
+    }
+
     return result;
 }
 //end of ONE_WIRE_readBit()
@@ -213,24 +261,49 @@ enONE_WIRE_PRESENCE ONE_WIRE_reset(void)
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
-// @ReturnValue   Bit value: 0,1
+// @ReturnValue   RESULT_OK - function completed successfully
+//                RESULT_NOT_OK - function didn't complete successfully
 //--------------------------------------------------------------------------------------------------
-// @Parameters    None.
+// @Parameters    nCh - number of channel
+//                bitVal - value being written
 //**************************************************************************************************
-void ONE_WIRE_writeBit(uint8_t bitVal)
+STD_RESULT ONE_WIRE_writeBit(uint8_t nCh, uint8_t bitVal)
 {
-    // pull DQ low to start timeslot
-    ONE_WIRE_DQLow();
+    STD_RESULT result = RESULT_NOT_OK;
 
-    if (1 == bitVal)
+    // pull DQ low to start timeslot
+    if (RESULT_OK == ONE_WIRE_DQLow(nCh))
     {
+        if (1 == bitVal)
+        {
+            // allow line to return high
+            if (RESULT_OK == ONE_WIRE_DQInput(nCh))
+            {
+                result = RESULT_OK;
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+            }
+        }
+        // wait master write time
+        ONE_WIRE_Delay(ONE_WIRE_WRITE_SAMPLE_TIME_US);
         // allow line to return high
-        ONE_WIRE_DQInput();
+        if (RESULT_OK == ONE_WIRE_DQInput(nCh))
+        {
+            result = RESULT_OK;
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+        }
     }
-    // wait master write time
-    ONE_WIRE_Delay(ONE_WIRE_WRITE_SAMPLE_TIME_US);
-    // allow line to return high
-    ONE_WIRE_DQInput();
+    else
+    {
+        result = RESULT_NOT_OK;
+    }
+
+    return result;
 }
 //end of ONE_WIRE_writeBit()
 
@@ -243,19 +316,27 @@ void ONE_WIRE_writeBit(uint8_t bitVal)
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
-// @ReturnValue   Return byte read in one wire
+// @ReturnValue   RESULT_OK - function completed successfully
+//                RESULT_NOT_OK - function didn't complete successfully
 //--------------------------------------------------------------------------------------------------
-// @Parameters    None.
+// @Parameters    nCh - number of channel
+//                bitVal - value being read
 //**************************************************************************************************
-uint8_t ONE_WIRE_readByte(void)
+STD_RESULT ONE_WIRE_readByte(uint8_t nCh, uint8_t *const byteVal)
 {
-    uint8_t result = 0;
+    STD_RESULT result = RESULT_OK;
 
     for (int i=0;i<8;i++)
     {
-        if (ONE_WIRE_readBit() == 1)
+        uint8_t bitVal=0;
+        if (RESULT_OK == ONE_WIRE_readBit(nCh,&bitVal))
         {
-            result |= 0x01 << i;
+            *byteVal |= 0x01 << i;
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+            break;
         }
         // wait for rest of timeslot
         ONE_WIRE_Delay(ONE_WIRE_REST_TIME_SLOT_US);
@@ -277,17 +358,54 @@ uint8_t ONE_WIRE_readByte(void)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-void ONE_WIRE_writeByte(uint8_t byteVal)
+STD_RESULT ONE_WIRE_writeByte(uint8_t nCh, uint8_t byteVal)
 {
+    STD_RESULT result = RESULT_OK;
+
     uint8_t temp = 0;
-    for(int i=0;i<8;i++)
+
+    if (ONE_WIRE_CH0 == nCh)
     {
-        temp = byteVal >> i;
-        temp &= 0x01;
-        ONE_WIRE_writeBit(temp);
-        // wait for rest of timeslot
-        ONE_WIRE_Delay(ONE_WIRE_REST_TIME_SLOT_US);
+        for(int i=0;i<8;i++)
+        {
+            temp = byteVal >> i;
+            temp &= 0x01;
+            if (RESULT_OK == ONE_WIRE_writeBit(nCh,temp))
+            {
+                // wait for rest of timeslot
+                ONE_WIRE_Delay(ONE_WIRE_REST_TIME_SLOT_US);
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+                break;
+            }
+        }
     }
+    else if (ONE_WIRE_CH1 == nCh)
+    {
+        for(int i=0;i<8;i++)
+        {
+            temp = byteVal >> i;
+            temp &= 0x01;
+            if (RESULT_OK == ONE_WIRE_writeBit(nCh,temp))
+            {
+                // wait for rest of timeslot
+                ONE_WIRE_Delay(ONE_WIRE_REST_TIME_SLOT_US);
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+                break;
+            }
+        }
+    }
+    else
+    {
+        result = RESULT_NOT_OK;
+    }
+
+    return result;
 }
 //end of ONE_WIRE_writeByte()
 
@@ -315,12 +433,15 @@ void ONE_WIRE_writeByte(uint8_t byteVal)
 static void ONE_WIRE_GpioInit(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN);
+    GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN_CH0);
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(ONE_WIRE_GPIO_PORT, &GPIO_InitStruct);
+    GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
+
+    GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN_CH1);
+    GPIO_Init(ONE_WIRE_GPIO_PORT_CH1, &GPIO_InitStruct);
 
 }// end of ONE_WIRE_GpioInit()
 
@@ -337,12 +458,28 @@ static void ONE_WIRE_GpioInit(void)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static void ONE_WIRE_DQLow(void)
+static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh)
 {
-    // Config DQ as OUT
-    ONE_WIRE_GPIO_PORT->MODER |= GPIO_MODER_MODER0_0 << (ONE_WIRE_PIN*2);
-    // set DQ low
-    ONE_WIRE_GPIO_PORT->BSRRH = GPIO_Pin_10;
+    STD_RESULT result = RESULT_NOT_OK;
+
+    if (ONE_WIRE_CH0 == nCh)
+    {
+        // Config DQ as OUT
+        ONE_WIRE_GPIO_PORT_CH0->MODER |= GPIO_MODER_MODER0_0 << (ONE_WIRE_PIN_CH0*2);
+        // set DQ low
+        ONE_WIRE_GPIO_PORT_CH0->BSRRH = GPIO_Pin_10;
+        result = RESULT_OK;
+    }
+    else if (ONE_WIRE_CH1 == nCh)
+    {
+        // Config DQ as OUT
+        ONE_WIRE_GPIO_PORT_CH1->MODER |= GPIO_MODER_MODER0_0 << (ONE_WIRE_PIN_CH1*2);
+        // set DQ low
+        ONE_WIRE_GPIO_PORT_CH1->BSRRH = GPIO_Pin_10;
+        result = RESULT_OK;
+    }
+
+    return result;
 }// end of ONE_WIRE_DQLow()
 
 
@@ -358,10 +495,24 @@ static void ONE_WIRE_DQLow(void)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static void ONE_WIRE_DQInput(void)
+static STD_RESULT ONE_WIRE_DQInput(uint8_t nCh)
 {
-    // Config DQ as INPUT
-    ONE_WIRE_GPIO_PORT->MODER &= ~(GPIO_MODER_MODER0 << (ONE_WIRE_PIN*2));
+    STD_RESULT result = RESULT_NOT_OK;
+
+    if (ONE_WIRE_CH0 == nCh)
+    {
+        // Config DQ as INPUT
+        ONE_WIRE_GPIO_PORT_CH0->MODER &= ~(GPIO_MODER_MODER0 << (ONE_WIRE_PIN_CH0 * 2));
+        result = RESULT_OK;
+    }
+    else if (ONE_WIRE_CH1 == nCh)
+    {
+        // Config DQ as INPUT
+        ONE_WIRE_GPIO_PORT_CH1->MODER &= ~(GPIO_MODER_MODER0 << (ONE_WIRE_PIN_CH1 * 2));
+        result = RESULT_OK;
+    }
+
+    return result;
 }// end of ONE_WIRE_DQInput()
 
 
@@ -377,19 +528,38 @@ static void ONE_WIRE_DQInput(void)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static uint8_t ONE_WIRE_DQGetValue(void)
+static STD_RESULT ONE_WIRE_DQGetValue(uint8_t nCh, uint8_t *const bitStatus)
 {
-    // Get value
-    uint8_t bitstatus=0;
-    if ((ONE_WIRE_GPIO_PORT->IDR & (1<<ONE_WIRE_PIN)) != (uint32_t)Bit_RESET)
+    STD_RESULT result = RESULT_NOT_OK;
+
+    if (ONE_WIRE_CH0 == nCh)
     {
-        bitstatus = (uint8_t)Bit_SET;
+        // Get value
+        if ((ONE_WIRE_GPIO_PORT_CH0->IDR & (1<<ONE_WIRE_PIN_CH0)) != (uint32_t)Bit_RESET)
+        {
+            *bitStatus = (uint8_t)Bit_SET;
+        }
+        else
+        {
+            *bitStatus = (uint8_t)Bit_RESET;
+        }
+        result = RESULT_OK;
     }
-    else
+    else if (ONE_WIRE_CH1 == nCh)
     {
-        bitstatus = (uint8_t)Bit_RESET;
+        // Get value
+        if ((ONE_WIRE_GPIO_PORT_CH1->IDR & (1<<ONE_WIRE_PIN_CH1)) != (uint32_t)Bit_RESET)
+        {
+            *bitStatus = (uint8_t)Bit_SET;
+        }
+        else
+        {
+            *bitStatus = (uint8_t)Bit_RESET;
+        }
+        result = RESULT_OK;
     }
-    return bitstatus;
+
+    return result;
 }// end of ONE_WIRE_DQGetValue()
 
 //****************************************** end of file *******************************************

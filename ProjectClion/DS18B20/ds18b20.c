@@ -118,25 +118,26 @@
 // Declarations of local (private) functions
 //**************************************************************************************************
 // Match ROM function
-static void DS18B20_MatchID(uint64_t ID);
+static STD_RESULT DS18B20_MatchID(const uint8_t nCh, uint64_t ID);
 // Skip ROM function
-static void DS18B20_SkipID(void);
+static void DS18B20_SkipID(const uint8_t nCh);
 // Read scratchpad
-static void DS18B20_ReadScratchPad(uint8_t* data);
+static void DS18B20_ReadScratchPad(const uint8_t nCh, uint8_t* data);
 // Start convert T
-static STD_RESULT DS18B20_ConvertT(void);
+static STD_RESULT DS18B20_ConvertT(const uint8_t nCh);
 // Get temperature value from scratchpad
 static float DS18B20_GetTemFromScratchpad(const uint8_t* scratchpad);
 // Calculate CRC
 static uint8_t DS18B20_CalculateCRC(uint8_t* data, uint8_t len);
 // Write scratchpad
-static void DS18B20_WriteScratchPad(uint8_t TL, uint8_t TH, uint8_t resolution);
+static void DS18B20_WriteScratchPad(const uint8_t nCh, uint8_t TL, uint8_t TH, uint8_t resolution);
 
 //**************************************************************************************************
 //==================================================================================================
 // Definitions of global (public) functions
 //==================================================================================================
 //**************************************************************************************************
+
 
 //**************************************************************************************************
 // @Function      DS18B20_GetID()
@@ -149,26 +150,37 @@ static void DS18B20_WriteScratchPad(uint8_t TL, uint8_t TH, uint8_t resolution);
 //                RESULT_NOT_OK - crc doesn't correct or sensor doesn't presence
 //--------------------------------------------------------------------------------------------------
 // @Parameters    ID - pointer data to store ID
+//                nCh - channel One Wire
 //**************************************************************************************************
-STD_RESULT DS18B20_GetID(uint64_t *const ID)
+STD_RESULT DS18B20_GetID(const uint8_t nCh, uint64_t *const ID)
 {
     STD_RESULT result = RESULT_NOT_OK;
     uint8_t crc=0;
 
     // Reset 1-wire
-    if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
+    enONE_WIRE_PRESENCE status;
+    if (RESULT_OK == ONE_WIRE_reset(nCh,&status))
     {
-        // Send command READ ROM
-        ONE_WIRE_writeByte(DS18B20_READ_ROM_CMD);
-        // Read 8 bytes
-        for (int i=0;i<DS18B20_SIZE_ID_BYTES;i++)
+        if (ONE_WIRE_PRESENCE == status)
         {
-            *ID |= ((uint64_t)ONE_WIRE_readByte()) << i*8;
-        }
-        crc = DS18B20_CalculateCRC((uint8_t*)ID, DS18B20_SIZE_ID_BYTES-1);
-        if (crc == (uint8_t)(*ID >> (DS18B20_SIZE_ID_BYTES*8-8)))
-        {
-            result = RESULT_OK;
+            // Send command READ ROM
+            ONE_WIRE_writeByte(nCh,DS18B20_READ_ROM_CMD);
+            // Read 8 bytes
+            for (int i=0;i<DS18B20_SIZE_ID_BYTES;i++)
+            {
+                uint8_t byteVal=0;
+                ONE_WIRE_readByte(nCh,&byteVal);
+                *ID |= ((uint64_t)byteVal) << i*8;
+            }
+            crc = DS18B20_CalculateCRC((uint8_t*)ID, DS18B20_SIZE_ID_BYTES-1);
+            if (crc == (uint8_t)(*ID >> (DS18B20_SIZE_ID_BYTES*8-8)))
+            {
+                result = RESULT_OK;
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+            }
         }
         else
         {
@@ -179,6 +191,7 @@ STD_RESULT DS18B20_GetID(uint64_t *const ID)
     {
         result = RESULT_NOT_OK;
     }
+
     return result;
 }
 //end of DS18B20_GetID()
@@ -197,34 +210,43 @@ STD_RESULT DS18B20_GetID(uint64_t *const ID)
 // @Parameters    *t - Pointer data to store temperature
 //                ID - ID of sensor
 //**************************************************************************************************
-STD_RESULT DS18B20_GetTemperature(float *const t, const uint64_t *const ID)
+STD_RESULT DS18B20_GetTemperature(uint8_t nCh, const uint64_t *const ID, float *const t )
 {
     STD_RESULT result = RESULT_NOT_OK;
     uint8_t scratchpad[DS18B20_SCRATCHPAD_SIZE];
     uint8_t crc = 0;
 
     // Detect sensor/sensors
-    if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
+    enONE_WIRE_PRESENCE status;
+    if (RESULT_OK == ONE_WIRE_reset(nCh,&status))
     {
-        // Match ROM ID
-        DS18B20_MatchID(*ID);
-        // Convert T
-        if (RESULT_OK == DS18B20_ConvertT())
+        if (ONE_WIRE_PRESENCE == status)
         {
-            // Detect sensor/sensors
-            if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
+            // Match ROM ID
+            DS18B20_MatchID(nCh,*ID);
+            // Convert T
+            if (RESULT_OK == DS18B20_ConvertT(nCh))
             {
-                // Match ROM ID
-                DS18B20_MatchID(*ID);
-                // read scratchpad
-                DS18B20_ReadScratchPad(scratchpad);
-                // calculate crc
-                crc = DS18B20_CalculateCRC(scratchpad, DS18B20_SCRATCHPAD_SIZE-1);
-                if (crc == scratchpad[8])
+                // Detect sensor/sensors
+                ONE_WIRE_reset(nCh,&status);
+                if (ONE_WIRE_PRESENCE == status)
                 {
-                    // Get temperature
-                    *t = DS18B20_GetTemFromScratchpad(scratchpad);
-                    result = RESULT_OK;
+                    // Match ROM ID
+                    DS18B20_MatchID(nCh,*ID);
+                    // read scratchpad
+                    DS18B20_ReadScratchPad(nCh,scratchpad);
+                    // calculate crc
+                    crc = DS18B20_CalculateCRC(scratchpad, DS18B20_SCRATCHPAD_SIZE-1);
+                    if (crc == scratchpad[8])
+                    {
+                        // Get temperature
+                        *t = DS18B20_GetTemFromScratchpad(scratchpad);
+                        result = RESULT_OK;
+                    }
+                    else
+                    {
+                        result = RESULT_NOT_OK;
+                    }
                 }
                 else
                 {
@@ -263,24 +285,32 @@ STD_RESULT DS18B20_GetTemperature(float *const t, const uint64_t *const ID)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    resolution - pointer data resolution
 //**************************************************************************************************
-STD_RESULT DS18B20_SetResolution(const uint8_t* ID, const uint8_t* resolution)
+STD_RESULT DS18B20_SetResolution(uint8_t nCh, const uint8_t* ID,const uint8_t* resolution)
 {
     STD_RESULT result = RESULT_NOT_OK;
     uint8_t scratchPad[DS18B20_SCRATCHPAD_SIZE];
-
-    if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
+    enONE_WIRE_PRESENCE status;
+    if (RESULT_OK == ONE_WIRE_reset(nCh,&status))
     {
-        // Match ID
-        DS18B20_MatchID(*ID);
-        // Read TH and TL
-        DS18B20_ReadScratchPad(scratchPad);
-        if (ONE_WIRE_PRESENCE == ONE_WIRE_reset())
+        if (ONE_WIRE_PRESENCE == status)
         {
             // Match ID
-            DS18B20_MatchID(*ID);
-            // Set new resolution
-            DS18B20_WriteScratchPad( scratchPad[DS18B20_SCRATCHPAD_TL_ADDR],scratchPad[DS18B20_SCRATCHPAD_TH_ADDR], *resolution);
-            result = RESULT_OK;
+            DS18B20_MatchID(nCh,*ID);
+            // Read TH and TL
+            DS18B20_ReadScratchPad(nCh,scratchPad);
+            ONE_WIRE_reset(nCh,&status);
+            if (ONE_WIRE_PRESENCE == status)
+            {
+                // Match ID
+                DS18B20_MatchID(nCh,*ID);
+                // Set new resolution
+                DS18B20_WriteScratchPad(nCh, scratchPad[DS18B20_SCRATCHPAD_TL_ADDR],scratchPad[DS18B20_SCRATCHPAD_TH_ADDR], *resolution);
+                result = RESULT_OK;
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+            }
         }
         else
         {
@@ -291,6 +321,7 @@ STD_RESULT DS18B20_SetResolution(const uint8_t* ID, const uint8_t* resolution)
     {
         result = RESULT_NOT_OK;
     }
+
 
     return result;
 }
@@ -313,19 +344,32 @@ STD_RESULT DS18B20_SetResolution(const uint8_t* ID, const uint8_t* resolution)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static void DS18B20_MatchID(uint64_t ID)
+static STD_RESULT DS18B20_MatchID(const uint8_t nCh, uint64_t ID)
 {
+    STD_RESULT result = RESULT_OK;
     uint8_t temp=0;
 
     // Send command MATCH ROM
-    ONE_WIRE_writeByte(DS18B20_MATCH_ROM_CMD);
 
-    for(int i=0;i<64;i++)
+    if (RESULT_OK == ONE_WIRE_writeByte(nCh,DS18B20_MATCH_ROM_CMD))
     {
-        temp = ID >> i;
-        temp &= 0x01;
-        ONE_WIRE_writeBit(temp);
+        for(int i=0;i<64;i++)
+        {
+            temp = ID >> i;
+            temp &= 0x01;
+            if (RESULT_NOT_OK == ONE_WIRE_writeBit(nCh,temp))
+            {
+                result = RESULT_NOT_OK;
+                break;
+            }
+        }
     }
+    else
+    {
+        result = RESULT_NOT_OK;
+    }
+
+    return result;
 }
 //end of DS18B20_MatchID()
 
@@ -342,10 +386,10 @@ static void DS18B20_MatchID(uint64_t ID)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static void DS18B20_SkipID(void)
+static void DS18B20_SkipID(const uint8_t nCh)
 {
     // Send command SKIP ROM
-    ONE_WIRE_writeByte(DS18B20_SKIP_ROM_CMD);
+    ONE_WIRE_writeByte(nCh,DS18B20_SKIP_ROM_CMD);
 }
 //end of DS18B20_SkipID()
 
@@ -362,13 +406,15 @@ static void DS18B20_SkipID(void)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    Pointer data to store 8 bytes
 //**************************************************************************************************
-static void DS18B20_ReadScratchPad(uint8_t* data)
+static void DS18B20_ReadScratchPad(uint8_t nCh, uint8_t* data)
 {
     // Send command READ SCRATCHPAD
-    ONE_WIRE_writeByte(DS18B20_READ_SCRATCHPAD);
+    ONE_WIRE_writeByte(nCh, DS18B20_READ_SCRATCHPAD);
     for(int i=0;i<DS18B20_SCRATCHPAD_SIZE;i++)
     {
-        *data = ONE_WIRE_readByte();
+        uint8_t byteVal=0;
+        ONE_WIRE_readByte(nCh,&byteVal);
+        *data = byteVal;
         data++;
     }
 }
@@ -387,18 +433,17 @@ static void DS18B20_ReadScratchPad(uint8_t* data)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    TL - threshold high temperature
 //                TL - threshold low temperature
-//                config -
 //**************************************************************************************************
-static void DS18B20_WriteScratchPad( uint8_t TL,uint8_t TH, uint8_t resolution)
+static void DS18B20_WriteScratchPad(const uint8_t nCh, uint8_t TL,uint8_t TH, uint8_t resolution)
 {
     // Send command WRITE SCRATCHPAD
-    ONE_WIRE_writeByte(DS18B20_WRITE_SCRATCHPAD);
+    ONE_WIRE_writeByte(nCh,DS18B20_WRITE_SCRATCHPAD);
     // write TL
-    ONE_WIRE_writeByte(TL);
+    ONE_WIRE_writeByte(nCh,TL);
     // write TH
-    ONE_WIRE_writeByte(TH);
+    ONE_WIRE_writeByte(nCh,TH);
     // write config
-    ONE_WIRE_writeByte(resolution);
+    ONE_WIRE_writeByte(nCh,resolution);
 }
 // end of DS18B20_WriteScratchPad()
 
@@ -415,21 +460,30 @@ static void DS18B20_WriteScratchPad( uint8_t TL,uint8_t TH, uint8_t resolution)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static STD_RESULT DS18B20_ConvertT(void)
+static STD_RESULT DS18B20_ConvertT(const uint8_t nCh)
 {
     STD_RESULT result = RESULT_NOT_OK;
     // Send command Convert T
-    ONE_WIRE_writeByte(DS18B20_CONVERT_T);
-    // Delay conversion
-    DS18B20_Delay(DS18B20_CONVERSION_TIME_US);
-    if (LOGIC_1 == ONE_WIRE_readBit())
+    if (RESULT_OK == ONE_WIRE_writeByte(nCh,DS18B20_CONVERT_T))
     {
-        result = RESULT_OK;
+        // Delay conversion
+        DS18B20_Delay(DS18B20_CONVERSION_TIME_US);
+        uint8_t bitVal = 0;
+        ONE_WIRE_readBit(nCh,&bitVal);
+        if (LOGIC_1 == bitVal)
+        {
+            result = RESULT_OK;
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+        }
     }
     else
     {
         result = RESULT_NOT_OK;
     }
+
     return result;
 }
 //end of DS18B20_ConvertT()
@@ -447,7 +501,7 @@ static STD_RESULT DS18B20_ConvertT(void)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static float DS18B20_GetTemFromScratchpad(const uint8_t* scratchpad)
+static float DS18B20_GetTemFromScratchpad( const uint8_t* scratchpad)
 {
     uint16_t tempScratchPad = 0;
     float temperature = 0.0f;

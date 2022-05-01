@@ -62,15 +62,15 @@ typedef enum
 // Init one wire
 extern void ONE_WIRE_init(void);
 // Reset
-extern enONE_WIRE_PRESENCE ONE_WIRE_reset(void);
+extern STD_RESULT ONE_WIRE_reset(uint8_t nCh, enONE_WIRE_PRESENCE *const status);
 // Read bit
-extern uint8_t ONE_WIRE_readBit(void);
+extern STD_RESULT ONE_WIRE_readBit(uint8_t nCh, uint8_t *const bitVal);
 // Write bit
-extern void ONE_WIRE_writeBit(uint8_t bitVal);
+extern STD_RESULT ONE_WIRE_writeBit(uint8_t nCh, uint8_t bitVal);
 // Read byte
-extern uint8_t ONE_WIRE_readByte(void);
+extern STD_RESULT ONE_WIRE_readByte(uint8_t nCh, uint8_t *const byteVal);
 // Write byte
-extern void ONE_WIRE_writeByte(uint8_t byteVal);
+extern STD_RESULT ONE_WIRE_writeByte(uint8_t nCh, uint8_t byteVal);
 // Delay in us
 extern void ONE_WIRE_Delay(uint32_t us);
 

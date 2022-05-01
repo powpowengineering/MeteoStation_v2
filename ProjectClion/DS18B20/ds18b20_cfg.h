@@ -32,9 +32,8 @@
 // Valid values: ON / OFF
 #define MODULE_INTERNAL_DIAGNOSTICS             (OFF)
 
-
 // User specify pointer delay function
-#define DS18B20_Delay                          (INIT_Delay)
+#define DS18B20_Delay                           (INIT_Delay)
 
 
 

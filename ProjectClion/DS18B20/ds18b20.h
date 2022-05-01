@@ -57,11 +57,11 @@
 //**************************************************************************************************
 
 // Read ROM ID
-STD_RESULT DS18B20_GetID(uint64_t *const ID);
+STD_RESULT DS18B20_GetID(const uint8_t nCh, uint64_t *const ID);
 // Get temperature
-STD_RESULT DS18B20_GetTemperature(float *const t,  const uint64_t *const ID);
+STD_RESULT DS18B20_GetTemperature(uint8_t nCh, const uint64_t *const ID, float *const t );
 // Set Resolution
-STD_RESULT DS18B20_SetResolution(const uint8_t* ID,const uint8_t* resolution);
+STD_RESULT DS18B20_SetResolution(uint8_t nCh, const uint8_t* ID,const uint8_t* resolution);
 // Delay in us
 void DS18B20_Delay(uint32_t us);
 

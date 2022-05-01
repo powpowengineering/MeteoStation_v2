@@ -36,11 +36,13 @@
 
 // User specify port GPIOx
 // Valid value: GPIOA,GPIOB,GPIOC
-#define ONE_WIRE_GPIO_PORT                      (GPIOB)
-
+#define ONE_WIRE_GPIO_PORT_CH0                  (GPIOB)
 // User specify pin
 // Valid value: [0,15]
-#define ONE_WIRE_PIN                            (10)
+#define ONE_WIRE_PIN_CH0                        (10)
+
+#define ONE_WIRE_GPIO_PORT_CH1                  (GPIOB)
+#define ONE_WIRE_PIN_CH1                        (10)
 
 // User specify pointer delay function
 #define ONE_WIRE_Delay                          (INIT_Delay)
