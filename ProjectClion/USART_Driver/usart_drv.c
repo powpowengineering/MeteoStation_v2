@@ -38,7 +38,6 @@
 #include "usart_drv.h"
 
 
-
 //**************************************************************************************************
 // Verification of the imported configuration parameters
 //**************************************************************************************************
@@ -57,16 +56,13 @@
 // Declarations of local (private) data types
 //**************************************************************************************************
 
-// pointer function
-typedef void (*pf)(void);
-
 // Setting Usart
 typedef struct USART_SETTINGS_str
 {
     uint8_t Enable;
     USART_TypeDef* channel;
-    pf GpioTX;
-    pf GpioRX;
+    GPIO_TypeDef* GpioTX;
+    GPIO_TypeDef* GpioRX;
     uint32_t PinTX;
     uint32_t PinRX;
     uint32_t BaudRate;
@@ -75,9 +71,10 @@ typedef struct USART_SETTINGS_str
     uint8_t StopBits;
 }USART_SETTINGS;
 
-#define USART_SETTINGS_CHANNEL(ch){ \
+#define USART_SETTINGS_CHANNEL(ch) \
+{ \
     USART_CH_##ch,                  \
-    USART_ALIAS_STD_LIB_CH_##ch     \
+    USART_ALIAS_STD_LIB_CH_##ch,     \
     USART_GPIO_TX_PIN_CH_##ch,      \
     USART_GPIO_RX_PIN_CH_##ch,      \
     USART_TX_PIN_CH_##ch,           \
@@ -92,21 +89,12 @@ typedef struct USART_SETTINGS_str
 // Definitions of local (private) constants
 //**************************************************************************************************
 
-// Number settings
-#define USART_NUM_SETTINGS              (10U)
 // timeout
 #define USART_TIMEOUT_TX                (0xffffU)
 // An array to setting usart channels
-const static USART_SETTINGS USART_Settings[USART_NUMBER_CHANNELS][USART_NUM_SETTINGS] =
+const static USART_SETTINGS USART_Settings[USART_NUMBER_CHANNELS] =
 {
-    USART_SETTINGS_CHANNEL(0),
-    USART_SETTINGS_CHANNEL(1),
-    USART_SETTINGS_CHANNEL(2),
-    USART_SETTINGS_CHANNEL(3),
-    USART_SETTINGS_CHANNEL(4),
-    USART_SETTINGS_CHANNEL(5),
-    USART_SETTINGS_CHANNEL(6),
-    USART_SETTINGS_CHANNEL(7)
+    USART_SETTINGS_CHANNEL(0)
 };
 
 //**************************************************************************************************
@@ -144,16 +132,18 @@ void USART_init(void)
 {
     for (uint8_t i=0;i<USART_NUMBER_CHANNELS;i++)
     {
-        if (ON == USART_Settings[i]->Enable)
+        if (ON == USART_Settings[i].Enable)
         {
             USART_InitTypeDef USART_InitStruct;
-            USART_InitStruct.USART_BaudRate = USART_Settings[i]->BaudRate;
-            USART_InitStruct.USART_WordLength = USART_Settings[i]->SizeBits;
-            USART_InitStruct.USART_StopBits = USART_Settings[i]->StopBits;
-            USART_InitStruct.USART_Parity = USART_Settings[i]->PartyBit;
+            USART_InitStruct.USART_BaudRate = USART_Settings[i].BaudRate;
+            USART_InitStruct.USART_WordLength = USART_Settings[i].SizeBits;
+            USART_InitStruct.USART_StopBits = USART_Settings[i].StopBits;
+            USART_InitStruct.USART_Parity = USART_Settings[i].PartyBit;
             USART_InitStruct.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
             USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-            USART_Init(USART_Settings[i]->channel, &USART_InitStruct);
+            USART_Init(USART_Settings[i].channel, &USART_InitStruct);
+            USART_Cmd(USART_Settings[i].channel, ENABLE);
+
         }
     }
 }// end of USART_init()
@@ -171,15 +161,15 @@ void USART_init(void)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-void USART_PutChar(const uint8_t channel, const uint8_t character)
+void USART_PutChar(const uint8_t channel, const char character)
 {
 
     uint32_t timeout = USART_TIMEOUT_TX;
     while( timeout != 0)
     {
-        if (SET == USART_GetFlagStatus(USART_Settings[channel]->channel, USART_IT_TC))
+        if (SET == USART_GetFlagStatus(USART_Settings[channel].channel, USART_FLAG_TXE))
         {
-            USART_SendData(USART_Settings[channel]->channel, character);
+            USART_SendData(USART_Settings[channel].channel, character);
             break;
         }
         timeout--;

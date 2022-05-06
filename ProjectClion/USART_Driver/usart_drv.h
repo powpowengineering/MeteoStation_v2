@@ -55,7 +55,7 @@
 // init USART
 extern void USART_init(void);
 // Put character
-extern void USART_PutChar(const uint8_t channel, const uint8_t ch);
+extern void USART_PutChar(const uint8_t channel, const char character);
 
 
 #endif // #ifndef USART_DRV_H

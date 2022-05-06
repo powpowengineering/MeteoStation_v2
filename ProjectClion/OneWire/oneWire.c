@@ -177,6 +177,7 @@ STD_RESULT ONE_WIRE_reset(uint8_t nCh, enONE_WIRE_PRESENCE *const status)
                 }
                 // wait for end of timeslot
                 ONE_WIRE_Delay(ONE_WIRE_DETECT_TIME_US - ONE_WIRE_RESET_PULSE_TIME_US - ONE_WIRE_PRESENCE_PULSE_TIME_US);
+                result = RESULT_OK;
             }
             else
             {
@@ -331,7 +332,10 @@ STD_RESULT ONE_WIRE_readByte(uint8_t nCh, uint8_t *const byteVal)
         uint8_t bitVal=0;
         if (RESULT_OK == ONE_WIRE_readBit(nCh,&bitVal))
         {
-            *byteVal |= 0x01 << i;
+            if (1 == bitVal)
+            {
+                *byteVal |= 0x01 << i;
+            }
         }
         else
         {
@@ -434,7 +438,7 @@ static void ONE_WIRE_GpioInit(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN_CH0);
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;

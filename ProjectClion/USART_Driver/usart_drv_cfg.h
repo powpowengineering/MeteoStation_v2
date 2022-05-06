@@ -34,22 +34,22 @@
 // Amount channels
 #define USART_NUMBER_CHANNELS                   (1U)
 
-// number ch 0
+//
 #define USART_CH_0                              (ON)
 // alias std lib usart
-#define USART_ALIAS_STD_LIB_CH_0                (USART3)
+#define USART_ALIAS_STD_LIB_CH_0                USART1
 // GPIO TX PIN channel 0
-#define USART_GPIO_TX_PIN_CH_0                  (GPIOB)
+#define USART_GPIO_TX_PIN_CH_0                  GPIOA
 // GPIO RX PIN channel 0
-#define USART_GPIO_RX_PIN_CH_0                  (GPIOB)
+#define USART_GPIO_RX_PIN_CH_0                  GPIOA
 // TX PIN channel 0
-#define USART_TX_PIN_CH_0                       (GPIO_PIN_10)
+#define USART_TX_PIN_CH_0                       (GPIO_Pin_9)
 // RX PIN channel 0
-#define USART_RX_PIN_CH_0                       (GPIO_PIN_11)
+#define USART_RX_PIN_CH_0                       (GPIO_Pin_10)
 // Usart channel 0 baudrate
 #define USART_BAUDRATE_CH_0                     (115200)
 // Usart party bit
-#define USART_PARTY_BIT_CH_0                    (NONE)
+#define USART_PARTY_BIT_CH_0                    USART_Parity_No
 // Usart size data bit
 #define USART_DATA_SIZE_BITS_CH_0               (8U)
 // Usart stop bits
