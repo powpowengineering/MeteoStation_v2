@@ -1,20 +1,21 @@
 //**************************************************************************************************
-// @Module        DS18B20
-// @Filename      ds18b20.h
+// @Module        AM2305
+// @Filename      am2305.h
 //--------------------------------------------------------------------------------------------------
-// @Description   Interface of the ds18b20 sensor interface.
-//
+// @Description   Interface of the AM2305 module.
+//                
 //--------------------------------------------------------------------------------------------------
 // @Version       1.0.0
 //--------------------------------------------------------------------------------------------------
-// @Date          xx.xx.xxxx
+// @Date          XX.XX.XXXX
 //--------------------------------------------------------------------------------------------------
 // @History       Version  Author      Comment
 // XX.XX.XXXX     1.0.0    KPS         First release.
 //**************************************************************************************************
 
-#ifndef DS18B20_H
-#define DS18B20_H
+#ifndef AM2305_H
+#define AM2305_H
+
 
 
 //**************************************************************************************************
@@ -25,7 +26,10 @@
 
 #include "general_types.h"
 
-#include "ds18b20_cfg.h"
+// Get configuration of the program module
+#include "am2305_cfg.h"
+
+
 
 //**************************************************************************************************
 // Declarations of global (public) data types
@@ -34,15 +38,13 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Definitions of global (public) constants
 //**************************************************************************************************
 
-// DS18B20 resolution
-#define DS18B20_RESOLUTION_9_BIT                (uint8_t)(0U)
-#define DS18B20_RESOLUTION_10_BIT               (uint8_t)(1U << 5)
-#define DS18B20_RESOLUTION_11_BIT               (uint8_t)(2U << 5)
-#define DS18B20_RESOLUTION_12_BIT               (uint8_t)(3U << 5)
+// None.
+
 
 
 //**************************************************************************************************
@@ -56,13 +58,15 @@
 // Declarations of global (public) functions
 //**************************************************************************************************
 
-// Read ROM ID
-extern STD_RESULT DS18B20_GetID(const uint8_t nCh, uint64_t *const ID);
-// Get temperature
-extern STD_RESULT DS18B20_GetTemperature(uint8_t nCh, const uint64_t *const ID, float *const t );
-// Set Resolution
-extern STD_RESULT DS18B20_SetResolution(uint8_t nCh, const uint8_t* ID,const uint8_t* resolution);
+// Init am2305
+extern void AM2305_Init(void);
+// Get humidity and temperature
+extern STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temperature);
 
-#endif // #ifndef DS18B20_H
+              
+
+
+
+#endif // #ifndef AM2305_H
 
 //****************************************** end of file *******************************************

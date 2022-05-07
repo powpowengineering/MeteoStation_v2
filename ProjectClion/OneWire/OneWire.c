@@ -435,8 +435,7 @@ STD_RESULT ONE_WIRE_writeByte(uint8_t nCh, uint8_t byteVal)
 // @Parameters    None.
 //**************************************************************************************************
 static void ONE_WIRE_GpioInit(void)
-{
-    GPIO_InitTypeDef GPIO_InitStruct;
+{    GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN_CH0);
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
@@ -446,6 +445,7 @@ static void ONE_WIRE_GpioInit(void)
 
     GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN_CH1);
     GPIO_Init(ONE_WIRE_GPIO_PORT_CH1, &GPIO_InitStruct);
+
 
 }// end of ONE_WIRE_GpioInit()
 
@@ -471,7 +471,7 @@ static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh)
         // Config DQ as OUT
         ONE_WIRE_GPIO_PORT_CH0->MODER |= GPIO_MODER_MODER0_0 << (ONE_WIRE_PIN_CH0*2);
         // set DQ low
-        ONE_WIRE_GPIO_PORT_CH0->BSRRH = GPIO_Pin_10;
+        ONE_WIRE_GPIO_PORT_CH0->BSRRH = 1U << ONE_WIRE_PIN_CH0;
         result = RESULT_OK;
     }
     else if (ONE_WIRE_CH1 == nCh)
@@ -479,7 +479,7 @@ static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh)
         // Config DQ as OUT
         ONE_WIRE_GPIO_PORT_CH1->MODER |= GPIO_MODER_MODER0_0 << (ONE_WIRE_PIN_CH1*2);
         // set DQ low
-        ONE_WIRE_GPIO_PORT_CH1->BSRRH = GPIO_Pin_10;
+        ONE_WIRE_GPIO_PORT_CH1->BSRRH = 1U << ONE_WIRE_PIN_CH1;
         result = RESULT_OK;
     }
 
