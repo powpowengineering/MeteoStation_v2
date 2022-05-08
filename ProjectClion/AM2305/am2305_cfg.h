@@ -40,7 +40,7 @@
 #define AM2305_PIN                           (12U)
 
 // User specify pointer delay function
-#define AM2305_Delay                           (INIT_Delay)
+#define AM2305_Delay                         INIT_Delay
 
 
 #endif // #ifndef AM2305_CFG_H

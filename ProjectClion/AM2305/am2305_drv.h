@@ -63,10 +63,6 @@ extern void AM2305_Init(void);
 // Get humidity and temperature
 extern STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temperature);
 
-              
-
-
-
 #endif // #ifndef AM2305_H
 
 //****************************************** end of file *******************************************

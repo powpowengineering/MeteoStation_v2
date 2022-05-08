@@ -10,15 +10,17 @@
 //                
 //
 //                Abbreviations:
-//                  
+//                  None.
 //                  
 //
 //                Global (public) functions:
-//                  
-//                  
+//                  AM2305_Init();
+//                  AM2305_GetHumidityTemperature();
 //
 //                Local (private) functions:
-//                  
+//                  AM2305_DQLow();
+//                  AM2305_DQInput();
+//                  AM2305_DQGetValue();
 //                  
 //
 //--------------------------------------------------------------------------------------------------
@@ -39,8 +41,7 @@
 // Native header
 #include "am2305_drv.h"
 
-// Interface oneWire
-#include "OneWire.h"
+#include "Init.h"
 
 
 //**************************************************************************************************
@@ -81,10 +82,16 @@
 #define AM2305_TIME_T_REH_US               (80U)
 // Signal "0", "1" low time
 #define AM2305_TIME_T_LOW_US               (50U)
+// Signal "0", "1" low time max
+#define AM2305_TIME_T_LOW_MAX_US           (55U)
 // Signal "0" high time
 #define AM2305_TIME_T_H0_US                (26U)
 // Signal "1" high time
 #define AM2305_TIME_T_H1_US                (70U)
+// Signal "1" high time min
+#define AM2305_TIME_T_H1_MIN_US            (68U)
+// Signal "1" high time max
+#define AM2305_TIME_T_H1_MAX_US            (75U)
 // Sensor to release the bus time
 #define AM2305_TIME_T_EN_US                (50U)
 // quantity data bits
@@ -95,12 +102,19 @@
 #define AM2305_QTY_ZERO_BITS               (AM2305_TIME_T_LOW_US/AM2305_STROBE_DURATION_US)
 // quantity one strobes in data. BIT_RESET_STATE
 #define AM2305_QTY_ONE_STROBE_BIT_RESET_STATE   (AM2305_TIME_T_H0_US/AM2305_STROBE_DURATION_US)
+// quantity MIN one strobes in data. BIT_SET_STATE
+#define AM2305_QTY_MIN_ONE_STROBE_BIT_SET_STATE     (AM2305_TIME_T_H1_MIN_US/AM2305_STROBE_DURATION_US)
+// quantity MAX one strobes in data. BIT_SET_STATE
+#define AM2305_QTY_MAX_ONE_STROBE_BIT_SET_STATE     (AM2305_TIME_T_H1_MAX_US/AM2305_STROBE_DURATION_US)
+// quantity MAX zero strobes in data.
+#define AM2305_QTY_MAX_ZERO_STROBES_BIT         (AM2305_TIME_T_LOW_MAX_US/AM2305_STROBE_DURATION_US)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-// None.
+// Pointer of delay function.
+void (*pAM2305_Delay)(uint32_t us);
 
 
 //**************************************************************************************************
@@ -125,7 +139,7 @@ static BitAction AM2305_DQGetValue(void);
 //**************************************************************************************************
 // @Function      AM2305_Init()
 //--------------------------------------------------------------------------------------------------
-// @Description   Init am2305 sensor
+// @Description   Init GPIO, delay function.
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
@@ -143,10 +157,10 @@ void AM2305_Init(void)
     GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(AM2305_GPIO_PORT, &GPIO_InitStruct);
-
     // High DQ line
     AM2305_DQInput();
-
+    // Init AM2305 delay function.
+    pAM2305_Delay = AM2305_Delay;
 }// end of AM2305_Init();
 
 
@@ -165,8 +179,10 @@ void AM2305_Init(void)
 //**************************************************************************************************
 STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temperature)
 {
-    STD_RESULT result = RESULT_NOT_OK;
+    STD_RESULT result = RESULT_OK;
     uint8_t data[AM2305_QTY_DATA_BITS/8];
+    uint8_t cntBit=0;
+    uint8_t cntByte=0;
 
     // Getting response from sensor
     AM2305_DQLow();
@@ -186,52 +202,89 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
         // In response to high time
         AM2305_Delay(AM2305_TIME_T_REH_US);
 
-        for (int i=0,cntZero=0,cntOne=0;  i< AM2305_QTY_DATA_BITS; )
+        for (int i=0,cntZero=0,cntOne=0; i < AM2305_QTY_DATA_BITS; )
         {
             AM2305_Delay(AM2305_STROBE_DURATION_US);
             if (Bit_RESET == AM2305_DQGetValue())
             {
                 cntZero++;
-                if ((0 < cntOne) && ( AM2305_QTY_ONE_STROBE_BIT_RESET_STATE >= cntOne))
+                if ((0 < cntOne) && (AM2305_QTY_ONE_STROBE_BIT_RESET_STATE >= cntOne))
                 {
-                    data
+                    if (cntBit == 8U)
+                    {
+                        cntByte++;
+                        cntBit=0;
+                        data[cntByte] = 0;
+                    }
+                    cntBit++;
+                    cntOne=0;
+                    i++;
                 }
-                cntOne=0;
+                else if ((AM2305_QTY_MIN_ONE_STROBE_BIT_SET_STATE <= cntOne) && \
+                         (AM2305_QTY_MAX_ONE_STROBE_BIT_SET_STATE >= cntOne))
+                {
+                    if (cntBit == 8U)
+                    {
+                        cntByte++;
+                        cntBit=0;
+                        data[cntByte] = 0;
+                    }
+                    data[cntByte] |= 1 << cntBit;
+                    cntBit++;
+                    cntOne=0;
+                    i++;
+                }
+                else if (AM2305_QTY_MAX_ZERO_STROBES_BIT < cntZero)
+                {
+                    result = RESULT_NOT_OK;
+                    break;
+                }
             }
             else
             {
                 cntOne++;
                 cntZero=0;
             }
-            if (AM2305_QTY_ZERO_BITS < cntZero)
-            {
-                result = RESULT_NOT_OK;
-                break;
-            }
-            else if (cntOne)
-            {}
-
-
-            for (int cntZero = 0; cntZero < AM2305_QTY_ZERO_BITS;)
-            {
-                AM2305_Delay(AM2305_STROBE_DURATION_US);
-
-                cntZero++;
-            }
         }
-
-
-        result = RESULT_OK;
     }
     else
     {
         result = RESULT_NOT_OK;
     }
 
+    // calculate temperature and humidity
+    if (RESULT_OK == result)
+    {
+        // calculate party byte
+        uint8_t sum=0;
+        for(uint8_t i = 0; i < (AM2305_QTY_DATA_BITS/8)-1; i++)
+        {
+            sum += data[i];
+        }
+        if ( data[(AM2305_QTY_DATA_BITS/8)-1] == sum)
+        {
+            uint16_t temp = (((uint16_t)data[0])<<8) | data[1];
+            *humidity = (float)(temp)/10;
 
-
+            temp = (((uint16_t)data[3])<<8) | data[4];
+            // if temperature < 0
+            if ((temp & (1<<15)) == 1<<15)
+            {
+                *temperature = -(float)(temp)/10;
+            }
+            else
+            {
+                *temperature = (float)(temp)/10;
+            }
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+        }
+    }
 
     return result;
+
 }// end of AM2305_GetHumidityTemperature()
 
 //**************************************************************************************************
