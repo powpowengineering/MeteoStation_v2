@@ -37,6 +37,7 @@
 // Native header
 #include "W25Q_drv.h"
 
+#include "Init.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -54,10 +55,14 @@
 
 //**************************************************************************************************
 // Declarations of local (private) data types
-//**************************************************************************************************
+//*************************************************************************************************
 
-// None.
-
+// Level CS.
+typedef enum SPI_CS_LEVEL_enum
+{
+    LOW =0,
+    HIGH
+}SPI_CS_LEVEL;
 
 //**************************************************************************************************
 // Definitions of local (private) constants
@@ -65,87 +70,120 @@
 
 // W25Q128 chip commands. Standard SPI instruction.
 // Write enable
-#define W25Q_WRITE_EN               (0x6U)
+#define W25Q_CMD_WRITE_EN               (0x6U)
 // Volatile SR Write enable
-#define W25Q_SR_WRITE_EN            (0x50U)
+#define W25Q_CMD_SR_WRITE_EN            (0x50U)
 // Write disable
-#define W25Q_WRITE_DIS              (0x04U)
+#define W25Q_CMD_WRITE_DIS              (0x04U)
 // Release Power-down/ID
-#define W25Q_RELEASE_POWER_DOWN     (0xABU)
+#define W25Q_CMD_RELEASE_POWER_DOWN     (0xABU)
 // Manufacturer/Device ID
-#define W25Q_DEVICE_ID              (0x90U)
+#define W25Q_CMD_DEVICE_ID              (0x90U)
 // JEDEC ID
-#define W25Q_JEDEC_ID               (0x9FU)
+#define W25Q_CMD_JEDEC_ID               (0x9FU)
 // Read unique ID
-#define W25Q_READ_UNIQUE_ID         (0x4BU)
+#define W25Q_CMD_READ_UNIQUE_ID         (0x4BU)
 // Read data
-#define W25Q_READ_DATA              (0x03U)
+#define W25Q_CMD_READ_DATA              (0x03U)
 // Fast read
-#define W25Q_FAST_READ              (0x0BU)
+#define W25Q_CMD_FAST_READ              (0x0BU)
 // Page program
-#define W25Q_PAGE_PROGRAM           (0x02U)
+#define W25Q_CMD_PAGE_PROGRAM           (0x02U)
 // Sector erase 4 KB
-#define W25Q_SECTOR_ERASE           (0x20U)
+#define W25Q_CMD_SECTOR_ERASE           (0x20U)
 // Block erase 32 KB
-#define W25Q_BLOCK_ERASE_32         (0x52U)
+#define W25Q_CMD_BLOCK_ERASE_32         (0x52U)
 // Block erase 64 KB
-#define W25Q_BLOCK_ERASE_64         (0xD8U)
+#define W25Q_CMD_BLOCK_ERASE_64         (0xD8U)
 // Chip erase
-#define W25Q_CHIP_ERASE             (0xC7U)//0x60U
+#define W25Q_CMD_CHIP_ERASE             (0xC7U)//0x60U
 // Read status reg-1
-#define W25Q_READ_STATUS_REG_1      (0x05U)
+#define W25Q_CMD_READ_STATUS_REG_1      (0x05U)
 // Write status reg-1
-#define W25Q_WRITE_STATUS_REG_1     (0x01U)
+#define W25Q_CMD_WRITE_STATUS_REG_1     (0x01U)
 // Read status reg-2
-#define W25Q_READ_STATUS_REG_2      (0x35U)
+#define W25Q_CMD_READ_STATUS_REG_2      (0x35U)
 // Write status reg-2
-#define W25Q_WRITE_STATUS_REG_2     (0x31U)
+#define W25Q_CMD_WRITE_STATUS_REG_2     (0x31U)
 // Read status reg-3
-#define W25Q_READ_STATUS_REG_3      (0x15U)
+#define W25Q_CMD_READ_STATUS_REG_3      (0x15U)
 // Write status reg-3
-#define W25Q_WRITE_STATUS_REG_3     (0x11U)
+#define W25Q_CMD_WRITE_STATUS_REG_3     (0x11U)
 // Read SFDP reg
-#define W25Q_READ_SFDP_REG          (0x5AU)
+#define W25Q_CMD_READ_SFDP_REG          (0x5AU)
 // Erase security reg
-#define W25Q_ERASE_STY_REG          (0x44U)
+#define W25Q_CMD_ERASE_STY_REG          (0x44U)
 // Program security reg
-#define W25Q_PRM_STY_REG            (0x42U)
+#define W25Q_CMD_PRM_STY_REG            (0x42U)
 // Read security reg
-#define W25Q_READ_STY_REG           (0x48U)
+#define W25Q_CMD_READ_STY_REG           (0x48U)
 // Global block lock
-#define W25Q_GLOBAL_BLOCK_LOCK      (0x7EU)
+#define W25Q_CMD_GLOBAL_BLOCK_LOCK      (0x7EU)
 // Global block unlock
-#define W25Q_GLOBAL_BLOCK_UNLOCK    (0x98U)
+#define W25Q_CMD_GLOBAL_BLOCK_UNLOCK    (0x98U)
 // Read block Lock
-#define W25Q_READ_BLOCK_LOCK        (0x3DU)
+#define W25Q_CMD_READ_BLOCK_LOCK        (0x3DU)
 // Individual block lock
-#define W25Q_INL_BLOCK_LOCK         (0x36U)
+#define W25Q_CMD_INL_BLOCK_LOCK         (0x36U)
 // Individual block unlock
-#define W25Q_INL_BLOCK_UNLOCK       (0x36U)
+#define W25Q_CMD_INL_BLOCK_UNLOCK       (0x36U)
 // Erase/Program suspend
-#define W25Q_ERASE_PRM_SUSPEND      (0x75U)
+#define W25Q_CMD_ERASE_PRM_SUSPEND      (0x75U)
 // Erase/Program Resume
-#define W25Q_ERASE_PRM_RESUME       (0x7AU)
+#define W25Q_CMD_ERASE_PRM_RESUME       (0x7AU)
 // Power down
-#define W25Q_POWER_DOWN             (0xB9U)
+#define W25Q_CMD_POWER_DOWN             (0xB9U)
 // Enable reset
-#define W25Q_RST_EN                 (0x66U)
+#define W25Q_CMD_RST_EN                 (0x66U)
 // Reset Device
-#define W25Q_RST_DEVICE             (99U)
+#define W25Q_CMD_RST_DEVICE             (99U)
 
+
+// timeout value in US
+#define W25Q_TIMEOUT_US             (12U)
+// Quantity timeouts
+#define W25Q_QTY_TIMEOUT            (10U)
+// Status reg number
+#define W25Q_STATUS_REG1            (0)
+#define W25Q_STATUS_REG2            (1U)
+#define W25Q_STATUS_REG3            (2U)
+
+// Bit definition status reg-1
+#define W25Q_REG1_BUSY_BIT          (1<<0)
+#define W25Q_REG1_WEL_BIT           (1<<1U)
+#define W25Q_REG1_BP0_BIT           (1<<2U)
+#define W25Q_REG1_BP1_BIT           (1<<3U)
+#define W25Q_REG1_BP2_BIT           (1<<4U)
+#define W25Q_REG1_TB_BIT            (1<<5U)
+#define W25Q_REG1_SEC_BIT           (1<<6U)
+#define W25Q_REG1_SRP_BIT           (1<<7U)
+
+
+#define W25Q_SIZE_ADR_WORD_BYTES    (3U)
+#define W25Q_SIZE_CMD_WORD_BYTES    (1U)
+// Page size bytes
+#define W25Q_SIZE_PAGE_BYTES        (256U)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-// None.
+void (*pW25Q_Delay)(uint32_t us);
 
 
 //**************************************************************************************************
 // Declarations of local (private) functions
 //**************************************************************************************************
 
-// None.
+// Set CS pin level.
+static void W25Q_SPI_SetCS(SPI_CS_LEVEL csLevel);
+// Read data from SPI.
+static STD_RESULT W25Q_ReadWriteSPI(uint8_t *dataPut, const uint32_t lenPut, uint8_t *dataGet, uint32_t lenGet);
+// read status regs.
+static STD_RESULT W25Q_ReadStatusReg(const uint8_t regNumber,uint8_t *const status);
+// write spi data.
+static STD_RESULT W25Q_WriteSPI(uint8_t *data, const uint32_t len);
+
 
 
 //**************************************************************************************************
@@ -155,7 +193,7 @@
 //**************************************************************************************************
 
 //**************************************************************************************************
-// @Function      W25Q_init()
+// @Function      W25Q_Init()
 //--------------------------------------------------------------------------------------------------
 // @Description   Init SPI interface.
 //--------------------------------------------------------------------------------------------------
@@ -165,7 +203,7 @@
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-void W25Q_init(void)
+void W25Q_Init(void)
 {
     // Init GPIO
     // SCK
@@ -219,7 +257,102 @@ void W25Q_init(void)
 
     SPI_Cmd(W25Q_SPI, ENABLE);
 
-}// end of W25Q_init()
+    pW25Q_Delay = W25Q_Delay;
+}// end of W25Q_Init()
+
+
+
+//**************************************************************************************************
+// @Function      W25Q_ReadData()
+//--------------------------------------------------------------------------------------------------
+// @Description   Read W25Q Flash Data.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    adr - absolute address flash memory
+//                data - pointer data
+//                len - length data
+//**************************************************************************************************
+STD_RESULT W25Q_ReadData(const uint32_t adr,uint8_t* data, const uint32_t len)
+{
+    STD_RESULT result = RESULT_OK;
+    uint8_t status=0;
+    uint8_t dataPut[W25Q_SIZE_CMD_WORD_BYTES+W25Q_SIZE_ADR_WORD_BYTES];
+
+    //check BUSY W25Q
+    if (RESULT_OK == W25Q_ReadStatusReg(W25Q_STATUS_REG1,status))
+    {
+        if ((status & W25Q_REG1_BUSY_BIT) == 0)
+        {
+            dataPut[0] = (uint8_t)W25Q_CMD_READ_DATA;
+            dataPut[1] = (uint8_t)(adr>>2);
+            dataPut[2] = (uint8_t)(adr>>1);
+            dataPut[3] = (uint8_t)adr;
+
+            if (RESULT_NOT_OK == W25Q_ReadWriteSPI(dataPut, W25Q_SIZE_CMD_WORD_BYTES + W25Q_SIZE_ADR_WORD_BYTES, \
+                                        data, len))
+            {
+                result = RESULT_NOT_OK;
+            }
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+        }
+    }
+    else
+    {
+        result = RESULT_NOT_OK;
+    }
+
+    return result;
+
+}// end of W25Q_ReadData()
+
+
+
+//**************************************************************************************************
+// @Function      W25Q_WriteData()
+//--------------------------------------------------------------------------------------------------
+// @Description   Write W25Q Flash Data.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    adr - absolute address flash memory
+//                data - pointer data
+//                len - length data
+//**************************************************************************************************
+STD_RESULT W25Q_WriteData(const uint32_t adr,uint8_t* data, const uint32_t len)
+{
+    STD_RESULT result = RESULT_OK;
+    uint8_t cmd = 0;
+
+    // check capacity
+
+
+    // Write enable instruction
+    cmd = (uint8_t)W25Q_CMD_WRITE_EN;
+    if (RESULT_OK == W25Q_ReadWriteSPI(&cmd,W25Q_SIZE_CMD_WORD_BYTES, 0, 0))
+    {
+
+
+        for (uint32_t i=0; i < len/(uint32_t)W25Q_SIZE_PAGE_BYTES;i++)
+        // write page
+
+    }
+    else
+    {
+        result = RESULT_NOT_OK;
+    }
+
+
+    return result;
+
+}//end of W25Q_WriteData()
 
 
 
@@ -229,7 +362,231 @@ void W25Q_init(void)
 //==================================================================================================
 //**************************************************************************************************
 
-// None.
+//**************************************************************************************************
+// @Function      W25Q_ReadStatusReg()
+//--------------------------------------------------------------------------------------------------
+// @Description   Reading W25Q status reg-1 or reg-2 or reg-3.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    status - status reg-1,2,3
+//**************************************************************************************************
+static STD_RESULT W25Q_ReadStatusReg(const uint8_t regNumber,uint8_t *const status)
+{
+    STD_RESULT result = RESULT_OK;
+    uint8_t cmd=0;
+
+    switch(regNumber)
+    {
+        case W25Q_STATUS_REG1: cmd = (uint8_t)W25Q_CMD_WRITE_STATUS_REG_1;break;
+        case W25Q_STATUS_REG2: cmd = (uint8_t)W25Q_CMD_WRITE_STATUS_REG_2;break;
+        case W25Q_STATUS_REG3: cmd = (uint8_t)W25Q_CMD_WRITE_STATUS_REG_3;break;
+        default:result = RESULT_NOT_OK;
+    }
+
+    if (RESULT_OK == result)
+    {
+        if (RESULT_NOT_OK == W25Q_ReadWriteSPI(&cmd, 1, &status, 1))
+        {
+            result = RESULT_NOT_OK;
+        }
+    }
+
+    return result;
+}// end of W25Q_ReadStatusReg()
+
+
+
+//**************************************************************************************************
+// @Function      W25Q_ReadWriteSPI()
+//--------------------------------------------------------------------------------------------------
+// @Description   Read SPI data.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    data - pointer data.
+//                len - length data.
+//**************************************************************************************************
+static STD_RESULT W25Q_ReadWriteSPI(uint8_t *dataPut, const uint32_t lenPut, uint8_t *dataGet, uint32_t lenGet)
+{
+    STD_RESULT result = RESULT_OK;
+    uint32_t cntTimeout=0;
+
+    // Set CS Low
+    W25Q_SPI_SetCS(LOW);
+
+    for (int i=0;i<lenPut+lenGet;i++)
+    {
+        // wait TXE flag
+        cntTimeout=0;
+        while(1)
+        {
+            if (RESET == SPI_I2S_GetFlagStatus(W25Q_SPI,SPI_I2S_FLAG_TXE))
+            {
+                break;
+            }
+            if (cntTimeout > W25Q_QTY_TIMEOUT)
+            {
+                result = RESULT_NOT_OK;
+                break;
+            }
+            pW25Q_Delay(W25Q_TIMEOUT_US);
+            cntTimeout++;
+        }
+        if (RESULT_NOT_OK == result)
+        {
+            break;
+        }
+        if (i < lenPut)
+        {
+            SPI_I2S_SendData(W25Q_SPI, *dataPut);
+            dataPut++;
+        }
+        else
+        {
+            // Send byte(garbage data)
+            SPI_I2S_SendData(W25Q_SPI, 0xff);
+        }
+
+        // wait RXNE flag
+        cntTimeout=0;
+        while(1)
+        {
+            if (SET == SPI_I2S_GetFlagStatus(W25Q_SPI,SPI_I2S_FLAG_RXNE))
+            {
+                break;
+            }
+            if (cntTimeout > W25Q_QTY_TIMEOUT)
+            {
+                result = RESULT_NOT_OK;
+                break;
+            }
+            pW25Q_Delay(W25Q_TIMEOUT_US);
+            cntTimeout++;
+        }
+        if (RESULT_NOT_OK == result)
+        {
+            break;
+        }
+        // read byte
+        if (i >= lenPut)
+        {
+            if (dataGet != 0)
+            {
+                *dataGet = SPI_I2S_ReceiveData(W25Q_SPI);
+                dataGet++;
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+            }
+        }
+        if (RESULT_NOT_OK == result)
+        {
+            break;
+        }
+    }
+
+    // wait BUSY SPI
+    cntTimeout=0;
+    while(1)
+    {
+        if (RESET == SPI_I2S_GetFlagStatus(W25Q_SPI,SPI_I2S_FLAG_BSY))
+        {
+            break;
+        }
+        if (cntTimeout > W25Q_QTY_TIMEOUT)
+        {
+            result = RESULT_NOT_OK;
+            break;
+        }
+        pW25Q_Delay(W25Q_TIMEOUT_US);
+        cntTimeout++;
+    }
+
+    // Set CS High
+    W25Q_SPI_SetCS(HIGH);
+
+    return result;
+}// end of W25Q_ReadWriteSPI()
+
+
+
+//**************************************************************************************************
+// @Function      W25Q_WriteSPI()
+//--------------------------------------------------------------------------------------------------
+// @Description   Write SPI data.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    data - pointer data.
+//                len - length data.
+//**************************************************************************************************
+static STD_RESULT W25Q_WriteSPI(uint8_t *data, const uint32_t len)
+{
+    STD_RESULT result = RESULT_OK;
+    uint32_t cntTimeout=0;
+
+    for (int i=0;i<len;i++)
+    {
+        // wait TXE bit
+        cntTimeout=0;
+        while(1)
+        {
+            if (SET == SPI_I2S_GetFlagStatus(W25Q_SPI,SPI_I2S_FLAG_TXE))
+            {
+                break;
+            }
+            if (cntTimeout > W25Q_QTY_TIMEOUT)
+            {
+                result = RESULT_NOT_OK;
+                break;
+            }
+            pW25Q_Delay(W25Q_TIMEOUT_US);
+            cntTimeout++;
+        }
+        if (RESULT_NOT_OK == result)
+        {
+            break;
+        }
+        // Send byte
+        SPI_I2S_SendData(W25Q_SPI, &data);
+        data++;
+    }
+
+    return result;
+}// end of W25Q_WriteSPI()
+
+
+
+//**************************************************************************************************
+// @Function      W25Q_SPI_SetCS()
+//--------------------------------------------------------------------------------------------------
+// @Description   Setting CS level.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    csLevel - level CS. LOW or HIGH.
+//**************************************************************************************************
+static void W25Q_SPI_SetCS(SPI_CS_LEVEL csLevel)
+{
+    if (LOW == csLevel)
+    {
+        W25Q_GPIO_PORT_CS->BSRRH = W25Q_PIN_CS;
+    }
+    else
+    {
+        W25Q_GPIO_PORT_CS->BSRRL = W25Q_PIN_CS;
+    }
+}// end of W25Q_SPI_SetCS()
 
 
 //****************************************** end of file *******************************************

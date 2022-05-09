@@ -45,6 +45,7 @@
 // Native header
 #include "OneWire.h"
 
+#include "Init.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters

@@ -16,7 +16,6 @@
 #ifndef ONE_WIRE_CFG_H
 #define ONE_WIRE_CFG_H
 
-#include "Init.h"
 
 //**************************************************************************************************
 // Definitions of global (public) constants

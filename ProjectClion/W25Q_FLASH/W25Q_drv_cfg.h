@@ -58,7 +58,20 @@
 #define W25Q_MISO_PinSource         (GPIO_PinSource0)
 // Specify GPIO_AF
 #define W25Q_GPIO_AF                (GPIO_AF_SPI1)
+// User specify pointer delay function
+#define W25Q_Delay                   INIT_Delay
 
+// Capacity W25Q
+// Total memory capacity
+#define W25Q_CAPACITY_ALL_MEMORY_BYTES    (16777216UL)// (134217728UL) bits
+// Quantity of blocks
+#define W25Q_QTY_BLOCKS                   (256UL)
+// Capacity of block
+#define W25Q_CAPACITY_BLOCK               (65536UL)
+// Quantity sectors
+#define W25Q_QTY_SECTORS                  (16*W25Q_QTY_BLOCKS)
+// Capacity sector
+#define W25Q_CAPACITY_SECTOR_BYTES        (4096UL)
 
 #endif // #ifndef W25Q_CFG_H
 
