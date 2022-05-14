@@ -41,8 +41,6 @@
 // Native header
 #include "am2305_drv.h"
 
-#include "Init.h"
-
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -76,16 +74,30 @@
 #define AM2305_TIME_T_BE_US                (1000U)
 // Host the start signal down time
 #define AM2305_TIME_T_GO_US                (30U)
+// Response to low time min
+#define AM2305_TIME_T_REL_MIN_US           (75U)
 // Response to low time
 #define AM2305_TIME_T_REL_US               (80U)
+// Response to low time max
+#define AM2305_TIME_T_REL_MAX_US           (85U)
+// In response to high time min
+#define AM2305_TIME_T_REH_MIN_US           (75U)
 // In response to high time
 #define AM2305_TIME_T_REH_US               (80U)
+// In response to high time max
+#define AM2305_TIME_T_REH_MAX_US           (85U)
 // Signal "0", "1" low time
 #define AM2305_TIME_T_LOW_US               (50U)
 // Signal "0", "1" low time max
 #define AM2305_TIME_T_LOW_MAX_US           (55U)
+// Signal "0", "1" low time min
+#define AM2305_TIME_T_LOW_MIN_US           (48U)
 // Signal "0" high time
 #define AM2305_TIME_T_H0_US                (26U)
+// Signal "0" high time MIN
+#define AM2305_TIME_T_H0_MIN_US            (22U)
+// Signal "0" high time MAX
+#define AM2305_TIME_T_H0_MAX_US            (30U)
 // Signal "1" high time
 #define AM2305_TIME_T_H1_US                (70U)
 // Signal "1" high time min
@@ -108,6 +120,11 @@
 #define AM2305_QTY_MAX_ONE_STROBE_BIT_SET_STATE     (AM2305_TIME_T_H1_MAX_US/AM2305_STROBE_DURATION_US)
 // quantity MAX zero strobes in data.
 #define AM2305_QTY_MAX_ZERO_STROBES_BIT         (AM2305_TIME_T_LOW_MAX_US/AM2305_STROBE_DURATION_US)
+// Quantity measurements
+#define AM2305_QTY_MEAS             (100U)
+// General time measure
+#define AM2305_TIME_MEAS_US         (6000U)
+
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -127,6 +144,10 @@ static void AM2305_DQLow(void);
 static void AM2305_DQInput(void);
 // Get DQ value
 static BitAction AM2305_DQGetValue(void);
+// Delay function
+static void AM2305_Delay(uint32_t microseconds);
+// capture time.
+static STD_RESULT AM2305_CaptureTime(uint32_t *const microseconds);
 
 
 //**************************************************************************************************
@@ -151,16 +172,33 @@ void AM2305_Init(void)
 {
     // gpio init
     GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.GPIO_Pin  = (1<<AM2305_PIN);
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
+    GPIO_InitStruct.GPIO_Pin  = 1<<AM2305_PIN;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(AM2305_GPIO_PORT, &GPIO_InitStruct);
+    GPIO_PinAFConfig(AM2305_GPIO_PORT, AM2305_PinSource, AM2305_GPIO_AF);
+
     // High DQ line
     AM2305_DQInput();
-    // Init AM2305 delay function.
-    pAM2305_Delay = AM2305_Delay;
+
+    // Init AM2305_TIMER
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
+    TIM_TimeBaseInitStruct.TIM_Period = AM2305_TIMER_PERIOD;
+    TIM_TimeBaseInitStruct.TIM_Prescaler = AM2305_TIMER_PSC;
+    TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
+    TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInit(AM2305_TIMER, &TIM_TimeBaseInitStruct);
+
+    TIM_ICInitTypeDef TIM_ICInitStruct;
+    TIM_ICInitStruct.TIM_Channel = TIM_Channel_2;
+    TIM_ICInitStruct.TIM_ICPolarity = TIM_ICPolarity_BothEdge;
+    TIM_ICInitStruct.TIM_ICSelection = TIM_ICSelection_DirectTI;
+    TIM_ICInitStruct.TIM_ICPrescaler = TIM_ICPSC_DIV1;
+    TIM_ICInitStruct.TIM_ICFilter = 0x00;
+    TIM_ICInit(AM2305_TIMER, &TIM_ICInitStruct);
+
 }// end of AM2305_Init();
 
 
@@ -183,6 +221,12 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
     uint8_t data[AM2305_QTY_DATA_BITS/8];
     uint8_t cntBit=0;
     uint8_t cntByte=0;
+    uint32_t time=0;
+    uint32_t timesOld=0;
+    uint32_t cnt=0;
+    uint16_t measurements[AM2305_QTY_MEAS];
+    uint8_t status=0;
+    uint8_t bit=0;
 
     // Getting response from sensor
     AM2305_DQLow();
@@ -190,6 +234,73 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
     AM2305_Delay(AM2305_TIME_T_BE_US);
     // High DQ
     AM2305_DQInput();
+    AM2305_TIMER->SR = (uint16_t)~(TIM_FLAG_CC2|TIM_FLAG_Update);
+    AM2305_TIMER->CNT = 0;
+
+    while(AM2305_TIMER->CNT < AM2305_TIME_MEAS_US)
+    {
+        if (RESULT_OK == AM2305_CaptureTime(&time))
+        {
+            AM2305_DQGetValue();
+            measurements[cnt] = time - timesOld;
+            timesOld = time;
+            if (cnt == (AM2305_QTY_MEAS-1))
+                break;
+            cnt++;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    for(int i = 0; i<AM2305_QTY_MEAS;i++)
+    {
+        switch(status)
+        {
+            case 0 :    if ((measurements[i] >= AM2305_TIME_T_REL_MIN_US) && \
+                            (measurements[i] <= AM2305_TIME_T_REL_MAX_US))
+                        {
+                            status = 1;
+                        }
+                        break;
+            case 1 :    if ((measurements[i] >= AM2305_TIME_T_REH_MIN_US) && \
+                            (measurements[i] <= AM2305_TIME_T_REH_MAX_US))
+                        {
+                            status = 2;
+                        }
+                        break;
+            case 2 :    if ((measurements[i] >= AM2305_TIME_T_LOW_MIN_US) && \
+                            (measurements[i] <= AM2305_TIME_T_LOW_MAX_US))
+                        {
+                            status = 3;
+                        }
+                        break;
+            case 3 :    if ((measurements[i] >= AM2305_TIME_T_H0_MIN_US) && \
+                            (measurements[i] <= AM2305_TIME_T_H0_MAX_US))
+                        {
+                            bit = 0;
+                        }
+                        else if ((measurements[i] >= AM2305_TIME_T_H1_MIN_US) && \
+                                 (measurements[i] <= AM2305_TIME_T_H1_MAX_US))
+                        {
+                            bit = 1;
+                        }
+                        status = 2;
+                        if (cntBit == 8U)
+                        {
+                            cntByte++;
+                            cntBit=0;
+                            data[cntByte] = 0;
+                        }
+                        data[cntByte] |= bit << cntBit;
+                        cntBit++;
+                        break;
+            default:break;
+        }
+    }
+
+
     // Bus master has released time
     AM2305_Delay(AM2305_TIME_T_GO_US);
     // Master sample time
@@ -306,6 +417,8 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
 //**************************************************************************************************
 static void AM2305_DQLow(void)
 {
+    // Clear MODERx
+    AM2305_GPIO_PORT->MODER &= ~(GPIO_MODER_MODER0 << (AM2305_PIN * 2));
     // Config DQ as OUT
     AM2305_GPIO_PORT->MODER |= GPIO_MODER_MODER0_0 << (AM2305_PIN*2);
     // set DQ low
@@ -327,8 +440,10 @@ static void AM2305_DQLow(void)
 //**************************************************************************************************
 static void AM2305_DQInput(void)
 {
-    // Config DQ as INPUT
+    // Config DQ as Input
     AM2305_GPIO_PORT->MODER &= ~(GPIO_MODER_MODER0 << (AM2305_PIN * 2));
+    // Config DQ as AF
+    AM2305_GPIO_PORT->MODER |= GPIO_MODER_MODER0_1 << (AM2305_PIN * 2);
 }// end of AM2305_DQInput()
 
 
@@ -346,7 +461,8 @@ static void AM2305_DQInput(void)
 static BitAction AM2305_DQGetValue(void)
 {
     uint8_t result = 0;
-
+    //set PA1
+    *(uint32_t*)0x40020018 = 1<<1;
     // Get value
     if ((AM2305_GPIO_PORT->IDR & (1<<AM2305_PIN)) != (uint32_t)Bit_RESET)
     {
@@ -356,8 +472,102 @@ static BitAction AM2305_DQGetValue(void)
     {
         result = (uint8_t)Bit_RESET;
     }
+    //reset PA1
+    *(uint32_t*)0x40020018 = ((1<<1)<<16);
     return result;
 }// end of AM2305_DQGetValue()
 
 
+
+//**************************************************************************************************
+// @Function      AM2305_Delay()
+//--------------------------------------------------------------------------------------------------
+// @Description   Delay function.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void AM2305_Delay(uint32_t microseconds)
+{
+    uint32_t nPeriods = 0;
+
+    if (microseconds > AM2305_TIMER_PERIOD)
+    {
+        nPeriods = microseconds / (uint32_t)AM2305_TIMER_PERIOD;
+        // Set auto-reload register
+        AM2305_TIMER->ARR = AM2305_TIMER_PERIOD;
+
+        for (int i = 0; i < nPeriods; i++)
+        {
+            /* Disable the TIM Counter */
+            AM2305_TIMER->CR1 &= (uint16_t) (~((uint16_t) TIM_CR1_CEN));
+            /* Clear the flags */
+            AM2305_TIMER->SR = (uint16_t) ~TIM_FLAG_Update;
+            /* Clear counter */
+            AM2305_TIMER->CNT = 0;
+            /* Enable the TIM Counter */
+            AM2305_TIMER->CR1 |= TIM_CR1_CEN;
+            // wait
+            while ((AM2305_TIMER->SR & TIM_FLAG_Update) != TIM_FLAG_Update);
+        }
+    }
+
+    /* Disable the TIM Counter */
+    AM2305_TIMER->CR1 &= (uint16_t) (~((uint16_t) TIM_CR1_CEN));
+    /* Clear the flags */
+    AM2305_TIMER->SR = (uint16_t) ~TIM_FLAG_Update;
+    // Set auto-reload register
+    AM2305_TIMER->ARR = microseconds - (nPeriods * AM2305_TIMER_PERIOD);
+    /* Clear counter */
+    AM2305_TIMER->CNT = 0;
+    /* Enable the TIM Counter */
+    AM2305_TIMER->CR1 |= TIM_CR1_CEN;
+    // wait
+    while ((AM2305_TIMER->SR & TIM_FLAG_Update) != TIM_FLAG_Update);
+}// end of AM2305_Delay()
+
+
+
+//**************************************************************************************************
+// @Function      AM2305_CaptureTime()
+//--------------------------------------------------------------------------------------------------
+// @Description   Capture time.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static STD_RESULT AM2305_CaptureTime(uint32_t *const microseconds)
+{
+    STD_RESULT result = RESULT_NOT_OK;
+
+    AM2305_TIMER->ARR = AM2305_TIMER_PERIOD;
+    uint32_t flag_CC2=0;
+    uint32_t flag_Update=0;
+
+    while((RESET == flag_CC2) && (RESET == flag_Update))
+    {
+        flag_CC2 = TIM_GetFlagStatus(AM2305_TIMER, TIM_FLAG_CC2);
+        flag_Update = TIM_GetFlagStatus(AM2305_TIMER, TIM_FLAG_Update);
+    }
+    //AM2305_TIMER->CNT = 0;
+    AM2305_TIMER->SR = (uint16_t)~(TIM_FLAG_CC2|TIM_FLAG_Update);
+    if (SET == flag_CC2)
+    {
+        *microseconds = AM2305_TIMER->CCR2;
+        result = RESULT_OK;
+    }
+    else if (SET == flag_Update)
+    {
+        result = RESULT_NOT_OK;
+    }
+
+    return result;
+
+}// end of AM2305_CaptureTime
 //****************************************** end of file *******************************************

@@ -149,19 +149,27 @@ void Init(void)
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+    RCC_APB2PeriphClockCmd(    RCC_APB2Periph_TIM9, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);
-    RCC_MCOConfig(RCC_MCOSource_SYSCLK,RCC_MCODiv_16);
 
 
     /*GPIO Init*/
+    // test pin
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_8;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
-    GPIO_PinAFConfig(GPIOA, GPIO_Pin_8, GPIO_AF_MCO);
+    // test pin
+    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_1;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_Init(GPIOA, &GPIO_InitStruct);
+
 
     /*USART1 TX*/
     GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_9;

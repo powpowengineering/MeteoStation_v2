@@ -31,7 +31,14 @@
 // Declarations of global (public) data types
 //**************************************************************************************************
 
-// None.
+// Type memory blocks
+typedef enum W25Q_TYPE_BLOCKS_enum
+{
+    W25Q_BLOCK_MEMORY_4KB = 0,
+    W25Q_BLOCK_MEMORY_32KB,
+    W25Q_BLOCK_MEMORY_64KB,
+    W25Q_BLOCK_MEMORY_ALL
+}W25Q_TYPE_BLOCKS;
 
 
 //**************************************************************************************************
@@ -57,15 +64,9 @@ extern void W25Q_Init(void);
 // Read data
 extern STD_RESULT W25Q_ReadData(const uint32_t adr,uint8_t* data, const uint32_t len);
 // Write data
-extern STD_RESULT W25Q_WriteData(const uint32_t adr,uint8_t* data, const uint32_t len);
-// Erase 4 KB
-extern STD_RESULT W25Q_Erase_4KB(const uint32_t adr);
-// Erase 32 KB
-extern STD_RESULT W25Q_Erase_32KB(const uint32_t adr);
-// Erase 64 KB
-extern STD_RESULT W25Q_Erase_64KB(const uint32_t adr);
-// Erase chip
-extern STD_RESULT W25Q_Erase_All(void);
+extern STD_RESULT W25Q_WriteData(uint32_t adr,uint8_t* data, uint32_t len);
+// Erase block 4KB,32KB,64KB or all memory.
+extern STD_RESULT W25Q_EraseBlock(const uint32_t adr, W25Q_TYPE_BLOCKS typeBlock);
 
 #endif // #ifndef W25Q_H
 

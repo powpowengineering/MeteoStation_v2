@@ -32,15 +32,23 @@
 // Valid values: ON / OFF
 #define MODULE_INTERNAL_DIAGNOSTICS             (OFF)
 
-// User specify port GPIOx
-// Valid value: GPIOA,GPIOB,GPIOC
-#define AM2305_GPIO_PORT                     (GPIOB)
-// User specify pin
-// Valid value: [0,15]
-#define AM2305_PIN                           (12U)
+// The user specify port GPIOx with Tim channel
+#define AM2305_GPIO_PORT                     GPIOB
+// User specify pin with Tim channel
+#define AM2305_PIN                           (14U)
+// Specify PinSource
+#define AM2305_PinSource                     GPIO_PinSource14
+// Specify GPIO_AF
+#define AM2305_GPIO_AF                       GPIO_AF_TIM9
 
-// User specify pointer delay function
-#define AM2305_Delay                         INIT_Delay
+
+// The user specifies a timer with a capture function
+#define AM2305_TIMER                               TIM9
+// User specify prescaler
+#define AM2305_TIMER_PSC                          (31U)
+// User specify period for one wire delay timer
+// Valid value: [0,0xFFFF]
+#define AM2305_TIMER_PERIOD                       (0xFFFFU)
 
 
 #endif // #ifndef AM2305_CFG_H

@@ -369,45 +369,20 @@ STD_RESULT ONE_WIRE_writeByte(uint8_t nCh, uint8_t byteVal)
 
     uint8_t temp = 0;
 
-    if (ONE_WIRE_CH0 == nCh)
+    for(int i=0;i<8;i++)
     {
-        for(int i=0;i<8;i++)
+        temp = byteVal >> i;
+        temp &= 0x01;
+        if (RESULT_OK == ONE_WIRE_writeBit(nCh,temp))
         {
-            temp = byteVal >> i;
-            temp &= 0x01;
-            if (RESULT_OK == ONE_WIRE_writeBit(nCh,temp))
-            {
-                // wait for rest of timeslot
-                ONE_WIRE_Delay(ONE_WIRE_REST_TIME_SLOT_US);
-            }
-            else
-            {
-                result = RESULT_NOT_OK;
-                break;
-            }
+            // wait for rest of timeslot
+            ONE_WIRE_Delay(ONE_WIRE_REST_TIME_SLOT_US);
         }
-    }
-    else if (ONE_WIRE_CH1 == nCh)
-    {
-        for(int i=0;i<8;i++)
+        else
         {
-            temp = byteVal >> i;
-            temp &= 0x01;
-            if (RESULT_OK == ONE_WIRE_writeBit(nCh,temp))
-            {
-                // wait for rest of timeslot
-                ONE_WIRE_Delay(ONE_WIRE_REST_TIME_SLOT_US);
-            }
-            else
-            {
-                result = RESULT_NOT_OK;
-                break;
-            }
+            result = RESULT_NOT_OK;
+            break;
         }
-    }
-    else
-    {
-        result = RESULT_NOT_OK;
     }
 
     return result;
@@ -436,17 +411,20 @@ STD_RESULT ONE_WIRE_writeByte(uint8_t nCh, uint8_t byteVal)
 // @Parameters    None.
 //**************************************************************************************************
 static void ONE_WIRE_GpioInit(void)
-{    GPIO_InitTypeDef GPIO_InitStruct;
+{
+    GPIO_InitTypeDef GPIO_InitStruct;
+#if (ONE_WIRE_CH0_EN == ON)
     GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN_CH0);
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
-
+#endif
+#if (ONE_WIRE_CH1_EN == ON)
     GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN_CH1);
     GPIO_Init(ONE_WIRE_GPIO_PORT_CH1, &GPIO_InitStruct);
-
+#endif
 
 }// end of ONE_WIRE_GpioInit()
 
@@ -467,6 +445,7 @@ static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh)
 {
     STD_RESULT result = RESULT_NOT_OK;
 
+#if (ONE_WIRE_CH0_EN == ON)
     if (ONE_WIRE_CH0 == nCh)
     {
         // Config DQ as OUT
@@ -475,7 +454,9 @@ static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh)
         ONE_WIRE_GPIO_PORT_CH0->BSRRH = 1U << ONE_WIRE_PIN_CH0;
         result = RESULT_OK;
     }
-    else if (ONE_WIRE_CH1 == nCh)
+#endif
+#if (ONE_WIRE_CH1_EN == ON)
+     if (ONE_WIRE_CH1 == nCh)
     {
         // Config DQ as OUT
         ONE_WIRE_GPIO_PORT_CH1->MODER |= GPIO_MODER_MODER0_0 << (ONE_WIRE_PIN_CH1*2);
@@ -483,6 +464,7 @@ static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh)
         ONE_WIRE_GPIO_PORT_CH1->BSRRH = 1U << ONE_WIRE_PIN_CH1;
         result = RESULT_OK;
     }
+#endif
 
     return result;
 }// end of ONE_WIRE_DQLow()
@@ -504,18 +486,22 @@ static STD_RESULT ONE_WIRE_DQInput(uint8_t nCh)
 {
     STD_RESULT result = RESULT_NOT_OK;
 
+#if (ONE_WIRE_CH0_EN == ON)
     if (ONE_WIRE_CH0 == nCh)
     {
         // Config DQ as INPUT
         ONE_WIRE_GPIO_PORT_CH0->MODER &= ~(GPIO_MODER_MODER0 << (ONE_WIRE_PIN_CH0 * 2));
         result = RESULT_OK;
     }
-    else if (ONE_WIRE_CH1 == nCh)
+#endif
+#if (ONE_WIRE_CH1_EN == ON)
+    if (ONE_WIRE_CH1 == nCh)
     {
         // Config DQ as INPUT
         ONE_WIRE_GPIO_PORT_CH1->MODER &= ~(GPIO_MODER_MODER0 << (ONE_WIRE_PIN_CH1 * 2));
         result = RESULT_OK;
     }
+#endif
 
     return result;
 }// end of ONE_WIRE_DQInput()
@@ -537,6 +523,7 @@ static STD_RESULT ONE_WIRE_DQGetValue(uint8_t nCh, uint8_t *const bitStatus)
 {
     STD_RESULT result = RESULT_NOT_OK;
 
+#if (ONE_WIRE_CH0_EN == ON)
     if (ONE_WIRE_CH0 == nCh)
     {
         // Get value
@@ -550,7 +537,9 @@ static STD_RESULT ONE_WIRE_DQGetValue(uint8_t nCh, uint8_t *const bitStatus)
         }
         result = RESULT_OK;
     }
-    else if (ONE_WIRE_CH1 == nCh)
+#endif
+#if (ONE_WIRE_CH1_EN == ON)
+    if (ONE_WIRE_CH1 == nCh)
     {
         // Get value
         if ((ONE_WIRE_GPIO_PORT_CH1->IDR & (1<<ONE_WIRE_PIN_CH1)) != (uint32_t)Bit_RESET)
@@ -563,7 +552,7 @@ static STD_RESULT ONE_WIRE_DQGetValue(uint8_t nCh, uint8_t *const bitStatus)
         }
         result = RESULT_OK;
     }
-
+#endif
     return result;
 }// end of ONE_WIRE_DQGetValue()
 

@@ -64,6 +64,7 @@ typedef enum SPI_CS_LEVEL_enum
     HIGH
 }SPI_CS_LEVEL;
 
+
 //**************************************************************************************************
 // Definitions of local (private) constants
 //**************************************************************************************************
@@ -158,11 +159,17 @@ typedef enum SPI_CS_LEVEL_enum
 #define W25Q_REG1_SEC_BIT           (1<<6U)
 #define W25Q_REG1_SRP_BIT           (1<<7U)
 
-
 #define W25Q_SIZE_ADR_WORD_BYTES    (3U)
 #define W25Q_SIZE_CMD_WORD_BYTES    (1U)
 // Page size bytes
 #define W25Q_SIZE_PAGE_BYTES        (256U)
+
+// Timings
+#define W25Q_PAGE_PRM_TIME_US       (3000UL)
+#define W25Q_4KB_ER_TIME_US         (400000UL)
+#define W25Q_32KB_ER_TIME_US        (1600000UL)
+#define W25Q_64KB_ER_TIME_US        (2000000UL)
+#define W25Q_CHIP_ER_TIME_US        (200000000UL)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -326,33 +333,180 @@ STD_RESULT W25Q_ReadData(const uint32_t adr,uint8_t* data, const uint32_t len)
 //                data - pointer data
 //                len - length data
 //**************************************************************************************************
-STD_RESULT W25Q_WriteData(const uint32_t adr,uint8_t* data, const uint32_t len)
+STD_RESULT W25Q_WriteData(uint32_t adr,uint8_t* data, uint32_t len)
 {
     STD_RESULT result = RESULT_OK;
     uint8_t cmd = 0;
+    uint32_t len_write=0;
+    uint8_t status=0;
+    uint32_t timeoutCnt=0;
 
     // check capacity
-
-
-    // Write enable instruction
-    cmd = (uint8_t)W25Q_CMD_WRITE_EN;
-    if (RESULT_OK == W25Q_ReadWriteSPI(&cmd,W25Q_SIZE_CMD_WORD_BYTES, 0, 0))
+    if((adr + len) < W25Q_CAPACITY_ALL_MEMORY_BYTES)
     {
-
-
-        for (uint32_t i=0; i < len/(uint32_t)W25Q_SIZE_PAGE_BYTES;i++)
-        // write page
-
+        while(len != 0)
+        {
+            //check BUSY W25Q
+            cmd = (uint8_t) W25Q_CMD_READ_STATUS_REG_1;
+            W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
+            timeoutCnt = 2;
+            while(((status & W25Q_REG1_BUSY_BIT) == W25Q_REG1_BUSY_BIT) && (timeoutCnt!=0))
+            {
+                pW25Q_Delay(W25Q_PAGE_PRM_TIME_US+W25Q_PAGE_PRM_TIME_US/10);
+                W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
+                timeoutCnt--;
+            }
+            if ((status & W25Q_REG1_BUSY_BIT) == W25Q_REG1_BUSY_BIT)
+            {
+                result = RESULT_NOT_OK;
+                break;
+            }
+            // Write enable instruction
+            cmd = (uint8_t) W25Q_CMD_WRITE_EN;
+            if (RESULT_OK == W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, 0, 0))
+            {
+                cmd = (uint8_t) W25Q_CMD_PAGE_PROGRAM;
+                len_write = W25Q_SIZE_PAGE_BYTES - (adr & 0xff);
+                if (len >= len_write)
+                {
+                    if (RESULT_OK == W25Q_ReadWriteSPI(&cmd,
+                                                   W25Q_SIZE_CMD_WORD_BYTES + W25Q_SIZE_ADR_WORD_BYTES,
+                                                   data, len_write))
+                    {
+                        adr += len_write;
+                        len -= len_write;
+                    }
+                    else
+                    {
+                        result = RESULT_NOT_OK;
+                        break;
+                    }
+                }
+                else
+                {
+                    if (RESULT_OK == W25Q_ReadWriteSPI(&cmd,
+                                                       W25Q_SIZE_CMD_WORD_BYTES + W25Q_SIZE_ADR_WORD_BYTES,
+                                                       data, len))
+                    {
+                        len=0;
+                    }
+                    else
+                    {
+                        result = RESULT_NOT_OK;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+                break;
+            }
+        }
     }
     else
     {
         result = RESULT_NOT_OK;
     }
 
-
     return result;
 
 }//end of W25Q_WriteData()
+
+
+//**************************************************************************************************
+// @Function      W25Q_EraseBlock()
+//--------------------------------------------------------------------------------------------------
+// @Description   Erase block 4KB,32KB,64KB or all memory.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    adr - absolute address flash memory.
+//                typeBlock - W25Q_BLOCK_MEMORY_4KB,W25Q_BLOCK_MEMORY_32KB,W25Q_BLOCK_MEMORY_64KB,
+//                            W25Q_BLOCK_MEMORY_ALL
+//**************************************************************************************************
+STD_RESULT W25Q_EraseBlock(const uint32_t adr, W25Q_TYPE_BLOCKS typeBlock)
+{
+    STD_RESULT result = RESULT_OK;
+    uint8_t cmd = 0;
+    uint8_t status=0;
+    uint32_t timeoutCnt=0;
+    uint8_t dataPut[W25Q_SIZE_CMD_WORD_BYTES+W25Q_SIZE_ADR_WORD_BYTES];
+
+    // check adr
+    if(adr < W25Q_CAPACITY_ALL_MEMORY_BYTES)
+    {
+        //check BUSY W25Q
+        cmd = (uint8_t) W25Q_CMD_READ_STATUS_REG_1;
+        W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
+        if ((status & W25Q_REG1_BUSY_BIT) == 0)
+        {
+            // Write enable instruction
+            cmd = (uint8_t) W25Q_CMD_WRITE_EN;
+            if (RESULT_OK == W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, 0, 0))
+            {
+                // erase BLOCK
+                switch(typeBlock)
+                {
+                    case W25Q_BLOCK_MEMORY_4KB: cmd = (uint8_t)W25Q_CMD_SECTOR_ERASE;break;
+                    case W25Q_BLOCK_MEMORY_32KB: cmd = (uint8_t)W25Q_CMD_BLOCK_ERASE_32;break;
+                    case W25Q_BLOCK_MEMORY_64KB: cmd = (uint8_t)W25Q_CMD_BLOCK_ERASE_64;break;
+                    case W25Q_BLOCK_MEMORY_ALL: cmd = (uint8_t)W25Q_CMD_CHIP_ERASE;break;
+                    default:cmd = (uint8_t)W25Q_CMD_SECTOR_ERASE;
+                }
+                dataPut[0] = cmd;
+                dataPut[1] = (uint8_t)(adr>>2);
+                dataPut[2] = (uint8_t)(adr>>1);
+                dataPut[3] = (uint8_t)adr;
+
+                if (RESULT_OK == W25Q_ReadWriteSPI(dataPut, W25Q_SIZE_CMD_WORD_BYTES+W25Q_SIZE_ADR_WORD_BYTES,
+                                                   0, 0))
+                {
+                    // wait for erasure
+                    // check BUSY W25Q
+                    cmd = (uint8_t) W25Q_CMD_READ_STATUS_REG_1;
+                    W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
+                    timeoutCnt = 2;
+                    while(((status & W25Q_REG1_BUSY_BIT) == W25Q_REG1_BUSY_BIT) && (timeoutCnt!=0))
+                    {
+                        pW25Q_Delay(W25Q_4KB_ER_TIME_US+W25Q_4KB_ER_TIME_US/10);
+                        W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
+                        timeoutCnt--;
+                    }
+                    if ((status & W25Q_REG1_BUSY_BIT) == 0)
+                    {
+                        result = RESULT_OK;
+                    }
+                    else
+                    {
+                        result = RESULT_NOT_OK;
+                    }
+                }
+                else
+                {
+                    result = RESULT_NOT_OK;
+                }
+            }
+            else
+            {
+                result = RESULT_NOT_OK;
+            }
+        }
+        else
+        {
+            result = RESULT_NOT_OK;
+        }
+    }
+    else
+    {
+        result = RESULT_NOT_OK;
+    }
+
+    return result;
+
+}// end of W25Q_EraseBlock()
 
 
 
