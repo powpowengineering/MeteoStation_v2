@@ -62,7 +62,17 @@
 // Declarations of local (private) data types
 //**************************************************************************************************
 
-// None.
+typedef enum AM2305_SIGNAL_STATUS_enum
+{
+    AM2305_SIGNAL_STATUS_START=0,
+    AM2305_SIGNAL_STATUS_GO,
+    AM2305_SIGNAL_STATUS_RESPONSE_LOW,
+    AM2305_SIGNAL_STATUS_RESPONSE_HIGH,
+    AM2305_SIGNAL_STATUS_SIGNAL_0_1_LOW,
+    AM2305_SIGNAL_STATUS_SIGNAL_0_HIGH,
+    AM2305_SIGNAL_STATUS_SIGNAL_1_HIGH,
+    AM2305_SIGNAL_STATUS_END
+}AM2305_SIGNAL_STATUS;
 
 
 //**************************************************************************************************
@@ -218,6 +228,7 @@ void AM2305_Init(void)
 STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temperature)
 {
     STD_RESULT result = RESULT_OK;
+    AM2305_SIGNAL_STATUS AM2305_SignalStatus = AM2305_SIGNAL_STATUS_RESPONSE_LOW;
     uint8_t data[AM2305_QTY_DATA_BITS/8];
     uint8_t cntBit=0;
     uint8_t cntByte=0;
@@ -225,10 +236,11 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
     uint32_t timesOld=0;
     uint32_t cnt=0;
     uint16_t measurements[AM2305_QTY_MEAS];
-    uint8_t status=0;
     uint8_t bit=0;
 
-    // Getting response from sensor
+
+    // Start communicate. Getting response from sensor
+    // Start signal
     AM2305_DQLow();
     // Host the start signal down time
     AM2305_Delay(AM2305_TIME_T_BE_US);
@@ -239,9 +251,10 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
 
     while(AM2305_TIMER->CNT < AM2305_TIME_MEAS_US)
     {
-        if (RESULT_OK == AM2305_CaptureTime(&time))
+        result = AM2305_CaptureTime(&time);
+        if (RESULT_OK == result)
         {
-            AM2305_DQGetValue();
+            //AM2305_DQGetValue();
             measurements[cnt] = time - timesOld;
             timesOld = time;
             if (cnt == (AM2305_QTY_MEAS-1))
@@ -253,115 +266,75 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
             break;
         }
     }
+    // End communicate.
 
-    for(int i = 0; i<AM2305_QTY_MEAS;i++)
+    // Start parsing received data.
+    if (RESULT_OK == result)
     {
-        switch(status)
+        for(int i = 0; i<AM2305_QTY_MEAS;i++)
         {
-            case 0 :    if ((measurements[i] >= AM2305_TIME_T_REL_MIN_US) && \
-                            (measurements[i] <= AM2305_TIME_T_REL_MAX_US))
-                        {
-                            status = 1;
-                        }
-                        break;
-            case 1 :    if ((measurements[i] >= AM2305_TIME_T_REH_MIN_US) && \
-                            (measurements[i] <= AM2305_TIME_T_REH_MAX_US))
-                        {
-                            status = 2;
-                        }
-                        break;
-            case 2 :    if ((measurements[i] >= AM2305_TIME_T_LOW_MIN_US) && \
-                            (measurements[i] <= AM2305_TIME_T_LOW_MAX_US))
-                        {
-                            status = 3;
-                        }
-                        break;
-            case 3 :    if ((measurements[i] >= AM2305_TIME_T_H0_MIN_US) && \
-                            (measurements[i] <= AM2305_TIME_T_H0_MAX_US))
-                        {
-                            bit = 0;
-                        }
-                        else if ((measurements[i] >= AM2305_TIME_T_H1_MIN_US) && \
-                                 (measurements[i] <= AM2305_TIME_T_H1_MAX_US))
-                        {
-                            bit = 1;
-                        }
-                        status = 2;
-                        if (cntBit == 8U)
-                        {
-                            cntByte++;
-                            cntBit=0;
-                            data[cntByte] = 0;
-                        }
-                        data[cntByte] |= bit << cntBit;
-                        cntBit++;
-                        break;
-            default:break;
-        }
-    }
-
-
-    // Bus master has released time
-    AM2305_Delay(AM2305_TIME_T_GO_US);
-    // Master sample time
-    AM2305_Delay(AM2305_TIME_T_REL_US/2);
-    // Get DQ value
-    if (Bit_RESET == AM2305_DQGetValue())
-    {
-        // continue wait response to low time
-        AM2305_Delay(AM2305_TIME_T_REL_US/2);
-        // In response to high time
-        AM2305_Delay(AM2305_TIME_T_REH_US);
-
-        for (int i=0,cntZero=0,cntOne=0; i < AM2305_QTY_DATA_BITS; )
-        {
-            AM2305_Delay(AM2305_STROBE_DURATION_US);
-            if (Bit_RESET == AM2305_DQGetValue())
+            switch(AM2305_SignalStatus)
             {
-                cntZero++;
-                if ((0 < cntOne) && (AM2305_QTY_ONE_STROBE_BIT_RESET_STATE >= cntOne))
-                {
-                    if (cntBit == 8U)
+                case AM2305_SIGNAL_STATUS_RESPONSE_LOW :
+                    if ((measurements[i] >= AM2305_TIME_T_REL_MIN_US) && \
+                        (measurements[i] <= AM2305_TIME_T_REL_MAX_US))
                     {
-                        cntByte++;
-                        cntBit=0;
-                        data[cntByte] = 0;
+                        AM2305_SignalStatus = AM2305_SIGNAL_STATUS_RESPONSE_HIGH;
                     }
-                    cntBit++;
-                    cntOne=0;
-                    i++;
-                }
-                else if ((AM2305_QTY_MIN_ONE_STROBE_BIT_SET_STATE <= cntOne) && \
-                         (AM2305_QTY_MAX_ONE_STROBE_BIT_SET_STATE >= cntOne))
-                {
-                    if (cntBit == 8U)
-                    {
-                        cntByte++;
-                        cntBit=0;
-                        data[cntByte] = 0;
-                    }
-                    data[cntByte] |= 1 << cntBit;
-                    cntBit++;
-                    cntOne=0;
-                    i++;
-                }
-                else if (AM2305_QTY_MAX_ZERO_STROBES_BIT < cntZero)
-                {
-                    result = RESULT_NOT_OK;
                     break;
-                }
-            }
-            else
-            {
-                cntOne++;
-                cntZero=0;
+                case AM2305_SIGNAL_STATUS_RESPONSE_HIGH :
+                    if ((measurements[i] >= AM2305_TIME_T_REH_MIN_US) && \
+                        (measurements[i] <= AM2305_TIME_T_REH_MAX_US))
+                    {
+                        AM2305_SignalStatus = AM2305_SIGNAL_STATUS_SIGNAL_0_1_LOW;
+                    }
+                    break;
+                case AM2305_SIGNAL_STATUS_SIGNAL_0_1_LOW :
+                    if ((measurements[i] >= AM2305_TIME_T_LOW_MIN_US) && \
+                        (measurements[i] <= AM2305_TIME_T_LOW_MAX_US))
+                    {
+                        AM2305_SignalStatus = AM2305_SIGNAL_STATUS_SIGNAL_0_HIGH;
+                    }
+                    break;
+                case AM2305_SIGNAL_STATUS_SIGNAL_0_HIGH :
+                case AM2305_SIGNAL_STATUS_SIGNAL_1_HIGH :
+                    if ((measurements[i] >= AM2305_TIME_T_H0_MIN_US) && \
+                        (measurements[i] <= AM2305_TIME_T_H0_MAX_US))
+                    {
+                        bit = 0;
+                    }
+                    else if ((measurements[i] >= AM2305_TIME_T_H1_MIN_US) && \
+                             (measurements[i] <= AM2305_TIME_T_H1_MAX_US))
+                    {
+                        bit = 1;
+                    }
+                    AM2305_SignalStatus = AM2305_SIGNAL_STATUS_SIGNAL_0_1_LOW;
+                    if (cntBit == 8U)
+                    {
+                        cntByte++;
+                        cntBit=0;
+                        data[cntByte] = 0;
+                    }
+                    data[cntByte] |= bit << cntBit;
+                    if ((AM2305_QTY_DATA_BITS/8 == cntByte) && (7U == cntBit))
+                    {
+                        AM2305_SignalStatus = AM2305_SIGNAL_STATUS_END;
+                    }
+                    else
+                    {
+                        cntBit++;
+                    }
+                    break;
+                case AM2305_SIGNAL_STATUS_END :
+                    i = AM2305_QTY_MEAS;
+                    break;
+                default:
+                    AM2305_SignalStatus = AM2305_SIGNAL_STATUS_SIGNAL_0_1_LOW;
+                    break;
             }
         }
     }
-    else
-    {
-        result = RESULT_NOT_OK;
-    }
+
 
     // calculate temperature and humidity
     if (RESULT_OK == result)
@@ -556,7 +529,7 @@ static STD_RESULT AM2305_CaptureTime(uint32_t *const microseconds)
         flag_Update = TIM_GetFlagStatus(AM2305_TIMER, TIM_FLAG_Update);
     }
     //AM2305_TIMER->CNT = 0;
-    AM2305_TIMER->SR = (uint16_t)~(TIM_FLAG_CC2|TIM_FLAG_Update);
+    AM2305_TIMER->SR &= (uint16_t)~(TIM_FLAG_CC2|TIM_FLAG_Update);
     if (SET == flag_CC2)
     {
         *microseconds = AM2305_TIMER->CCR2;
