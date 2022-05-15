@@ -99,9 +99,9 @@ typedef enum AM2305_SIGNAL_STATUS_enum
 // Signal "0", "1" low time
 #define AM2305_TIME_T_LOW_US               (50U)
 // Signal "0", "1" low time max
-#define AM2305_TIME_T_LOW_MAX_US           (55U)
+#define AM2305_TIME_T_LOW_MAX_US           (70U)
 // Signal "0", "1" low time min
-#define AM2305_TIME_T_LOW_MIN_US           (48U)
+#define AM2305_TIME_T_LOW_MIN_US           (30U)
 // Signal "0" high time
 #define AM2305_TIME_T_H0_US                (26U)
 // Signal "0" high time MIN
@@ -269,7 +269,7 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
     // End communicate.
 
     // Start parsing received data.
-    if (RESULT_OK == result)
+    if (0 != cnt)
     {
         for(int i = 0; i<AM2305_QTY_MEAS;i++)
         {
@@ -315,7 +315,7 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
                         cntBit=0;
                         data[cntByte] = 0;
                     }
-                    data[cntByte] |= bit << cntBit;
+                    data[cntByte] |= bit << (7U-cntBit);
                     if ((AM2305_QTY_DATA_BITS/8 == cntByte) && (7U == cntBit))
                     {
                         AM2305_SignalStatus = AM2305_SIGNAL_STATUS_END;
@@ -333,12 +333,7 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
                     break;
             }
         }
-    }
 
-
-    // calculate temperature and humidity
-    if (RESULT_OK == result)
-    {
         // calculate party byte
         uint8_t sum=0;
         for(uint8_t i = 0; i < (AM2305_QTY_DATA_BITS/8)-1; i++)
@@ -350,7 +345,7 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
             uint16_t temp = (((uint16_t)data[0])<<8) | data[1];
             *humidity = (float)(temp)/10;
 
-            temp = (((uint16_t)data[3])<<8) | data[4];
+            temp = (((uint16_t)data[2])<<8) | data[3];
             // if temperature < 0
             if ((temp & (1<<15)) == 1<<15)
             {
@@ -360,6 +355,7 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
             {
                 *temperature = (float)(temp)/10;
             }
+            result = RESULT_OK;
         }
         else
         {
