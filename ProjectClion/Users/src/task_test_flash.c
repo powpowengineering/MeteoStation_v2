@@ -41,6 +41,7 @@
 #include "W25Q_drv.h"
 #include "printf.h"
 #include "ftoa.h"
+#include "string.h"
 // FreeRtos
 #include "FreeRTOS.h"
 #include "task.h"
@@ -80,7 +81,8 @@
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-// None.
+uint8_t dataTest[256];
+uint8_t dataTestWrite[256];
 
 
 //**************************************************************************************************
@@ -115,11 +117,44 @@ void vTaskTestFlash(void *pvParameters)
     W25Q_Init();
     uint64_t ID;
     uint16_t ManufID;
+    uint32_t adr=0;
+
+    W25Q_ReadUniqueID(&ID);
+    W25Q_ReadManufactureID(&ManufID);
+
+    for (int i=0;i<256;i++)
+    {
+        dataTest[i]=0;
+    }
+    sprintf(dataTestWrite,"Imagination rules the world\n");
 
     while(1)
     {
-        W25Q_ReadUniqueID(&ID);
-        W25Q_ReadManufactureID(&ManufID);
+        if (RESULT_OK== W25Q_ReadData(adr,dataTest, 256))
+        {
+            printf("Read 256 bytes\n");
+        }
+        else
+        {
+            printf("Read fail\n");
+        }
+
+        if (RESULT_OK == W25Q_EraseBlock(adr, W25Q_BLOCK_MEMORY_4KB))
+        {
+            printf("Earse OK\n");
+        }
+        else
+        {
+            print("Erase fail\n");
+        }
+        if (RESULT_OK == W25Q_WriteData(adr,dataTestWrite, strlen(dataTestWrite)))
+        {
+            printf("Write OK\n");
+        }
+        else
+        {
+            printf("Write fail\n");
+        }
 
         vTaskDelay(1000/portTICK_RATE_MS);
     }
