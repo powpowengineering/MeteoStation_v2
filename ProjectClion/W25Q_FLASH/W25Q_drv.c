@@ -217,7 +217,7 @@ void W25Q_Init(void)
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.GPIO_Pin  = W25Q_PIN_SCK;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(W25Q_GPIO_PORT_SCK, &GPIO_InitStruct);
@@ -225,26 +225,26 @@ void W25Q_Init(void)
 
     // MISO
     GPIO_InitStruct.GPIO_Pin  = W25Q_PIN_MISO;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;//GPIO_Mode_AF;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(W25Q_GPIO_PORT_MISO, &GPIO_InitStruct);
-    GPIO_PinAFConfig(W25Q_GPIO_PORT_MISO, W25Q_SCK_PinSource, W25Q_GPIO_AF);
+    //GPIO_PinAFConfig(W25Q_GPIO_PORT_MISO, W25Q_MISO_PinSource, W25Q_GPIO_AF);
 
     // MOSI
     GPIO_InitStruct.GPIO_Pin  = W25Q_PIN_MOSI;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(W25Q_GPIO_PORT_MOSI, &GPIO_InitStruct);
-    GPIO_PinAFConfig(W25Q_GPIO_PORT_MOSI, W25Q_SCK_PinSource, W25Q_GPIO_AF);
+    GPIO_PinAFConfig(W25Q_GPIO_PORT_MOSI, W25Q_MOSI_PinSource, W25Q_GPIO_AF);
 
     // CS
     GPIO_InitStruct.GPIO_Pin  = W25Q_PIN_CS;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(W25Q_GPIO_PORT_CS, &GPIO_InitStruct);
@@ -257,7 +257,7 @@ void W25Q_Init(void)
     SPI_InitStruct.SPI_CPOL = SPI_CPOL_Low;
     SPI_InitStruct.SPI_CPHA = SPI_CPHA_1Edge;
     SPI_InitStruct.SPI_NSS = SPI_NSS_Soft;
-    SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
+    SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32;
     SPI_InitStruct.SPI_FirstBit = SPI_FirstBit_MSB;
     SPI_InitStruct.SPI_CRCPolynomial = 7;
     SPI_Init(W25Q_SPI,&SPI_InitStruct);
@@ -267,6 +267,62 @@ void W25Q_Init(void)
     pW25Q_Delay = W25Q_Delay;
 }// end of W25Q_Init()
 
+
+
+//**************************************************************************************************
+// @Function      W25Q_ReadUniqueID()
+//--------------------------------------------------------------------------------------------------
+// @Description   Read Unique ID W25Q.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    ID - get Id W25Q
+//**************************************************************************************************
+STD_RESULT W25Q_ReadUniqueID(uint64_t* ID)
+{
+    STD_RESULT result = RESULT_OK;
+
+    uint8_t dataPut[W25Q_SIZE_CMD_WORD_BYTES+4U];
+
+    dataPut[0] = (uint8_t)W25Q_CMD_READ_UNIQUE_ID;
+    dataPut[1] = (uint8_t)0xff;
+    dataPut[2] = (uint8_t)0xff;
+    dataPut[3] = (uint8_t)0xff;
+    dataPut[4] = (uint8_t)0xff;
+
+    result = W25Q_ReadWriteSPI(dataPut,5U, (uint8_t*)ID, 8U);
+
+    return result;
+}//end of W25Q_ReadUniqueID
+
+//**************************************************************************************************
+// @Function      W25Q_ReadManufactureID()
+//--------------------------------------------------------------------------------------------------
+// @Description   Read Manufacture ID
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    ID - get Manufacture Id W25Q
+//**************************************************************************************************
+STD_RESULT W25Q_ReadManufactureID(uint16_t* ID)
+{
+    STD_RESULT result = RESULT_OK;
+
+    uint8_t dataPut[W25Q_SIZE_CMD_WORD_BYTES+4U];
+
+    dataPut[0] = (uint8_t)W25Q_CMD_DEVICE_ID;
+    dataPut[1] = (uint8_t)(0);
+    dataPut[2] = (uint8_t)(0);
+    dataPut[3] = (uint8_t)(0);
+
+    result = W25Q_ReadWriteSPI(dataPut,4U, (uint8_t*)ID, 2U);
+
+    return result;
+}// W25Q_ReadManufactureID
 
 
 //**************************************************************************************************
@@ -579,7 +635,7 @@ static STD_RESULT W25Q_ReadWriteSPI(uint8_t *dataPut, const uint32_t lenPut, uin
         cntTimeout=0;
         while(1)
         {
-            if (RESET == SPI_I2S_GetFlagStatus(W25Q_SPI,SPI_I2S_FLAG_TXE))
+            if (SET == SPI_I2S_GetFlagStatus(W25Q_SPI,SPI_I2S_FLAG_TXE))
             {
                 break;
             }

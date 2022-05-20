@@ -61,6 +61,10 @@ typedef enum W25Q_TYPE_BLOCKS_enum
 
 // Init W25Q interface
 extern void W25Q_Init(void);
+// Read unique ID
+extern STD_RESULT W25Q_ReadUniqueID(uint64_t* ID);
+// Read Manufacture ID
+extern STD_RESULT W25Q_ReadManufactureID(uint16_t* ID);
 // Read data
 extern STD_RESULT W25Q_ReadData(const uint32_t adr,uint8_t* data, const uint32_t len);
 // Write data

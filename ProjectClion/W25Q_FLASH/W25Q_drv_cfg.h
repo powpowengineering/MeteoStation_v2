@@ -43,19 +43,19 @@
 // Specify port CS
 #define W25Q_GPIO_PORT_CS           (GPIOB)
 // Specify pin SCK
-#define W25Q_PIN_SCK                (GPIO_Pin_10)
+#define W25Q_PIN_SCK                (GPIO_Pin_3)
 // Specify pin MOSI
-#define W25Q_PIN_MOSI               (GPIO_Pin_10)
+#define W25Q_PIN_MOSI               (GPIO_Pin_5)
 // Specify pin MISO
-#define W25Q_PIN_MISO               (GPIO_Pin_10)
+#define W25Q_PIN_MISO               (GPIO_Pin_4)
 // Specify pin CS
-#define W25Q_PIN_CS                 (GPIO_Pin_10)
+#define W25Q_PIN_CS                 (GPIO_Pin_15)
 // Specify SCK PinSource
-#define W25Q_SCK_PinSource          (GPIO_PinSource0)
+#define W25Q_SCK_PinSource          (GPIO_PinSource3)
 // Specify MOSI PinSource
-#define W25Q_MOSI_PinSource         (GPIO_PinSource0)
+#define W25Q_MOSI_PinSource         (GPIO_PinSource5)
 // Specify MISO PinSource
-#define W25Q_MISO_PinSource         (GPIO_PinSource0)
+#define W25Q_MISO_PinSource         (GPIO_PinSource4)
 // Specify GPIO_AF
 #define W25Q_GPIO_AF                (GPIO_AF_SPI1)
 // User specify pointer delay function
