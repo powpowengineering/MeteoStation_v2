@@ -1,8 +1,8 @@
 //**************************************************************************************************
-// @Module        TASK_SENSOR_READ
-// @Filename      task_sensors_read.h
+// @Module        TASK_TEST_FLASH
+// @Filename      task_test_flash.h
 //--------------------------------------------------------------------------------------------------
-// @Description   Interface of the TASK_SENSOR_READ interface.
+// @Description   Interface of the TASK_TEST_FLASH interface.
 //
 //--------------------------------------------------------------------------------------------------
 // @Version       1.0.0
@@ -13,8 +13,8 @@
 // XX.XX.XXXX     1.0.0    KPS         First release.
 //**************************************************************************************************
 
-#ifndef TASK_SENSOR_READ_H
-#define TASK_SENSOR_READ_H
+#ifndef TASK_TEST_FLASH_H
+#define TASK_TEST_FLASH_H
 
 
 //**************************************************************************************************
@@ -51,7 +51,7 @@
 //**************************************************************************************************
 
 // Task sensors read.
-extern void vTaskSensorsRead(void *pvParameters);
+extern void vTaskTestFlash(void *pvParameters);
 
 #endif // #ifndef TASK_SENSOR_READ_H
 

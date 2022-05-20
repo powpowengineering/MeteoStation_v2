@@ -1,12 +1,12 @@
 //**************************************************************************************************
-// @Module        MAIN
-// @Filename      main.c
+// @Module        TASK_TEST_FLASH
+// @Filename      task_test_flash.c
 //--------------------------------------------------------------------------------------------------
 // @Platform      STM32
 //--------------------------------------------------------------------------------------------------
 // @Compatible    STM32L151
 //--------------------------------------------------------------------------------------------------
-// @Description   Implementation of the AM2305 functionality.
+// @Description   Implementation of the TASK_SENSOR_READ functionality.
 //
 //
 //                Abbreviations:
@@ -34,24 +34,17 @@
 //**************************************************************************************************
 // Project Includes
 //**************************************************************************************************
-// stm32 STL
-#include "stm32l1xx.h"
+
+// Native header
+#include "task_test_flash.h"
 // drivers
-#include "OneWire.h"
-#include "usart_drv.h"
-#include "Init.h"
-#include "ds18b20.h"
-#include "am2305_drv.h"
-#include "ftoa.h"
+#include "W25Q_drv.h"
 #include "printf.h"
-// Freertos
+#include "ftoa.h"
+// FreeRtos
 #include "FreeRTOS.h"
 #include "task.h"
 
-// Include task_sensors_read interface
-#include "tasks_sensors_read.h"
-// Include task_test_flash interface
-#include "task_test_flash.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -67,6 +60,7 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of local (private) data types
 //**************************************************************************************************
@@ -77,19 +71,9 @@
 //**************************************************************************************************
 // Definitions of local (private) constants
 //**************************************************************************************************
-#define PRINTF_DISABLE_SUPPORT_FLOAT
-#define PRINTF_DISABLE_SUPPORT_EXPONENTIAL
-#define TLM_CHANNEL                     (0)
 
-// Prm vTaskSensorsRead
-#define TASK_SEN_R_STACK_DEPTH          (256U)
-#define TASK_SEN_R_PARAMETERS           (NULL)
-#define TASK_SEN_R_PRIORITY             (1U)
+// None.
 
-// Prm vTaskTestFlash
-#define TASK_TEST_FLASH_STACK_DEPTH          (256U)
-#define TASK_TEST_FLASH_PARAMETERS           (NULL)
-#define TASK_TEST_FLASH_PRIORITY             (1U)
 
 
 //**************************************************************************************************
@@ -112,10 +96,11 @@
 //==================================================================================================
 //**************************************************************************************************
 
+
 //**************************************************************************************************
-// @Function      main()
+// @Function      vTaskTestFlash()
 //--------------------------------------------------------------------------------------------------
-// @Description   Main function.
+// @Description   None.
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
@@ -123,47 +108,22 @@
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-void main(void)
+void vTaskTestFlash(void *pvParameters)
 {
-    Init();
-    // Init OneWire
-    ONE_WIRE_init();
-    AM2305_Init();
-    USART_init();
+    STD_RESULT result = RESULT_NOT_OK;
 
-    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
-                TASK_SEN_R_PARAMETERS,\
-                TASK_SEN_R_PRIORITY,NULL);
+    W25Q_Init();
+    uint64_t ID;
+    uint16_t ManufID;
 
-    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
-                TASK_TEST_FLASH_PARAMETERS,\
-                TASK_TEST_FLASH_PRIORITY,NULL);
+    while(1)
+    {
+        W25Q_ReadUniqueID(&ID);
+        W25Q_ReadManufactureID(&ManufID);
 
-    vTaskStartScheduler();
-
-
-
-
-    while(1);
-}// end of main
-
-
-
-//**************************************************************************************************
-// @Function      _putchar()
-//--------------------------------------------------------------------------------------------------
-// @Description   Put char function used by printf.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-void _putchar(char character)
-{
-    USART_PutChar(TLM_CHANNEL, character);
-}// end of _putchar
+        vTaskDelay(1000/portTICK_RATE_MS);
+    }
+}// end of vTaskSensorsRead
 
 
 
@@ -173,7 +133,26 @@ void _putchar(char character)
 //==================================================================================================
 //**************************************************************************************************
 
+//**************************************************************************************************
+// @Function      AM2305_DQLow()
+//--------------------------------------------------------------------------------------------------
+// @Description   Set low level on DQ pin
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+
 // None.
 
-
 //****************************************** end of file *******************************************
+
+
+
+
+
+
+
+
