@@ -14,7 +14,7 @@ add_compile_options(-O0 -ffunction-sections -fdata-sections)
 # Warnings options
 add_compile_options(-Wall -Wno-pragmas)
 # Stop build on warnings
-add_compile_options(-Werror)
+#add_compile_options(-Werror)
 # Machine-dependent options
 add_compile_options(-mcpu=${CMAKE_SYSTEM_PROCESSOR} -mlittle-endian -mthumb -mfloat-abi=softfp)#-mfpu=fpv4-sp-d16 )
 

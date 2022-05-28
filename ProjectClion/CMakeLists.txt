@@ -5,7 +5,8 @@ cmake_minimum_required(VERSION 3.17)
 include(toolchain.cmake)
 
 # Set project name
-project(RAK811 C ASM)
+#project(RAK811 C ASM)
+project(Lidar C ASM)
 
 # Set project composition method
 # Valid values: [COMP_PER_FILES ; COMP_PER_FOLDERS]
@@ -14,27 +15,34 @@ set(PROJECT_COMPOSITION COMP_PER_FOLDERS)
 # Set C standard
 set(CMAKE_C_STANDARD 99)
 # Set microcontroller
-set(CMAKE_SYSTEM_PROCESSOR cortex-m3)
+set(CMAKE_SYSTEM_PROCESSOR cortex-m4)
 # Binary file extension
 set(CMAKE_EXECUTABLE_SUFFIX ".elf")
 # Linker script file
-set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/Config/STM32L151XB_FLASH.ld)
-# Set startup file
-set(STARTUP_FILE ${CMAKE_SOURCE_DIR}/StartUp/startup_stm32l151xb.s)
+#set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/Config/STM32L151XB_FLASH.ld)
+set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/Config/stm32f4xx_flash.ld)
 
+# Set startup file
+#set(STARTUP_FILE ${CMAKE_SOURCE_DIR}/StartUp/startup_stm32l151xb.s)
+set(STARTUP_FILE "${CMAKE_SOURCE_DIR}/../STM32F4 Standard Peripheral Library/Libraries/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc_ride7/startup_stm32f40xx.s")
 # Adding compiler/linker options
 include(compiler.cmake)
 
 add_definitions(
-        -DSTM32L151CBU6
+        #-DSTM32L151CBU6
+        -DSTM32F40XX
         -DUSE_STDPERIPH_DRIVER)
 
-add_compile_definitions(STM32L1XX_MD)
+add_compile_definitions(STM32F4XX_MD)
 
 set(FREERTOS_DIR FreeRTOS/Source/)
 
-file(GLOB_RECURSE USER_SOURCES "${CMAKE_SOURCE_DIR}/Users/src/*.c")
-file(GLOB_RECURSE HAL_SOURCES "${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/src/*.c")
+#file(GLOB_RECURSE USER_SOURCES "${CMAKE_SOURCE_DIR}/Users/src")
+file(GLOB_RECURSE USER_SOURCES "${CMAKE_SOURCE_DIR}/Users/srcStm32F4/*.c")
+
+
+#file(GLOB_RECURSE HAL_SOURCES "${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/src/*.c")
+file(GLOB_RECURSE HAL_SOURCES "${CMAKE_SOURCE_DIR}/../STM32F4 Standard Peripheral Library/Libraries/STM32F4xx_StdPeriph_Driver/src/*.c")
 file(
         GLOB_RECURSE
         FREERTOS_SOURCES
@@ -50,10 +58,15 @@ file(
 )
 
 
-include_directories(${CMAKE_SOURCE_DIR}/Users/inc)
-include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/inc")
-include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Include")
-include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Device/ST/STM32L1xx/Include")
+include_directories(${CMAKE_SOURCE_DIR}/Users/incStm32F4)
+
+#include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/inc")
+#include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Include")
+#include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Device/ST/STM32L1xx/Include")
+
+include_directories("${CMAKE_SOURCE_DIR}/../STM32F4 Standard Peripheral Library/Libraries/STM32F4xx_StdPeriph_Driver/inc")
+include_directories("${CMAKE_SOURCE_DIR}/../STM32F4 Standard Peripheral Library/Libraries/CMSIS/Include")
+include_directories("${CMAKE_SOURCE_DIR}/../STM32F4 Standard Peripheral Library/Libraries/CMSIS/Device/ST/STM32F4xx/Include")
 
 include_directories(${FREERTOS_DIR})
 include_directories(${FREERTOS_DIR}/include)
@@ -63,7 +76,7 @@ include_directories(${FREERTOS_DIR}/portable/MemMang)
 #include_directories(${FREERTOS_DIR}/portable/Common)
 
 
-add_executable(${PROJECT_NAME} ${STARTUP_FILE} ${USER_SOURCES} ${HAL_SOURCES} ${FREERTOS_SOURCES})
+add_executable(${PROJECT_NAME} ${STARTUP_FILE} ${USER_SOURCES} ${HAL_SOURCES})# ${FREERTOS_SOURCES})
 
 
 

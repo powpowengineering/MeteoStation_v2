@@ -1,9 +1,10 @@
-#include "stm32l1xx.h"
-#include "FreeRTOS.h"
-#include "task.h"
+//#include "stm32l1xx.h"
+#include "stm32f4xx.h"
+//#include "FreeRTOS.h"
+//#include "task.h"
 
-extern void Init(void);
-extern void vTask(void *pvParameters);
+extern void InitStm32F4(void);
+//extern void vTask(void *pvParameters);
 
 void SWO_PrintChar  (char c);
 void SWO_PrintString(const char *s);
@@ -62,8 +63,8 @@ void SWO_PrintString(const char *s)
 
 void main(void)
 {
-   Init();
-
+   //Init();
+    InitStm32F4();
     /* Enable trace in core debug */
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
 
