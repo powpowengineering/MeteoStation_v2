@@ -541,6 +541,7 @@ STD_RESULT W25Q_EraseBlock(const uint32_t adr, W25Q_TYPE_BLOCKS typeBlock)
     uint32_t timeoutCnt=0;
     uint32_t timeErase=0;
     uint8_t dataPut[W25Q_SIZE_CMD_WORD_BYTES+W25Q_SIZE_ADR_WORD_BYTES];
+    uint8_t lenWrite=0;
 
     // check adr
     if(adr < W25Q_CAPACITY_ALL_MEMORY_BYTES)
@@ -559,19 +560,27 @@ STD_RESULT W25Q_EraseBlock(const uint32_t adr, W25Q_TYPE_BLOCKS typeBlock)
                 {
                     case W25Q_BLOCK_MEMORY_4KB:
                         cmd = (uint8_t)W25Q_CMD_SECTOR_ERASE;
-                        timeErase = W25Q_4KB_ER_TIME_US+W25Q_4KB_ER_TIME_US/10;
+                        timeErase = W25Q_Times.nErase4K.nTimeout + W25Q_Times.nErase4K.nTimeout / 10;
+                        timeoutCnt = W25Q_Times.nErase4K.nQuantityTimeout;
+                        lenWrite = W25Q_SIZE_CMD_WORD_BYTES+W25Q_SIZE_ADR_WORD_BYTES;
                         break;
                     case W25Q_BLOCK_MEMORY_32KB:
                         cmd = (uint8_t)W25Q_CMD_BLOCK_ERASE_32;
-                        timeErase = W25Q_32KB_ER_TIME_US+W25Q_32KB_ER_TIME_US/10;
+                        timeErase = W25Q_Times.nErase32K.nTimeout + W25Q_Times.nErase32K.nTimeout / 10;
+                        timeoutCnt = W25Q_Times.nErase32K.nQuantityTimeout;
+                        lenWrite = W25Q_SIZE_CMD_WORD_BYTES+W25Q_SIZE_ADR_WORD_BYTES;
                         break;
                     case W25Q_BLOCK_MEMORY_64KB:
                         cmd = (uint8_t)W25Q_CMD_BLOCK_ERASE_64;
-                        timeErase = W25Q_64KB_ER_TIME_US+W25Q_64KB_ER_TIME_US/10;
+                        timeErase = W25Q_Times.nErase64K.nTimeout + W25Q_Times.nErase64K.nTimeout / 10;
+                        timeoutCnt = W25Q_Times.nErase64K.nQuantityTimeout;
+                        lenWrite = W25Q_SIZE_CMD_WORD_BYTES+W25Q_SIZE_ADR_WORD_BYTES;
                         break;
                     case W25Q_BLOCK_MEMORY_ALL:
                         cmd = (uint8_t)W25Q_CMD_CHIP_ERASE;
-                        timeErase = W25Q_CHIP_ER_TIME_US+W25Q_CHIP_ER_TIME_US/10;
+                        timeErase = W25Q_Times.nEraseChip.nTimeout + W25Q_Times.nEraseChip.nTimeout / 10;
+                        timeoutCnt = W25Q_Times.nEraseChip.nQuantityTimeout;
+                        lenWrite = W25Q_SIZE_CMD_WORD_BYTES;
                         break;
                     default:cmd = (uint8_t)W25Q_CMD_SECTOR_ERASE;
                 }
@@ -580,17 +589,15 @@ STD_RESULT W25Q_EraseBlock(const uint32_t adr, W25Q_TYPE_BLOCKS typeBlock)
                 dataPut[2] = (uint8_t)(adr>>8);
                 dataPut[3] = (uint8_t)adr;
 
-                if (RESULT_OK == W25Q_ReadWriteSPI(dataPut, W25Q_SIZE_CMD_WORD_BYTES+W25Q_SIZE_ADR_WORD_BYTES,
-                                                   0, 0))
+                if (RESULT_OK == W25Q_ReadWriteSPI(dataPut, lenWrite,0, 0))
                 {
                     // wait for erasure
                     // check BUSY W25Q
                     cmd = (uint8_t) W25Q_CMD_READ_STATUS_REG_1;
                     W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
-                    timeoutCnt = 5;
                     while(((status & W25Q_REG1_BUSY_BIT) == W25Q_REG1_BUSY_BIT) && (timeoutCnt!=0))
                     {
-                        pW25Q_Delay(W25Q_4KB_ER_TIME_US+W25Q_4KB_ER_TIME_US/10);
+                        pW25Q_Delay(timeErase);
                         W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
                         timeoutCnt--;
                     }
