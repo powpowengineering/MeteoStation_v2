@@ -74,16 +74,17 @@
 // Definitions of local (private) constants
 //**************************************************************************************************
 
-#define SIZE_BUF            (512U-1U)
+#define SIZE_BUF            (0x400UL)
 
-
+// Test constants
+#define TEST_FLASH_NUMBER_OF_ITERATIONS_TEST_1          (3U)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-uint8_t dataRead[512];
-uint8_t dataWrite[512];
+uint8_t dataRead[SIZE_BUF];
+uint8_t dataWrite[SIZE_BUF];
 
 
 //**************************************************************************************************
@@ -116,47 +117,74 @@ void vTaskTestFlash(void *pvParameters)
     STD_RESULT result = RESULT_NOT_OK;
     uint64_t ID;
     uint16_t ManufID;
-    uint32_t adr=W25Q_CAPACITY_SECTOR_BYTES;
+    uint32_t adr=0;
 
     W25Q_Init();
 
-    for (int i =0;i<SIZE_BUF;i++)
-    {
-        dataWrite[i] = rand()%100;
-    }
-    dataWrite[SIZE_BUF] = CH_SUM_CalculateCRC8(dataWrite, SIZE_BUF-1);
+    vTaskDelay(1000/portTICK_RATE_MS);
 
     W25Q_ReadUniqueID(&ID);
     W25Q_ReadManufactureID(&ManufID);
 
-    vTaskDelay(1000/portTICK_RATE_MS);
+    printf("Manufacture ID %d\n\r",(uint8_t)(ManufID>>8));
 
-    taskENTER_CRITICAL();
+    // Test 1: Erase three random 4k sectors and write and read. Address multiple of 4K.
 
-    W25Q_EraseBlock(adr,W25Q_BLOCK_MEMORY_4KB);
-    W25Q_WriteData(adr,dataWrite,SIZE_BUF+1);
-
-    taskEXIT_CRITICAL();
-
-    while(1)
+    // erase/write/read/check data
+    result = RESULT_OK;
+    for (int i=0;i<TEST_FLASH_NUMBER_OF_ITERATIONS_TEST_1;i++)
     {
-        taskENTER_CRITICAL();
+        // get address
+        adr = (rand() / W25Q_QTY_SECTORS) * W25Q_CAPACITY_SECTOR_BYTES;
 
-        W25Q_ReadData(adr,dataRead, SIZE_BUF+1);
+        // Erase sector 4K
+        W25Q_EraseBlock(adr,W25Q_BLOCK_MEMORY_4KB);
 
-        if ( dataRead[SIZE_BUF] == CH_SUM_CalculateCRC8(dataRead, SIZE_BUF-1))
+        // Prepare dataWrite
+        for(int j=0;j<SIZE_BUF-1;j++)
+        {
+            dataWrite[j] = rand()%255;
+        }
+        dataWrite[SIZE_BUF-1] = CH_SUM_CalculateCRC8(dataWrite, SIZE_BUF-1);
+
+        // Write sector 4K
+        W25Q_WriteData(adr,dataWrite,SIZE_BUF);
+
+        // Read sector 4K
+        W25Q_ReadData(adr,dataRead, SIZE_BUF);
+
+        // Check data
+        if (dataRead[SIZE_BUF-1] == CH_SUM_CalculateCRC8(dataRead, SIZE_BUF-1))
         {
             printf("Test 1 PASS\n\r");
+
         }
         else
         {
+            result = RESULT_NOT_OK;
             printf("Test 1 FAIL\n\r");
         }
+    }
+    if (RESULT_OK == result)
+    {
+        printf("Test 1 PASS\n\r");
+    }
+    else
+    {
+        printf("Test 1 FAIL\n\r");
+    }
+    // End Test 1
 
-        taskEXIT_CRITICAL();
+    // Test 2: Erase Chip
+    W25Q_EraseBlock(adr,    W25Q_BLOCK_MEMORY_ALL);
 
-        //printf("%d\n\r",rand()%100);
 
+
+
+
+
+    while(1)
+    {
         vTaskDelay(1000/portTICK_RATE_MS);
     }
 }// end of vTaskSensorsRead
