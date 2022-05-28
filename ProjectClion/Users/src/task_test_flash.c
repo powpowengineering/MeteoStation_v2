@@ -39,7 +39,9 @@
 #include "task_test_flash.h"
 // drivers
 #include "W25Q_drv.h"
+#include "checksum.h"
 #include "printf.h"
+#include "stdlib.h"
 #include "ftoa.h"
 // FreeRtos
 #include "FreeRTOS.h"
@@ -72,7 +74,7 @@
 // Definitions of local (private) constants
 //**************************************************************************************************
 
-// None.
+#define SIZE_BUF            (512U-1U)
 
 
 
@@ -80,7 +82,8 @@
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-// None.
+uint8_t dataRead[512];
+uint8_t dataWrite[512];
 
 
 //**************************************************************************************************
@@ -111,15 +114,48 @@
 void vTaskTestFlash(void *pvParameters)
 {
     STD_RESULT result = RESULT_NOT_OK;
-
-    W25Q_Init();
     uint64_t ID;
     uint16_t ManufID;
+    uint32_t adr=W25Q_CAPACITY_SECTOR_BYTES;
+
+    W25Q_Init();
+
+    for (int i =0;i<SIZE_BUF;i++)
+    {
+        dataWrite[i] = rand()%100;
+    }
+    dataWrite[SIZE_BUF] = CH_SUM_CalculateCRC8(dataWrite, SIZE_BUF-1);
+
+    W25Q_ReadUniqueID(&ID);
+    W25Q_ReadManufactureID(&ManufID);
+
+    vTaskDelay(1000/portTICK_RATE_MS);
+
+    taskENTER_CRITICAL();
+
+    W25Q_EraseBlock(adr,W25Q_BLOCK_MEMORY_4KB);
+    W25Q_WriteData(adr,dataWrite,SIZE_BUF+1);
+
+    taskEXIT_CRITICAL();
 
     while(1)
     {
-        W25Q_ReadUniqueID(&ID);
-        W25Q_ReadManufactureID(&ManufID);
+        taskENTER_CRITICAL();
+
+        W25Q_ReadData(adr,dataRead, SIZE_BUF+1);
+
+        if ( dataRead[SIZE_BUF] == CH_SUM_CalculateCRC8(dataRead, SIZE_BUF-1))
+        {
+            printf("Test 1 PASS\n\r");
+        }
+        else
+        {
+            printf("Test 1 FAIL\n\r");
+        }
+
+        taskEXIT_CRITICAL();
+
+        //printf("%d\n\r",rand()%100);
 
         vTaskDelay(1000/portTICK_RATE_MS);
     }
