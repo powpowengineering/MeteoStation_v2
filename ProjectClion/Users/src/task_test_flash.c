@@ -1,12 +1,12 @@
 //**************************************************************************************************
-// @Module        MAIN
-// @Filename      main.c
+// @Module        TASK_TEST_FLASH
+// @Filename      task_test_flash.c
 //--------------------------------------------------------------------------------------------------
 // @Platform      STM32
 //--------------------------------------------------------------------------------------------------
 // @Compatible    STM32L151
 //--------------------------------------------------------------------------------------------------
-// @Description   Implementation of the AM2305 functionality.
+// @Description   Implementation of the TASK_SENSOR_READ functionality.
 //
 //
 //                Abbreviations:
@@ -34,24 +34,19 @@
 //**************************************************************************************************
 // Project Includes
 //**************************************************************************************************
-// stm32 STL
-#include "stm32l1xx.h"
+
+// Native header
+#include "task_test_flash.h"
 // drivers
-#include "OneWire.h"
-#include "usart_drv.h"
-#include "Init.h"
-#include "ds18b20.h"
-#include "am2305_drv.h"
-#include "ftoa.h"
+#include "W25Q_drv.h"
+#include "checksum.h"
 #include "printf.h"
-// Freertos
+#include "stdlib.h"
+#include "ftoa.h"
+// FreeRtos
 #include "FreeRTOS.h"
 #include "task.h"
 
-// Include task_sensors_read interface
-#include "tasks_sensors_read.h"
-// Include task_test_flash interface
-#include "task_test_flash.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -67,6 +62,7 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of local (private) data types
 //**************************************************************************************************
@@ -77,26 +73,17 @@
 //**************************************************************************************************
 // Definitions of local (private) constants
 //**************************************************************************************************
-#define PRINTF_DISABLE_SUPPORT_FLOAT
-#define PRINTF_DISABLE_SUPPORT_EXPONENTIAL
-#define TLM_CHANNEL                     (0)
 
-// Prm vTaskSensorsRead
-#define TASK_SEN_R_STACK_DEPTH          (256U)
-#define TASK_SEN_R_PARAMETERS           (NULL)
-#define TASK_SEN_R_PRIORITY             (1U)
+#define SIZE_BUF            (512U-1U)
 
-// Prm vTaskTestFlash
-#define TASK_TEST_FLASH_STACK_DEPTH          (256U)
-#define TASK_TEST_FLASH_PARAMETERS           (NULL)
-#define TASK_TEST_FLASH_PRIORITY             (1U)
 
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-// None.
+uint8_t dataRead[512];
+uint8_t dataWrite[512];
 
 
 //**************************************************************************************************
@@ -112,10 +99,11 @@
 //==================================================================================================
 //**************************************************************************************************
 
+
 //**************************************************************************************************
-// @Function      main()
+// @Function      vTaskTestFlash()
 //--------------------------------------------------------------------------------------------------
-// @Description   Main function.
+// @Description   None.
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
@@ -123,47 +111,55 @@
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-void main(void)
+void vTaskTestFlash(void *pvParameters)
 {
-    Init();
-    // Init OneWire
-    ONE_WIRE_init();
-    AM2305_Init();
-    USART_init();
+    STD_RESULT result = RESULT_NOT_OK;
+    uint64_t ID;
+    uint16_t ManufID;
+    uint32_t adr=W25Q_CAPACITY_SECTOR_BYTES;
 
-    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
-                TASK_SEN_R_PARAMETERS,\
-                TASK_SEN_R_PRIORITY,NULL);
+    W25Q_Init();
 
-    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
-                TASK_TEST_FLASH_PARAMETERS,\
-                TASK_TEST_FLASH_PRIORITY,NULL);
+    for (int i =0;i<SIZE_BUF;i++)
+    {
+        dataWrite[i] = rand()%100;
+    }
+    dataWrite[SIZE_BUF] = CH_SUM_CalculateCRC8(dataWrite, SIZE_BUF-1);
 
-    vTaskStartScheduler();
+    W25Q_ReadUniqueID(&ID);
+    W25Q_ReadManufactureID(&ManufID);
 
+    vTaskDelay(1000/portTICK_RATE_MS);
 
+    taskENTER_CRITICAL();
 
+    W25Q_EraseBlock(adr,W25Q_BLOCK_MEMORY_4KB);
+    W25Q_WriteData(adr,dataWrite,SIZE_BUF+1);
 
-    while(1);
-}// end of main
+    taskEXIT_CRITICAL();
 
+    while(1)
+    {
+        taskENTER_CRITICAL();
 
+        W25Q_ReadData(adr,dataRead, SIZE_BUF+1);
 
-//**************************************************************************************************
-// @Function      _putchar()
-//--------------------------------------------------------------------------------------------------
-// @Description   Put char function used by printf.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-void _putchar(char character)
-{
-    USART_PutChar(TLM_CHANNEL, character);
-}// end of _putchar
+        if ( dataRead[SIZE_BUF] == CH_SUM_CalculateCRC8(dataRead, SIZE_BUF-1))
+        {
+            printf("Test 1 PASS\n\r");
+        }
+        else
+        {
+            printf("Test 1 FAIL\n\r");
+        }
+
+        taskEXIT_CRITICAL();
+
+        //printf("%d\n\r",rand()%100);
+
+        vTaskDelay(1000/portTICK_RATE_MS);
+    }
+}// end of vTaskSensorsRead
 
 
 
@@ -173,7 +169,26 @@ void _putchar(char character)
 //==================================================================================================
 //**************************************************************************************************
 
+//**************************************************************************************************
+// @Function      AM2305_DQLow()
+//--------------------------------------------------------------------------------------------------
+// @Description   Set low level on DQ pin
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+
 // None.
 
-
 //****************************************** end of file *******************************************
+
+
+
+
+
+
+
+

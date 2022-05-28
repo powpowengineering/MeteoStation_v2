@@ -6,7 +6,7 @@ include(toolchain.cmake)
 
 # Set project name
 #project(RAK811 C ASM)
-project(Lidar C ASM)
+project(MeteoStation C ASM)
 
 # Set project composition method
 # Valid values: [COMP_PER_FILES ; COMP_PER_FOLDERS]

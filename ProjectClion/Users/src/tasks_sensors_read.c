@@ -1,12 +1,12 @@
 //**************************************************************************************************
-// @Module        MAIN
-// @Filename      main.c
+// @Module        TASK_SENSOR_READ
+// @Filename      task_sensors_read.c
 //--------------------------------------------------------------------------------------------------
 // @Platform      STM32
 //--------------------------------------------------------------------------------------------------
 // @Compatible    STM32L151
 //--------------------------------------------------------------------------------------------------
-// @Description   Implementation of the AM2305 functionality.
+// @Description   Implementation of the TASK_SENSOR_READ functionality.
 //
 //
 //                Abbreviations:
@@ -34,24 +34,18 @@
 //**************************************************************************************************
 // Project Includes
 //**************************************************************************************************
-// stm32 STL
-#include "stm32l1xx.h"
+
+// Native header
+#include "tasks_sensors_read.h"
 // drivers
-#include "OneWire.h"
-#include "usart_drv.h"
-#include "Init.h"
 #include "ds18b20.h"
 #include "am2305_drv.h"
-#include "ftoa.h"
 #include "printf.h"
-// Freertos
+#include "ftoa.h"
+// FreeRtos
 #include "FreeRTOS.h"
 #include "task.h"
 
-// Include task_sensors_read interface
-#include "tasks_sensors_read.h"
-// Include task_test_flash interface
-#include "task_test_flash.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -67,6 +61,7 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of local (private) data types
 //**************************************************************************************************
@@ -77,26 +72,17 @@
 //**************************************************************************************************
 // Definitions of local (private) constants
 //**************************************************************************************************
-#define PRINTF_DISABLE_SUPPORT_FLOAT
-#define PRINTF_DISABLE_SUPPORT_EXPONENTIAL
-#define TLM_CHANNEL                     (0)
 
-// Prm vTaskSensorsRead
-#define TASK_SEN_R_STACK_DEPTH          (256U)
-#define TASK_SEN_R_PARAMETERS           (NULL)
-#define TASK_SEN_R_PRIORITY             (1U)
-
-// Prm vTaskTestFlash
-#define TASK_TEST_FLASH_STACK_DEPTH          (256U)
-#define TASK_TEST_FLASH_PARAMETERS           (NULL)
-#define TASK_TEST_FLASH_PRIORITY             (1U)
-
+#define DS18B20_ONE_WIRE_CH             (0U)
+#define TASK_SENS_RD_SIZE_BUFF_PRINT    (128U)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-// None.
+// printf buffer.
+static char bufferPrintf[TASK_SENS_RD_SIZE_BUFF_PRINT];
+
 
 
 //**************************************************************************************************
@@ -112,10 +98,11 @@
 //==================================================================================================
 //**************************************************************************************************
 
+
 //**************************************************************************************************
-// @Function      main()
+// @Function      vTaskSensorsRead()
 //--------------------------------------------------------------------------------------------------
-// @Description   Main function.
+// @Description   None.
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
@@ -123,47 +110,55 @@
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-void main(void)
+void vTaskSensorsRead(void *pvParameters)
 {
-    Init();
-    // Init OneWire
-    ONE_WIRE_init();
-    AM2305_Init();
-    USART_init();
+    STD_RESULT result = RESULT_NOT_OK;
+    float tDS = 0.0f;
+    float tAM = 0.0f;
+    float humidity = 0.0f;
+    uint64_t ID=0;//0xd501211280621728U;
+    uint8_t presence=0;
 
-    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
-                TASK_SEN_R_PARAMETERS,\
-                TASK_SEN_R_PRIORITY,NULL);
+    result = DS18B20_GetID(DS18B20_ONE_WIRE_CH,&ID);
+/*
+    for (int i=0;i<TASK_SENS_RD_SIZE_BUFF_PRINT;i++)
+    {
+        bufferPrintf[i] = 0;
+    }
+*/
 
-    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
-                TASK_TEST_FLASH_PARAMETERS,\
-                TASK_TEST_FLASH_PRIORITY,NULL);
+    while(1)
+    {
+        result = AM2305_GetHumidityTemperature(&humidity,&tAM);
+        if (result == RESULT_NOT_OK)
+        {
+            printf("AM2305 isn't OK\r\n");
+        }
+        else
+        {
+            ftoa(tAM, bufferPrintf, 4);
+            printf("tAM = %s\r\n",bufferPrintf);
+            ftoa(humidity, bufferPrintf, 3);
+            printf("humidity = %s\r\n",bufferPrintf);
+        }
 
-    vTaskStartScheduler();
+        result = DS18B20_GetTemperature(DS18B20_ONE_WIRE_CH,&ID,&tDS);
+        //printf("ID = %llx\r\n",ID);
+
+        if (result == RESULT_NOT_OK)
+        {
+            printf("DS18B20 isn't OK\r\n");
+        }
+        else
+        {
+            ftoa(tDS, bufferPrintf, 4);
+            printf("tDS = %s\r\n",bufferPrintf);
+        }
 
 
-
-
-    while(1);
-}// end of main
-
-
-
-//**************************************************************************************************
-// @Function      _putchar()
-//--------------------------------------------------------------------------------------------------
-// @Description   Put char function used by printf.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-void _putchar(char character)
-{
-    USART_PutChar(TLM_CHANNEL, character);
-}// end of _putchar
+        vTaskDelay(1000/portTICK_RATE_MS);
+    }
+}// end of vTaskSensorsRead
 
 
 
@@ -173,7 +168,26 @@ void _putchar(char character)
 //==================================================================================================
 //**************************************************************************************************
 
+//**************************************************************************************************
+// @Function      AM2305_DQLow()
+//--------------------------------------------------------------------------------------------------
+// @Description   Set low level on DQ pin
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+
 // None.
 
-
 //****************************************** end of file *******************************************
+
+
+
+
+
+
+
+

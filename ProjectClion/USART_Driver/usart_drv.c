@@ -1,12 +1,12 @@
 //**************************************************************************************************
-// @Module        MAIN
-// @Filename      main.c
+// @Module        USART
+// @Filename      usart_drv.c
 //--------------------------------------------------------------------------------------------------
-// @Platform      STM32
+// @Platform      stm32
 //--------------------------------------------------------------------------------------------------
-// @Compatible    STM32L151
+// @Compatible    stm32
 //--------------------------------------------------------------------------------------------------
-// @Description   Implementation of the AM2305 functionality.
+// @Description   Implementation of the oneWire functionality.
 //
 //
 //                Abbreviations:
@@ -14,16 +14,15 @@
 //
 //
 //                Global (public) functions:
-//
+//                  USART_init()
 //
 //                Local (private) functions:
-//
-//
+
 //
 //--------------------------------------------------------------------------------------------------
 // @Version       1.0.0
 //--------------------------------------------------------------------------------------------------
-// @Date          XX.XX.XXXX
+// @Date          xx.xx.xxxx
 //--------------------------------------------------------------------------------------------------
 // @History       Version  Author      Comment
 // XX.XX.XXXX     1.0.0    KPS         First release.
@@ -34,24 +33,10 @@
 //**************************************************************************************************
 // Project Includes
 //**************************************************************************************************
-// stm32 STL
-#include "stm32l1xx.h"
-// drivers
-#include "OneWire.h"
-#include "usart_drv.h"
-#include "Init.h"
-#include "ds18b20.h"
-#include "am2305_drv.h"
-#include "ftoa.h"
-#include "printf.h"
-// Freertos
-#include "FreeRTOS.h"
-#include "task.h"
 
-// Include task_sensors_read interface
-#include "tasks_sensors_read.h"
-// Include task_test_flash interface
-#include "task_test_flash.h"
+// Native header
+#include "usart_drv.h"
+
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -71,26 +56,46 @@
 // Declarations of local (private) data types
 //**************************************************************************************************
 
-// None.
+// Setting Usart
+typedef struct USART_SETTINGS_str
+{
+    uint8_t Enable;
+    USART_TypeDef* channel;
+    GPIO_TypeDef* GpioTX;
+    GPIO_TypeDef* GpioRX;
+    uint32_t PinTX;
+    uint32_t PinRX;
+    uint32_t BaudRate;
+    uint8_t PartyBit;
+    uint8_t SizeBits;
+    uint8_t StopBits;
+}USART_SETTINGS;
 
+#define USART_SETTINGS_CHANNEL(ch) \
+{ \
+    USART_CH_##ch,                  \
+    USART_ALIAS_STD_LIB_CH_##ch,     \
+    USART_GPIO_TX_PIN_CH_##ch,      \
+    USART_GPIO_RX_PIN_CH_##ch,      \
+    USART_TX_PIN_CH_##ch,           \
+    USART_RX_PIN_CH_##ch,           \
+    USART_BAUDRATE_CH_##ch,         \
+    USART_PARTY_BIT_CH_##ch,        \
+    USART_DATA_SIZE_BITS_CH_##ch,   \
+    USART_NUM_STOP_BITS_CH_##ch     \
+}
 
 //**************************************************************************************************
 // Definitions of local (private) constants
 //**************************************************************************************************
-#define PRINTF_DISABLE_SUPPORT_FLOAT
-#define PRINTF_DISABLE_SUPPORT_EXPONENTIAL
-#define TLM_CHANNEL                     (0)
 
-// Prm vTaskSensorsRead
-#define TASK_SEN_R_STACK_DEPTH          (256U)
-#define TASK_SEN_R_PARAMETERS           (NULL)
-#define TASK_SEN_R_PRIORITY             (1U)
-
-// Prm vTaskTestFlash
-#define TASK_TEST_FLASH_STACK_DEPTH          (256U)
-#define TASK_TEST_FLASH_PARAMETERS           (NULL)
-#define TASK_TEST_FLASH_PRIORITY             (1U)
-
+// timeout
+#define USART_TIMEOUT_TX                (0xffffU)
+// An array to setting usart channels
+const static USART_SETTINGS USART_Settings[USART_NUMBER_CHANNELS] =
+{
+    USART_SETTINGS_CHANNEL(0)
+};
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -113,46 +118,9 @@
 //**************************************************************************************************
 
 //**************************************************************************************************
-// @Function      main()
+// @Function      USART_init()
 //--------------------------------------------------------------------------------------------------
-// @Description   Main function.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-void main(void)
-{
-    Init();
-    // Init OneWire
-    ONE_WIRE_init();
-    AM2305_Init();
-    USART_init();
-
-    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
-                TASK_SEN_R_PARAMETERS,\
-                TASK_SEN_R_PRIORITY,NULL);
-
-    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
-                TASK_TEST_FLASH_PARAMETERS,\
-                TASK_TEST_FLASH_PRIORITY,NULL);
-
-    vTaskStartScheduler();
-
-
-
-
-    while(1);
-}// end of main
-
-
-
-//**************************************************************************************************
-// @Function      _putchar()
-//--------------------------------------------------------------------------------------------------
-// @Description   Put char function used by printf.
+// @Description   Init USART channels
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------
@@ -160,10 +128,54 @@ void main(void)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-void _putchar(char character)
+void USART_init(void)
 {
-    USART_PutChar(TLM_CHANNEL, character);
-}// end of _putchar
+    for (uint8_t i=0;i<USART_NUMBER_CHANNELS;i++)
+    {
+        if (ON == USART_Settings[i].Enable)
+        {
+            USART_InitTypeDef USART_InitStruct;
+            USART_InitStruct.USART_BaudRate = USART_Settings[i].BaudRate;
+            USART_InitStruct.USART_WordLength = USART_Settings[i].SizeBits;
+            USART_InitStruct.USART_StopBits = USART_Settings[i].StopBits;
+            USART_InitStruct.USART_Parity = USART_Settings[i].PartyBit;
+            USART_InitStruct.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+            USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+            USART_Init(USART_Settings[i].channel, &USART_InitStruct);
+            USART_Cmd(USART_Settings[i].channel, ENABLE);
+
+        }
+    }
+}// end of USART_init()
+
+
+
+//**************************************************************************************************
+// @Function      USART_PutChar()
+//--------------------------------------------------------------------------------------------------
+// @Description   Put character
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+void USART_PutChar(const uint8_t channel, const char character)
+{
+
+    uint32_t timeout = USART_TIMEOUT_TX;
+    while( timeout != 0)
+    {
+        if (SET == USART_GetFlagStatus(USART_Settings[channel].channel, USART_FLAG_TXE))
+        {
+            USART_SendData(USART_Settings[channel].channel, character);
+            break;
+        }
+        timeout--;
+    }
+
+}// end of USART_PutChar()
 
 
 
@@ -177,3 +189,4 @@ void _putchar(char character)
 
 
 //****************************************** end of file *******************************************
+
