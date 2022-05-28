@@ -138,7 +138,7 @@ void vTaskTestFlash(void *pvParameters)
         adr = (rand() / W25Q_QTY_SECTORS) * W25Q_CAPACITY_SECTOR_BYTES;
 
         // Erase sector 4K
-        W25Q_EraseBlock(adr,W25Q_BLOCK_MEMORY_4KB);
+        result |= W25Q_EraseBlock(adr,W25Q_BLOCK_MEMORY_4KB);
 
         // Prepare dataWrite
         for(int j=0;j<SIZE_BUF-1;j++)
@@ -148,21 +148,15 @@ void vTaskTestFlash(void *pvParameters)
         dataWrite[SIZE_BUF-1] = CH_SUM_CalculateCRC8(dataWrite, SIZE_BUF-1);
 
         // Write sector 4K
-        W25Q_WriteData(adr,dataWrite,SIZE_BUF);
+        result |= W25Q_WriteData(adr,dataWrite,SIZE_BUF);
 
         // Read sector 4K
-        W25Q_ReadData(adr,dataRead, SIZE_BUF);
+        result |=  W25Q_ReadData(adr,dataRead, SIZE_BUF);
 
         // Check data
-        if (dataRead[SIZE_BUF-1] == CH_SUM_CalculateCRC8(dataRead, SIZE_BUF-1))
-        {
-            printf("Test 1 PASS\n\r");
-
-        }
-        else
+        if (dataRead[SIZE_BUF-1] != CH_SUM_CalculateCRC8(dataRead, SIZE_BUF-1))
         {
             result = RESULT_NOT_OK;
-            printf("Test 1 FAIL\n\r");
         }
     }
     if (RESULT_OK == result)
