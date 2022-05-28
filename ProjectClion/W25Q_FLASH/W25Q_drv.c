@@ -38,6 +38,8 @@
 #include "W25Q_drv.h"
 
 #include "Init.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -193,7 +195,7 @@ typedef struct W25Q_TIMES_str
 #define W25Q_ER_32K_QTY_TIMEOUT         (5U)
 #define W25Q_ER_64K_QTY_TIMEOUT         (5U)
 #define W25Q_ER_CHIP_QTY_TIMEOUT        (5U)
-#define W25Q_NONE_QTY_TIMEOUT           (5U)
+#define W25Q_NONE_QTY_TIMEOUT           (20U)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -716,13 +718,17 @@ static STD_RESULT W25Q_ReadWriteSPI(uint8_t *dataPut, const uint32_t lenPut, uin
         SPI_I2S_ReceiveData(W25Q_SPI);
         if (i < lenPut)
         {
+            taskENTER_CRITICAL();
             SPI_I2S_SendData(W25Q_SPI, *dataPut);
+            taskEXIT_CRITICAL();
             dataPut++;
         }
         else
         {
+            taskENTER_CRITICAL();
             // Send byte(garbage data)
             SPI_I2S_SendData(W25Q_SPI, *dataGet);
+            taskEXIT_CRITICAL();
         }
         // read byte
 
