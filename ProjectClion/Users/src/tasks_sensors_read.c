@@ -116,6 +116,9 @@ void vTaskSensorsRead(void *pvParameters)
     float tDS = 0.0f;
     float tAM = 0.0f;
     float humidity = 0.0f;
+    float k = 3.0f / 1024.0f;
+    float k2 = 6.0f * k;
+    float wind = 0.0f;
     uint64_t ID=0;//0xd501211280621728U;
     uint8_t presence=0;
 
@@ -127,33 +130,43 @@ void vTaskSensorsRead(void *pvParameters)
     }
 */
 
+uint8_t  cnt=0;
     while(1)
     {
-        result = AM2305_GetHumidityTemperature(&humidity,&tAM);
-        if (result == RESULT_NOT_OK)
-        {
-            printf("AM2305 isn't OK\r\n");
-        }
-        else
-        {
-            ftoa(tAM, bufferPrintf, 4);
-            printf("tAM = %s\r\n",bufferPrintf);
-            ftoa(humidity, bufferPrintf, 3);
-            printf("humidity = %s\r\n",bufferPrintf);
-        }
+        uint16_t get_val;
+        get_val = ADC_GetConversionValue(ADC1);
+        wind = (float)get_val * k2;
+        ftoa(wind, bufferPrintf, 2);
+        printf("ADC_anemometer value is %s\r\n", bufferPrintf);
+        printf("cnt %d\r\n", cnt);
+        cnt++;
 
-        result = DS18B20_GetTemperature(DS18B20_ONE_WIRE_CH,&ID,&tDS);
-        //printf("ID = %llx\r\n",ID);
-
-        if (result == RESULT_NOT_OK)
-        {
-            printf("DS18B20 isn't OK\r\n");
-        }
-        else
-        {
-            ftoa(tDS, bufferPrintf, 4);
-            printf("tDS = %s\r\n",bufferPrintf);
-        }
+//        result = AM2305_GetHumidityTemperature(&humidity,&tAM);
+//        if (result == RESULT_NOT_OK)
+//        {
+//            printf("AM2305 isn't OK\r\n");
+//        }
+//        else
+//        {
+//            ftoa(tAM, bufferPrintf, 4);
+//            printf("tAM = %s\r\n",bufferPrintf);
+//            ftoa(humidity, bufferPrintf, 3);
+//            printf("humidity = %s\r\n",bufferPrintf);
+//        }
+//
+//        result = DS18B20_GetTemperature(DS18B20_ONE_WIRE_CH,&ID,&tDS);
+//        //printf("ID = %llx\r\n",ID);
+//
+//        if (result == RESULT_NOT_OK)
+//        {
+//            printf("DS18B20 isn't OK\r\n");
+//        }
+//        else
+//        {
+//            ftoa(tDS, bufferPrintf, 4);
+//            printf("tDS = %s\r\n",bufferPrintf);
+//        }
+            printf("I am ready!!!\r\n");
 
 
         vTaskDelay(1000/portTICK_RATE_MS);

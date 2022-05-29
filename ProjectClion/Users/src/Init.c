@@ -150,6 +150,7 @@ void Init(void)
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
     RCC_APB2PeriphClockCmd(    RCC_APB2Periph_TIM9, ENABLE);
+    RCC_APB2PeriphClockCmd(    RCC_APB2Periph_ADC1, ENABLE); //activated ADC
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);
 
 
@@ -159,6 +160,13 @@ void Init(void)
     GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_8;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_Init(GPIOA, &GPIO_InitStruct);
+    //initialize pin A2 for anemometer
+    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_2;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AN; //because signal is analogue
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz; //speed for digital
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -215,6 +223,23 @@ void Init(void)
     TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
     TIM_TimeBaseInit(INIT_TIMER_DELAY, &TIM_TimeBaseInitStruct);
+    //ADC set
+    ADC_InitTypeDef ADC_InitStruct;
+    /* Reset ADC init structure parameters values */
+    ADC_InitStruct.ADC_Resolution = ADC_Resolution_12b;
+    ADC_InitStruct.ADC_ScanConvMode = DISABLE;
+    ADC_InitStruct.ADC_ContinuousConvMode = ENABLE;
+    ADC_InitStruct.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+    ADC_InitStruct.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T2_CC2;
+    ADC_InitStruct.ADC_DataAlign = ADC_DataAlign_Right;
+    ADC_InitStruct.ADC_NbrOfConversion = 1;
+    ADC_Init(ADC1, &ADC_InitStruct);
+
+    ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 1, ADC_SampleTime_24Cycles);
+
+    ADC_Cmd(ADC1, ENABLE);
+
+
 
 }
 // end of Init()
