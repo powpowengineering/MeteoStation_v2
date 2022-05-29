@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.17)
 include(toolchain.cmake)
 
 # Set project name
-project(MeteoStation_v2 C ASM)
+project(RAK811 C ASM)
 
 # Set project composition method
 # Valid values: [COMP_PER_FILES ; COMP_PER_FOLDERS]
