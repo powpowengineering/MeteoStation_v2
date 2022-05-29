@@ -138,7 +138,7 @@ void vTaskTestFlash(void *pvParameters)
     for (int i=0;i<TEST_FLASH_NUMBER_OF_ITERATIONS_TEST_1;i++)
     {
         // get address
-        adr = (rand() / W25Q_QTY_SECTORS) * W25Q_CAPACITY_SECTOR_BYTES;
+        adr = ((rand()%W25Q_CAPACITY_ALL_MEMORY_BYTES) / W25Q_QTY_SECTORS) * W25Q_CAPACITY_SECTOR_BYTES;
         printf("Address %x; ",adr);
 
         // Erase sector 4K
