@@ -129,7 +129,7 @@ void vTaskSensorsRead(void *pvParameters)
         bufferPrintf[i] = 0;
     }
 */
-
+    ADC_SoftwareStartConv(ADC1);
 uint8_t  cnt=0;
     while(1)
     {
