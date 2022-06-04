@@ -77,7 +77,7 @@
 #define SIZE_BUF            (0x400UL)
 
 // Test constants
-#define TEST_FLASH_NUMBER_OF_ITERATIONS_TEST_1          (3U)
+#define TEST_FLASH_NUMBER_OF_ITERATIONS_TEST_1          (10U)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -135,11 +135,41 @@ void vTaskTestFlash(void *pvParameters)
     // Test 1: Erase/write/read random number of 4k sectors. Address multiple of 4K.
     printf("Start Test 1:\n\r");
     // erase/write/read/check data
+    // Unlock global
+    if (RESULT_OK == W25Q_UnLockGlobal())
+    {
+        printf("Unlock global was successful\r\n");
+    }
+    else
+    {
+        printf("Unlock global failed\r\n");
+    }
+
     for (int i=0;i<TEST_FLASH_NUMBER_OF_ITERATIONS_TEST_1;i++)
     {
         // get address
         adr = ((rand()%W25Q_CAPACITY_ALL_MEMORY_BYTES) / W25Q_QTY_SECTORS) * W25Q_CAPACITY_SECTOR_BYTES;
+
         printf("Address %x; ",adr);
+
+        uint8_t lock=0;
+        // Check lock
+        if (RESULT_OK == W25Q_GetLock(adr,&lock))
+        {
+            if ((lock & 0x01) == 0x01)
+            {
+                printf("Block locked; ");
+            }
+            else
+            {
+                printf("Block Unlocked; ");
+            }
+        }
+        else
+        {
+            printf("Error Read; ");
+        }
+
 
         // Erase sector 4K
         if (RESULT_OK == W25Q_EraseBlock(adr,W25Q_BLOCK_MEMORY_4KB))
@@ -148,7 +178,7 @@ void vTaskTestFlash(void *pvParameters)
         }
         else
         {
-            printf("Erase 4K FAIL; ");
+            printf("Erase 4K BRAKE; ");
         }
 
         // Prepare dataWrite
@@ -165,17 +195,17 @@ void vTaskTestFlash(void *pvParameters)
         }
         else
         {
-            printf("Write 4K FAIL; ");
+            printf("Write 4K BRAKE; ");
         }
 
         // Read sector 4K
         if (RESULT_OK == W25Q_ReadData(adr,dataRead, SIZE_BUF))
         {
-            printf("Read 4K PASS");
+            printf("Read 4K PASS; ");
         }
         else
         {
-            printf("Read 4K FAIL");
+            printf("Read 4K BRAKE; ");
         }
 
         // Check data
@@ -184,22 +214,27 @@ void vTaskTestFlash(void *pvParameters)
             printf("Check Sum PASS; TEST 1.%d PASS\r\n",i);
             nNumberOfPass++;
         }
+        else
         {
             printf("Check Sum FAIL; TEST 1.%d FAIL\r\n",i);
             nNumberOfFail++;
         }
     }
-    printf("Finish Test 1: Tests passed %d ; Tests failed %d\n\r",nNumberOfPass,nNumberOfFail);
+    printf("Finished Test 1: Tests passed %d ; Tests failed %d\n\r",nNumberOfPass,nNumberOfFail);
     printf("\r\n");
     // End Test 1
 
     // Test 2: Erase Chip
+    printf("Test 2 started\r\n");
+    printf("Reading all memory\r\n");
     // Read all sectors
+    uint32_t nNumberReadBytes=0;
     for (uint8_t step=0;step<2;step++)
     {
         adr = 0;
-        nSizeRead = SIZE_BUF&(W25Q_CAPACITY_SECTOR_BYTES-1);
+        nSizeRead = SIZE_BUF & (W25Q_CAPACITY_SECTOR_BYTES-1);
         nNumberOfNotEmpty = 0;
+        nNumberReadBytes = 0;
 
         for (int i=0;i<W25Q_QTY_SECTORS;i++)
         {
@@ -208,6 +243,9 @@ void vTaskTestFlash(void *pvParameters)
             {
                 if (RESULT_OK == W25Q_ReadData(adr,dataRead, nSizeRead))
                 {
+                    nNumberReadBytes += nSizeRead;
+                    printf(" \r");
+                    printf("Read %d %% bytes\r",(nNumberReadBytes*100) / W25Q_CAPACITY_ALL_MEMORY_BYTES);
                     for (int j=0; j<nSizeRead; j++)
                     {
                         if (0xff != dataRead[j])
@@ -226,6 +264,7 @@ void vTaskTestFlash(void *pvParameters)
                 adr += nSizeRead;
             }
         }
+        printf("\n\r");
         printf("Number of not empty sectors  %d\r\n",nNumberOfNotEmpty);
 
         if (0 == step)

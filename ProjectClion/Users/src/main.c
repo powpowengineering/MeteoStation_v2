@@ -133,13 +133,13 @@ void main(void)
 
 
 
-    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
-                TASK_SEN_R_PARAMETERS,\
-                TASK_SEN_R_PRIORITY,NULL);
+//    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
+//                TASK_SEN_R_PARAMETERS,\
+//                TASK_SEN_R_PRIORITY,NULL);
 
-//    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
-//                TASK_TEST_FLASH_PARAMETERS,\
-//                TASK_TEST_FLASH_PRIORITY,NULL);
+    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
+                TASK_TEST_FLASH_PARAMETERS,\
+                TASK_TEST_FLASH_PRIORITY,NULL);
 
     vTaskStartScheduler();
 
