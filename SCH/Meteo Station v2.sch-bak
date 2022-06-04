@@ -156,7 +156,7 @@ $EndComp
 Wire Wire Line
 	7750 2850 7750 2900
 $Comp
-L Meteo-Station-v2-rescue:Conn_01x04_eskd-Meteo-Station-rescue X6
+L Meteo-Station-rescue:Conn_01x04_eskd X6
 U 1 1 6118B883
 P 1700 5000
 F 0 "X6" H 1900 5050 50  0000 L CIN
@@ -625,7 +625,7 @@ Entry Wire Line
 Text Label 10600 2550 0    50   Italic 0
 BUTTONS
 $Comp
-L Meteo-Station-v2-rescue:WisDuo_RAK811-RAKwireless-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-v2-rescue A2
+L Meteo-Station-v2-rescue:WisDuo_RAK811-RAKwireless-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-rescue A2
 U 1 1 61394268
 P 8400 1500
 F 0 "A2" H 8805 1445 50  0000 C CNN
@@ -1257,7 +1257,7 @@ Wire Wire Line
 Wire Wire Line
 	1250 8200 1350 8200
 $Comp
-L Meteo-Station-v2-rescue:SW_DPDT-Switch-Meteo-Station-rescue-Meteo-Station-v2-rescue SW1
+L Meteo-Station-v2-rescue:SW_DPDT-Switch-Meteo-Station-rescue SW1
 U 1 1 615D5366
 P 1600 8000
 F 0 "SW1" H 1550 8225 50  0000 C CIN
@@ -1300,7 +1300,7 @@ Wire Wire Line
 Wire Wire Line
 	1250 8100 1350 8100
 $Comp
-L Meteo-Station-v2-rescue:Module_RTC_DS3231-Modules-Meteo-Station-v2-rescue A3
+L Meteo-Station-v2-rescue:Module_RTC_DS3231-Modules A3
 U 1 1 6120706C
 P 8500 3100
 F 0 "A3" H 8800 3150 50  0000 C CNN
@@ -1311,7 +1311,7 @@ F 3 "" H 8500 3200 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Meteo-Station-v2-rescue:Module_LPS25HB-Modules-Meteo-Station-v2-rescue A4
+L Meteo-Station-v2-rescue:Module_LPS25HB-Modules A4
 U 1 1 612169F7
 P 8550 4250
 F 0 "A4" H 8800 4300 50  0000 C CNN
@@ -1322,7 +1322,7 @@ F 3 "" H 8550 4350 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Meteo-Station-v2-rescue:Module_SD_CARD-Modules-Meteo-Station-v2-rescue A5
+L Meteo-Station-v2-rescue:Module_SD_CARD-Modules A5
 U 1 1 61218907
 P 8550 5050
 F 0 "A5" H 8800 5100 50  0000 C CIN
@@ -1333,7 +1333,7 @@ F 3 "" H 8550 5050 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Meteo-Station-v2-rescue:Module_SD_CARD-Modules-Meteo-Station-v2-rescue A6
+L Meteo-Station-v2-rescue:Module_SD_CARD-Modules A6
 U 1 1 612199E2
 P 8550 5850
 F 0 "A6" H 8800 5900 50  0000 C CIN
@@ -1344,7 +1344,7 @@ F 3 "" H 8550 5850 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Meteo-Station-v2-rescue:Module_Lcd_5110-Modules-Meteo-Station-v2-rescue A7
+L Meteo-Station-v2-rescue:Module_Lcd_5110-Modules A7
 U 1 1 6121A98F
 P 8550 6750
 F 0 "A7" H 8750 6800 50  0000 L CNN
@@ -1355,7 +1355,7 @@ F 3 "" H 8550 6750 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Meteo-Station-v2-rescue:ArduinoMega2560-arduino-Meteo-Station-v2-rescue A1
+L Meteo-Station-v2-rescue:ArduinoMega2560-arduino A1
 U 1 1 6127765B
 P 4700 1600
 F 0 "A1" H 5350 1650 50  0000 C CIN
@@ -1498,7 +1498,7 @@ TX_LORA
 Text Label 7700 1900 0    50   Italic 0
 RX_LORA
 $Comp
-L Meteo-Station-v2-rescue:Conn_01x03_eskd-Connector_Generic-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-v2-rescue X7
+L Meteo-Station-v2-rescue:Conn_01x03_eskd-Connector_Generic-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-rescue X7
 U 1 1 613E84E2
 P 1800 5850
 F 0 "X7" H 2100 6050 50  0000 L CIN
@@ -1554,7 +1554,7 @@ Entry Wire Line
 Text Label 9800 2400 2    50   Italic 0
 SWCLK
 $Comp
-L Meteo-Station-v2-rescue:Conn_01x03_eskd-Connector_Generic-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-v2-rescue X8
+L Meteo-Station-v2-rescue:Conn_01x03_eskd-Connector_Generic-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-rescue-Meteo-Station-rescue X8
 U 1 1 61455039
 P 1800 6550
 F 0 "X8" H 2100 6750 50  0000 L CIN
@@ -1677,7 +1677,7 @@ Wire Wire Line
 Entry Wire Line
 	7400 5400 7500 5500
 $Comp
-L Meteo-Station-v2-rescue:DS2484-Meteo-Station-v2-rescue D1
+L Meteo-Station-v2-rescue:DS2484 D1
 U 1 1 6125CA19
 P 8550 8100
 F 0 "D1" H 8800 8150 50  0000 C CIN
