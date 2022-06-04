@@ -190,19 +190,21 @@ typedef struct W25Q_TIMES_str
 #define W25Q_CHIP_ER_TIME_US        (200000000UL)
 #define W25Q_NONE_TIME_US           (10000UL)
 
-#define W25Q_PAGE_PRM_QTY_TIMEOUT       (5U)
-#define W25Q_ER_4K_QTY_TIMEOUT          (5U)
+#define W25Q_PAGE_PRM_QTY_TIMEOUT       (10U)
+#define W25Q_ER_4K_QTY_TIMEOUT          (10U)
 #define W25Q_ER_32K_QTY_TIMEOUT         (5U)
 #define W25Q_ER_64K_QTY_TIMEOUT         (5U)
 #define W25Q_ER_CHIP_QTY_TIMEOUT        (5U)
 #define W25Q_NONE_QTY_TIMEOUT           (20U)
+
+
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
 void (*pW25Q_Delay)(uint32_t us);
-const W25Q_TIMES W25Q_Times = {
+static const W25Q_TIMES W25Q_Times= {
         {W25Q_PAGE_PRM_TIME_US,W25Q_PAGE_PRM_QTY_TIMEOUT},
         {W25Q_4KB_ER_TIME_US,W25Q_ER_4K_QTY_TIMEOUT},
         {W25Q_32KB_ER_TIME_US,W25Q_ER_32K_QTY_TIMEOUT},
@@ -210,6 +212,8 @@ const W25Q_TIMES W25Q_Times = {
         {W25Q_CHIP_ER_TIME_US,W25Q_ER_CHIP_QTY_TIMEOUT},
         {W25Q_NONE_TIME_US,W25Q_NONE_QTY_TIMEOUT}
         };
+
+
 
 //**************************************************************************************************
 // Declarations of local (private) functions
@@ -381,33 +385,34 @@ STD_RESULT W25Q_ReadData(const uint32_t adr,uint8_t* data, const uint32_t len)
 
     //check BUSY W25Q
     cmd = (uint8_t) W25Q_CMD_READ_STATUS_REG_1;
-    W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
-    timeoutCnt = W25Q_Times.nNone.nQuantityTimeout;
-    while(((status & W25Q_REG1_BUSY_BIT) == W25Q_REG1_BUSY_BIT) && (timeoutCnt!=0))
+    status = 0xff;
+    for(uint32_t nQtyTimeout=0;nQtyTimeout < W25Q_Times.nNone.nQuantityTimeout;nQtyTimeout++)
     {
-        pW25Q_Delay(W25Q_Times.nNone.nTimeout+W25Q_Times.nNone.nTimeout/10);
-        W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
-        timeoutCnt--;
-    }
-
-    if ((status & W25Q_REG1_BUSY_BIT) == 0)
-    {
-        dataPut[0] = (uint8_t)W25Q_CMD_READ_DATA;
-        dataPut[1] = (uint8_t)(adr>>16);
-        dataPut[2] = (uint8_t)(adr>>8);
-        dataPut[3] = (uint8_t)adr;
-
-        if (RESULT_NOT_OK == W25Q_ReadWriteSPI(dataPut, W25Q_SIZE_CMD_WORD_BYTES + W25Q_SIZE_ADR_WORD_BYTES, \
-                                    data, len))
+        if (RESULT_OK == W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1))
         {
-            result = RESULT_NOT_OK;
+            if ((status & W25Q_REG1_BUSY_BIT) == 0)
+            {
+                // Read data
+                dataPut[0] = (uint8_t)W25Q_CMD_READ_DATA;
+                dataPut[1] = (uint8_t)(adr>>16);
+                dataPut[2] = (uint8_t)(adr>>8);
+                dataPut[3] = (uint8_t)adr;
+
+                if (RESULT_NOT_OK == W25Q_ReadWriteSPI(dataPut,
+                                                       W25Q_SIZE_CMD_WORD_BYTES + W25Q_SIZE_ADR_WORD_BYTES, \
+                                                data,
+                                                len))
+                {
+                    result = RESULT_NOT_OK;
+                }
+                break;
+            }
+            else
+            {
+                pW25Q_Delay(W25Q_Times.nNone.nTimeout+W25Q_Times.nNone.nTimeout/10);
+            }
         }
     }
-    else
-    {
-        result = RESULT_NOT_OK;
-    }
-
 
     return result;
 
@@ -445,67 +450,71 @@ STD_RESULT W25Q_WriteData(uint32_t adr,uint8_t* data, uint32_t len)
         {
             //check BUSY W25Q
             cmd = (uint8_t) W25Q_CMD_READ_STATUS_REG_1;
-            W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
-            timeoutCnt = 2;
-            while(((status & W25Q_REG1_BUSY_BIT) == W25Q_REG1_BUSY_BIT) && (timeoutCnt!=0))
+            status = 0xff;
+            for(uint32_t nQtyTimeout=0;nQtyTimeout < W25Q_Times.nPageProgram.nQuantityTimeout;nQtyTimeout++)
             {
-                pW25Q_Delay(W25Q_PAGE_PRM_TIME_US+W25Q_PAGE_PRM_TIME_US/10);
-                W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1);
-                timeoutCnt--;
+                if (RESULT_OK ==  W25Q_ReadWriteSPI(&cmd,
+                                                    W25Q_SIZE_CMD_WORD_BYTES,
+                                                    &status,
+                                                    1))
+                {
+                    if ((status & W25Q_REG1_BUSY_BIT) == 0U)
+                    {
+                        // Write enable instruction
+                        cmd = (uint8_t) W25Q_CMD_WRITE_EN;
+                        if (RESULT_OK == W25Q_ReadWriteSPI(&cmd,
+                                                           W25Q_SIZE_CMD_WORD_BYTES,
+                                                           0,
+                                                           0))
+                        {
+                            cmd = (uint8_t) W25Q_CMD_PAGE_PROGRAM;
+                            len_write = W25Q_SIZE_PAGE_BYTES - (adr & 0xff);
+                            if (len >= len_write)
+                            {
+                                dataPut[0] = cmd;
+                                dataPut[1] = (uint8_t)(adr>>16);
+                                dataPut[2] = (uint8_t)(adr>>8);
+                                dataPut[3] = (uint8_t)adr;
+                                if (RESULT_OK == W25Q_ReadWriteSPI(dataPut,
+                                                                   W25Q_SIZE_CMD_WORD_BYTES + W25Q_SIZE_ADR_WORD_BYTES,
+                                                                   &data[indexBuf],
+                                                                   len_write))
+                                {
+                                    adr += len_write;
+                                    len -= len_write;
+                                    indexBuf += len_write;
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                dataPut[0] = cmd;
+                                dataPut[1] = (uint8_t)(adr>>16);
+                                dataPut[2] = (uint8_t)(adr>>8);
+                                dataPut[3] = (uint8_t)adr;
+                                if (RESULT_OK == W25Q_ReadWriteSPI(dataPut,
+                                                                   W25Q_SIZE_CMD_WORD_BYTES + W25Q_SIZE_ADR_WORD_BYTES,
+                                                                   &data[indexBuf],
+                                                                   len))
+                                {
+                                    len=0;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        pW25Q_Delay(W25Q_Times.nPageProgram.nTimeout + W25Q_Times.nPageProgram.nTimeout/10);
+                    }
+                }
             }
             if ((status & W25Q_REG1_BUSY_BIT) == W25Q_REG1_BUSY_BIT)
             {
                 result = RESULT_NOT_OK;
-                break;
             }
-            // Write enable instruction
-            cmd = (uint8_t) W25Q_CMD_WRITE_EN;
-            if (RESULT_OK == W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, 0, 0))
+            if (RESULT_NOT_OK == result)
             {
-                cmd = (uint8_t) W25Q_CMD_PAGE_PROGRAM;
-                len_write = W25Q_SIZE_PAGE_BYTES - (adr & 0xff);
-                if (len >= len_write)
-                {
-                    dataPut[0] = cmd;
-                    dataPut[1] = (uint8_t)(adr>>16);
-                    dataPut[2] = (uint8_t)(adr>>8);
-                    dataPut[3] = (uint8_t)adr;
-                    if (RESULT_OK == W25Q_ReadWriteSPI(dataPut,
-                                                   W25Q_SIZE_CMD_WORD_BYTES + W25Q_SIZE_ADR_WORD_BYTES,
-                                                       &data[indexBuf], len_write))
-                    {
-                        adr += len_write;
-                        len -= len_write;
-                        indexBuf += len_write;
-                    }
-                    else
-                    {
-                        result = RESULT_NOT_OK;
-                        break;
-                    }
-                }
-                else
-                {
-                    dataPut[0] = cmd;
-                    dataPut[1] = (uint8_t)(adr>>16);
-                    dataPut[2] = (uint8_t)(adr>>8);
-                    dataPut[3] = (uint8_t)adr;
-                    if (RESULT_OK == W25Q_ReadWriteSPI(dataPut,
-                                                       W25Q_SIZE_CMD_WORD_BYTES + W25Q_SIZE_ADR_WORD_BYTES,
-                                                       &data[indexBuf], len))
-                    {
-                        len=0;
-                    }
-                    else
-                    {
-                        result = RESULT_NOT_OK;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                result = RESULT_NOT_OK;
                 break;
             }
         }
@@ -634,6 +643,121 @@ STD_RESULT W25Q_EraseBlock(const uint32_t adr, W25Q_TYPE_BLOCKS typeBlock)
 
 }// end of W25Q_EraseBlock()
 
+
+
+//**************************************************************************************************
+// @Function      W25Q_GetLock()
+//--------------------------------------------------------------------------------------------------
+// @Description   Get Block/Sector Lock
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    adr - address of block
+//                lock - get lock byte
+//**************************************************************************************************
+STD_RESULT W25Q_GetLock(const uint32_t adr, uint8_t *const lock)
+{
+    STD_RESULT result = RESULT_OK;
+    uint8_t status=0;
+    uint8_t cmd = 0;
+    uint32_t timeoutCnt=0;
+    uint8_t dataPut[W25Q_SIZE_CMD_WORD_BYTES+W25Q_SIZE_ADR_WORD_BYTES];
+
+    //check BUSY W25Q
+    cmd = (uint8_t) W25Q_CMD_READ_STATUS_REG_1;
+    status = 0xff;
+    for(uint32_t nQtyTimeout=0;nQtyTimeout < W25Q_Times.nNone.nQuantityTimeout;nQtyTimeout++)
+    {
+        if (RESULT_OK == W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, &status, 1))
+        {
+            if ((status & W25Q_REG1_BUSY_BIT) == 0)
+            {
+                // Read data
+                dataPut[0] = (uint8_t)W25Q_CMD_READ_BLOCK_LOCK;
+                dataPut[1] = (uint8_t)(adr>>16);
+                dataPut[2] = (uint8_t)(adr>>8);
+                dataPut[3] = (uint8_t)adr;
+
+                if (RESULT_NOT_OK == W25Q_ReadWriteSPI(dataPut,
+                                                       W25Q_SIZE_CMD_WORD_BYTES + W25Q_SIZE_ADR_WORD_BYTES, \
+                                                lock,
+                                                       1U))
+                {
+                    result = RESULT_NOT_OK;
+                }
+                break;
+            }
+            else
+            {
+                pW25Q_Delay(W25Q_Times.nNone.nTimeout+W25Q_Times.nNone.nTimeout/10);
+            }
+        }
+    }
+
+    return result;
+}// end of W25Q_GetLock
+
+
+
+//**************************************************************************************************
+// @Function      W25Q_UnLockGlobal()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+STD_RESULT W25Q_UnLockGlobal(void)
+{
+    STD_RESULT result = RESULT_OK;
+    uint8_t status = 0;
+    uint8_t cmd = 0;
+    uint32_t timeoutCnt = 0;
+    uint8_t dataPut = 0;
+
+    //check BUSY W25Q
+    cmd = (uint8_t) W25Q_CMD_READ_STATUS_REG_1;
+    status = 0xff;
+    for(uint32_t nQtyTimeout=0;nQtyTimeout < W25Q_Times.nNone.nQuantityTimeout;nQtyTimeout++)
+    {
+        if (RESULT_OK == W25Q_ReadWriteSPI(&cmd,
+                                           W25Q_SIZE_CMD_WORD_BYTES,
+                                           &status,
+                                           1))
+        {
+            // Write enable instruction
+            cmd = (uint8_t) W25Q_CMD_WRITE_EN;
+            if (RESULT_OK == W25Q_ReadWriteSPI(&cmd, W25Q_SIZE_CMD_WORD_BYTES, 0, 0))
+            {
+                if ((status & W25Q_REG1_BUSY_BIT) == 0)
+                {
+                    // Write cmd
+                    dataPut = (uint8_t) W25Q_CMD_GLOBAL_BLOCK_UNLOCK;
+
+                    if (RESULT_NOT_OK == W25Q_ReadWriteSPI(&dataPut,
+                                                           W25Q_SIZE_CMD_WORD_BYTES,
+                                                           0,
+                                                           0))
+                    {
+                        result = RESULT_NOT_OK;
+                    }
+                    break;
+                }
+            }
+        }
+        else
+        {
+            pW25Q_Delay(W25Q_Times.nNone.nTimeout + W25Q_Times.nNone.nTimeout / 10);
+        }
+    }
+
+    return result;
+}// end of W25Q_UnLockGlobal
 
 
 //**************************************************************************************************
