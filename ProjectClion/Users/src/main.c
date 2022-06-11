@@ -52,6 +52,7 @@
 #include "tasks_sensors_read.h"
 // Include task_test_flash interface
 #include "task_test_flash.h"
+#include "task_mqtt.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -91,6 +92,10 @@
 #define TASK_TEST_FLASH_PARAMETERS           (NULL)
 #define TASK_TEST_FLASH_PRIORITY             (1U)
 
+// Prm vTaskMQTT
+#define TASK_MQTT_STACK_DEPTH          (1024U)
+#define TASK_MQTT_PARAMETERS           (NULL)
+#define TASK_MQTT_PRIORITY             (1U)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -137,13 +142,17 @@ void main(void)
 //                TASK_SEN_R_PARAMETERS,\
 //                TASK_SEN_R_PRIORITY,NULL);
 
-    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
-                TASK_TEST_FLASH_PARAMETERS,\
-                TASK_TEST_FLASH_PRIORITY,NULL);
+//    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
+//                TASK_TEST_FLASH_PARAMETERS,\
+//                TASK_TEST_FLASH_PRIORITY,NULL);
+
+    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
+                TASK_MQTT_PARAMETERS,\
+                TASK_MQTT_PRIORITY,NULL);
 
     vTaskStartScheduler();
 
-
+    vTaskMQTT(TLM_CHANNEL);
 
 
     while(1);

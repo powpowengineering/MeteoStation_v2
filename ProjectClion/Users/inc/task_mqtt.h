@@ -1,8 +1,8 @@
 //**************************************************************************************************
-// @Module        USART
-// @Filename      usart_drv.h
+// @Module        TASK_MQTT
+// @Filename      task_mqtt.h
 //--------------------------------------------------------------------------------------------------
-// @Description   Interface of the USART.
+// @Description   Interface of the TASK_MQTT interface.
 //
 //--------------------------------------------------------------------------------------------------
 // @Version       1.0.0
@@ -13,8 +13,8 @@
 // XX.XX.XXXX     1.0.0    KPS         First release.
 //**************************************************************************************************
 
-#ifndef USART_DRV_H
-#define USART_DRV_H
+#ifndef TASK_MQTT_H
+#define TASK_MQTT_H
 
 
 //**************************************************************************************************
@@ -24,8 +24,6 @@
 #include "stm32l1xx.h"
 
 #include "general_types.h"
-
-#include "usart_drv_cfg.h"
 
 //**************************************************************************************************
 // Declarations of global (public) data types
@@ -52,18 +50,9 @@
 // Declarations of global (public) functions
 //**************************************************************************************************
 
-// init USART
-extern void USART_init(void);
-// Put character
-extern void USART_PutChar(const uint8_t channel, const char character);
-// Put string
-extern void USART_PutString(const uint8_t channel, const char* s);
-// Put RAW data
-extern void USART_PutRAWData(const uint8_t channel, const char* s, const uint32_t size);
+// Task sensors read.
+extern void vTaskMQTT(void *pvParameters);
 
-
-
-
-#endif // #ifndef USART_DRV_H
+#endif // #ifndef TASK_MQTT_H
 
 //****************************************** end of file *******************************************

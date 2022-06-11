@@ -32,7 +32,7 @@
 #define MODULE_INTERNAL_DIAGNOSTICS             (OFF)
 
 // Amount channels
-#define USART_NUMBER_CHANNELS                   (1U)
+#define USART_NUMBER_CHANNELS                   (2U)
 
 //
 #define USART_CH_0                              (ON)
@@ -56,18 +56,18 @@
 #define USART_NUM_STOP_BITS_CH_0                (1U)
 
 
-/*
- * USART CHANNEL N
-#define USART_CH_0                              (USART3)
-#define USART_GPIO_TX_PIN_CH_0                  (GPIOB)
-#define USART_GPIO_RX_PIN_CH_0                  (GPIOB)
-#define USART_TX_PIN_CH_0                       (GPIO_PIN_10)
-#define USART_RX_PIN_CH_0                       (GPIO_PIN_11)
-#define USART_BAUDRATE_CH_0                     (115200)
-#define USART_PARTY_BIT_CH_0                    (NONE)
-#define USART_DATA_SIZE_BITS_CH_0               (8U)
-#define USART_NUM_STOP_BITS_CH_0                (1U)
-*/
+
+#define USART_CH_1                              (ON)
+#define USART_ALIAS_STD_LIB_CH_1                USART3
+#define USART_GPIO_TX_PIN_CH_1                  GPIOB
+#define USART_GPIO_RX_PIN_CH_1                  GPIOB
+#define USART_TX_PIN_CH_1                       (GPIO_Pin_10)
+#define USART_RX_PIN_CH_1                       (GPIO_Pin_11)
+#define USART_BAUDRATE_CH_1                     (9600)
+#define USART_PARTY_BIT_CH_1                    USART_Parity_No
+#define USART_DATA_SIZE_BITS_CH_1               (8U)
+#define USART_NUM_STOP_BITS_CH_1                (1U)
+
 
 
 

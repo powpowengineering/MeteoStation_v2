@@ -36,6 +36,7 @@
 
 // Native header
 #include "usart_drv.h"
+#include "string.h"
 
 
 //**************************************************************************************************
@@ -94,7 +95,8 @@ typedef struct USART_SETTINGS_str
 // An array to setting usart channels
 const static USART_SETTINGS USART_Settings[USART_NUMBER_CHANNELS] =
 {
-    USART_SETTINGS_CHANNEL(0)
+        USART_SETTINGS_CHANNEL(0),
+        USART_SETTINGS_CHANNEL(1)
 };
 
 //**************************************************************************************************
@@ -165,9 +167,9 @@ void USART_PutChar(const uint8_t channel, const char character)
 {
 
     uint32_t timeout = USART_TIMEOUT_TX;
-    while( timeout != 0)
+    while(1)//( timeout != 0)
     {
-        if (SET == USART_GetFlagStatus(USART_Settings[channel].channel, USART_FLAG_TXE))
+        if (SET == USART_GetFlagStatus(USART_Settings[channel].channel, USART_FLAG_TC))
         {
             USART_SendData(USART_Settings[channel].channel, character);
             break;
@@ -176,6 +178,52 @@ void USART_PutChar(const uint8_t channel, const char character)
     }
 
 }// end of USART_PutChar()
+
+
+//**************************************************************************************************
+// @Function      USART_PutString()
+//--------------------------------------------------------------------------------------------------
+// @Description   Put string
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+void USART_PutString(const uint8_t channel, const char* s)
+{
+    uint8_t len = strlen(s);
+    for (int i=0; i<len;i++)
+    {
+        USART_PutChar(channel,*s);
+        s++;
+    }
+
+}// end of USART_PutString()
+
+
+
+//**************************************************************************************************
+// @Function      USART_PutRAWData()
+//--------------------------------------------------------------------------------------------------
+// @Description   Put string
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+void USART_PutRAWData(const uint8_t channel, const char* s, const uint32_t size)
+{
+    for (int i=0; i<size;i++)
+    {
+        USART_PutChar(channel,*s);
+        s++;
+    }
+
+}// end of USART_PutRAWData()
 
 
 
