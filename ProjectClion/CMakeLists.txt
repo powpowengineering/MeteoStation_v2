@@ -111,13 +111,13 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         )
 
 # Generate BIN-file
-#[[
+
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_OBJCOPY}
         ARGS -Obinary ${PROJECT_NAME}.elf ${PROJECT_NAME}.bin
         COMMENT "Generate ${PROJECT_NAME}.bin file"
         )
-]]
+
 
 # Show memory usage
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
