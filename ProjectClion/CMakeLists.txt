@@ -56,6 +56,7 @@ file(GLOB_RECURSE CheckSum_SOURCES "${CMAKE_SOURCE_DIR}/CheckSum/checksum.c")
 file(GLOB_RECURSE PRINTF_SOURCES "${CMAKE_SOURCE_DIR}/printf-master/printf.c")
 file(GLOB_RECURSE USART_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/USART_Driver/usart_drv.c")
 file(GLOB_RECURSE W25Q_FLASH_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/W25Q_FLASH/W25Q_drv.c")
+file(GLOB_RECURSE BME280 "${CMAKE_SOURCE_DIR}/BME280/bme280.c")
 
 
 file(GLOB_RECURSE HAL_SOURCES "${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/src/*.c")
@@ -84,6 +85,7 @@ include_directories(${CMAKE_SOURCE_DIR}/W25Q_FLASH)
 include_directories(${CMAKE_SOURCE_DIR}/USART_Driver)
 include_directories(${CMAKE_SOURCE_DIR}/printf-master)
 include_directories(${CMAKE_SOURCE_DIR}/CheckSum)
+include_directories(${CMAKE_SOURCE_DIR}/BME280)
 
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/inc")
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Include")
@@ -117,6 +119,7 @@ add_executable( ${PROJECT_NAME}
         ${USER_SOURCES}
         ${DS18B20_SOURCES}
         ${AM2305_SOURCES}
+        ${BME280}
         ${USART_DRIVER_SOURCES}
         ${HAL_SOURCES}
         ${E_PAPER_FONTS}
