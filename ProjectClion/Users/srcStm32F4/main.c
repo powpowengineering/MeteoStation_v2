@@ -1,5 +1,11 @@
 //#include "stm32l1xx.h"
 #include "stm32f4xx.h"
+#include "DEV_Config.h"
+#include "EPD_2in13.h"
+#include "EPD_Test.h"
+#include "DEV_Config.h"
+#include "GUI_Paint.h"
+#include "EPD_2in13.h"
 //#include "FreeRTOS.h"
 //#include "task.h"
 
@@ -83,10 +89,61 @@ void SWO_PrintString(const char *s)
 uint8_t lidarData[SIZE_BUF_LIDAR_DATA];
 uint16_t index=0;
 
+UBYTE array[4000];
+//    //Create a new image cache
+UBYTE *BlackImage = array;
+
 void main(void)
 {
     //Init();
+
     InitStm32F4();
+
+    DEV_Module_Init();
+
+
+   // EPD_2in13_test();
+
+    EPD_2IN13_Init(EPD_2IN13_PART);
+    EPD_2IN13_Clear();
+    DEV_Delay_ms(4000);
+
+
+
+    Paint_NewImage(BlackImage, EPD_2IN13_WIDTH, EPD_2IN13_HEIGHT, 270, WHITE);
+    Paint_SelectImage(BlackImage);
+    Paint_Clear(WHITE);
+    Paint_DrawString_EN(0, 0, "hello world", &Font24, WHITE, BLACK);
+    EPD_2IN13_Display(BlackImage);
+    DEV_Delay_ms(1000);
+    Paint_DrawString_EN(0, 25, "hello world", &Font20, WHITE, BLACK);
+    EPD_2IN13_Display(BlackImage);
+    DEV_Delay_ms(1000);
+    Paint_DrawString_EN(0, 45, "hello world", &Font16, WHITE, BLACK);
+    EPD_2IN13_Display(BlackImage);
+    DEV_Delay_ms(1000);
+    Paint_DrawString_EN(0, 61, "hello world", &Font8, WHITE, BLACK);
+    EPD_2IN13_Display(BlackImage);
+    DEV_Delay_ms(1000);
+
+
+    for(int i =0;i<0xffff;i++)
+    {
+        Paint_ClearWindows(0, 69, 100, 100, WHITE);
+        EPD_2IN13_Display(BlackImage);
+        DEV_Delay_ms(1000);
+        Paint_DrawNum(0, 70, i, &Font24, BLACK, WHITE);
+        EPD_2IN13_Display(BlackImage);
+    }
+
+
+
+    while(1);
+
+
+
+
+
     /* Enable trace in core debug */
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
 
