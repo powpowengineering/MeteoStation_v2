@@ -70,6 +70,8 @@ typedef struct USART_SETTINGS_str
     uint8_t PartyBit;
     uint8_t SizeBits;
     uint8_t StopBits;
+    uint8_t DMA_TX;
+    uint8_t DMA_RX;
 }USART_SETTINGS;
 
 #define USART_SETTINGS_CHANNEL(ch) \
@@ -83,7 +85,9 @@ typedef struct USART_SETTINGS_str
     USART_BAUDRATE_CH_##ch,         \
     USART_PARTY_BIT_CH_##ch,        \
     USART_DATA_SIZE_BITS_CH_##ch,   \
-    USART_NUM_STOP_BITS_CH_##ch     \
+    USART_NUM_STOP_BITS_CH_##ch,    \
+    USART_DMA_TX_EN_##ch,           \
+    USART_DMA_RX_EN_##ch            \
 }
 
 //**************************************************************************************************
@@ -92,6 +96,7 @@ typedef struct USART_SETTINGS_str
 
 // timeout
 #define USART_TIMEOUT_TX                (0xffffU)
+
 // An array to setting usart channels
 const static USART_SETTINGS USART_Settings[USART_NUMBER_CHANNELS] =
 {
@@ -144,11 +149,46 @@ void USART_init(void)
             USART_InitStruct.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
             USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
             USART_Init(USART_Settings[i].channel, &USART_InitStruct);
+//            if (ON == USART_Settings[i].DMA_TX)
+//            {
+//                USART_DMACmd(USART_Settings[i].channel, USART_DMAReq_Tx, ENABLE);
+//            }
+//            if (ON == USART_Settings[i].DMA_RX)
+//            {
+//                USART_DMACmd(USART_Settings[i].channel, USART_DMAReq_Rx, ENABLE);
+//            }
             USART_Cmd(USART_Settings[i].channel, ENABLE);
-
         }
     }
 }// end of USART_init()
+
+
+
+//**************************************************************************************************
+// @Function      USART_SetBaudRate()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+void USART_SetBaudRate(const uint8_t channel, const uint32_t baudrate)
+{
+    USART_Cmd(USART_Settings[channel].channel, DISABLE);
+
+    USART_InitTypeDef USART_InitStruct;
+    USART_InitStruct.USART_BaudRate = baudrate;
+    USART_InitStruct.USART_WordLength = USART_Settings[channel].SizeBits;
+    USART_InitStruct.USART_StopBits = USART_Settings[channel].StopBits;
+    USART_InitStruct.USART_Parity = USART_Settings[channel].PartyBit;
+    USART_InitStruct.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+    USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+    USART_Init(USART_Settings[channel].channel, &USART_InitStruct);
+
+}// end of USART_SetBaudRate()
 
 
 

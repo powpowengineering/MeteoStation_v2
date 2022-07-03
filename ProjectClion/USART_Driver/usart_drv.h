@@ -61,7 +61,8 @@ extern void USART_PutString(const uint8_t channel, const char* s);
 // Put RAW data
 extern void USART_PutRAWData(const uint8_t channel, const char* s, const uint32_t size);
 
-
+// Set new baudrate
+extern void USART_SetBaudRate(const uint8_t channel, const uint32_t baudrate);
 
 
 #endif // #ifndef USART_DRV_H
