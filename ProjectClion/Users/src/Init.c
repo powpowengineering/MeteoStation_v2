@@ -217,7 +217,23 @@ void Init(void)
     GPIO_Init(GPIOB, &GPIO_InitStruct);
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource11, GPIO_AF_USART3);
 
+    // I2C1 SCL
+    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_8;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_I2C1);
 
+    // I2C1 SDA
+    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_9;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_I2C1);
 
     // Init Gpio SPI1
     //InitGpioSpi1OutBoard();
@@ -261,22 +277,16 @@ void Init(void)
 
     ADC_Cmd(ADC1, ENABLE);
 
+    // Init I2C1
     I2C_InitTypeDef I2C_InitStruct;
-
-/*---------------- Reset I2C init structure parameters values ----------------*/
-        /* initialize the I2C_ClockSpeed member */
-        I2C_InitStruct.I2C_ClockSpeed = 5000;
-        /* Initialize the I2C_Mode member */
-        I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
-        /* Initialize the I2C_DutyCycle member */
-        I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;
-        /* Initialize the I2C_OwnAddress1 member */
-        I2C_InitStruct.I2C_OwnAddress1 = 0;
-        /* Initialize the I2C_Ack member */
-        I2C_InitStruct.I2C_Ack = I2C_Ack_Disable;
-        /* Initialize the I2C_AcknowledgedAddress member */
-        I2C_InitStruct.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
-        I2C_Init(I2C1, &I2C_InitStruct);
+    I2C_InitStruct.I2C_ClockSpeed = 100000;
+    I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
+    I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;
+    I2C_InitStruct.I2C_OwnAddress1 = 0;
+    I2C_InitStruct.I2C_Ack = I2C_Ack_Disable;
+    I2C_InitStruct.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
+    I2C_Init(I2C1, &I2C_InitStruct);
+    I2C_Cmd(I2C1, ENABLE);
 
 
 }

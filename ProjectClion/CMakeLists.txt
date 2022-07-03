@@ -33,11 +33,12 @@ include(compiler.cmake)
 add_definitions(
         -DSTM32L151CBU6
         #-DSTM32F40XX
-        -DUSE_STDPERIPH_DRIVER)
+        -DUSE_STDPERIPH_DRIVER
+        -DMQTT_DO_NOT_USE_CUSTOM_CONFIG
+        )
 
 add_compile_definitions(STM32L1XX_MD)
 #add_compile_definitions(STM32F4XX_MD)
-
 
 set(FREERTOS_DIR FreeRTOS/Source/)
 #file(GLOB_RECURSE USER_SOURCES "${CMAKE_SOURCE_DIR}/Users/srcStm32F4/*.c")
@@ -56,7 +57,16 @@ file(GLOB_RECURSE CheckSum_SOURCES "${CMAKE_SOURCE_DIR}/CheckSum/checksum.c")
 file(GLOB_RECURSE PRINTF_SOURCES "${CMAKE_SOURCE_DIR}/printf-master/printf.c")
 file(GLOB_RECURSE USART_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/USART_Driver/usart_drv.c")
 file(GLOB_RECURSE W25Q_FLASH_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/W25Q_FLASH/W25Q_drv.c")
-file(GLOB_RECURSE BME280 "${CMAKE_SOURCE_DIR}/BME280/bme280.c")
+file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/BMP2-Sensor-API-master/bmp2.c")
+file(GLOB_RECURSE TF02_PRO "${CMAKE_SOURCE_DIR}/TF02_PRO/tf02Pro_drv.c")
+file(GLOB_RECURSE CORE_MQTT "${CMAKE_SOURCE_DIR}/coreMQTT/source/*.c")
+#file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/api/*.c")
+#file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/apps/mqtt/*.c")
+#file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/lwgsm/*.c")
+#file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/system/lwgsm_ll_stm32.c")
+#file(GLOB_RECURSE SYSCALL "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/syscalls.c")
+
+
 
 
 file(GLOB_RECURSE HAL_SOURCES "${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/src/*.c")
@@ -76,7 +86,6 @@ file(
         "${FREERTOS_DIR}/portable/MemMang/heap_1.c"
 )
 
-
 include_directories(${CMAKE_SOURCE_DIR}/Users/inc)
 include_directories(${CMAKE_SOURCE_DIR}/OneWire)
 include_directories(${CMAKE_SOURCE_DIR}/DS18B20)
@@ -85,10 +94,22 @@ include_directories(${CMAKE_SOURCE_DIR}/W25Q_FLASH)
 include_directories(${CMAKE_SOURCE_DIR}/USART_Driver)
 include_directories(${CMAKE_SOURCE_DIR}/printf-master)
 include_directories(${CMAKE_SOURCE_DIR}/CheckSum)
-include_directories(${CMAKE_SOURCE_DIR}/BME280)
+include_directories(${CMAKE_SOURCE_DIR}/BMP2-Sensor-API-master)
+include_directories(${CMAKE_SOURCE_DIR}/coreMQTT/source/include)
+include_directories(${CMAKE_SOURCE_DIR}/coreMQTT/source/interface)
+include_directories(${CMAKE_SOURCE_DIR}/TF02_PRO)
+
+#include_directories(${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/include)
+#include_directories(${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/include/system)
+#include_directories(${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/include/system/port/cmsis_os)
+#include_directories(${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/snippets/include)
+
+
 
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/STM32L1xx_StdPeriph_Driver/inc")
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Include")
+include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/RTOS2/Template")
+include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/RTOS2/Include")
 include_directories("${CMAKE_SOURCE_DIR}/../STM32L1xx_StdPeriph_Lib_V1.4.0/Libraries/CMSIS/Device/ST/STM32L1xx/Include")
 
 include_directories(${FREERTOS_DIR})
@@ -119,7 +140,9 @@ add_executable( ${PROJECT_NAME}
         ${USER_SOURCES}
         ${DS18B20_SOURCES}
         ${AM2305_SOURCES}
-        ${BME280}
+        ${BMP280}
+        ${CORE_MQTT}
+        ${TF02_PRO}
         ${USART_DRIVER_SOURCES}
         ${HAL_SOURCES}
         ${E_PAPER_FONTS}
@@ -127,6 +150,7 @@ add_executable( ${PROJECT_NAME}
         ${E_PAPER}
         ${E_PAPER_TEST}
         ${E_PAPER_GUI}
+
 
         ${PRINTF_SOURCES}
         ${FREERTOS_SOURCES}

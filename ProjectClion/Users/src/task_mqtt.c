@@ -43,7 +43,7 @@
 #include "printf.h"
 #include "stdlib.h"
 #include "ftoa.h"
-//#include "libemqtt.h"
+#include "core_mqtt.h"
 
 
 // FreeRtos
@@ -77,6 +77,8 @@
 //**************************************************************************************************
 
 #define MQTT_UART_CH            (1U)
+#define MQTT_BUF_SIZE           (1024U)
+
 static const int8_t MQTT_AT[] = {"AT\r"};
 static const int8_t MQTT_AT_CIPSTATUS[] = {"AT+CIPSTATUS\r"};
 static const int8_t MQTT_AT_CSTT[] = {"AT+CSTT=\"internet\"\r"};
@@ -105,18 +107,30 @@ static const char MQTT_PSW[] = {"D1MoanFH"};
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-// None.
-
-
+TransportInterface_t transport;
+MQTTFixedBuffer_t fixedBuffer;
+MQTTContext_t mqttContext;
+uint8_t buffer[MQTT_BUF_SIZE];
+MQTTPublishInfo_t publishInfo;
 //**************************************************************************************************
 // Declarations of local (private) functions
 //**************************************************************************************************
 
 static int SIM800send(void* socket_info, const void* buf, unsigned int count);
 
+static int32_t MQTTCoreSIM800send(NetworkContext_t * pNetworkContext,
+                                  const void * pBuffer,
+                                  size_t bytesToSend);
 
+static int32_t networkRecv( NetworkContext_t * pContext, void * pBuffer, size_t bytes );
 
+static uint32_t getTimeStampMs(void);
 
+// Callback function for receiving packets.
+static void eventCallback(
+        MQTTContext_t * pContext,
+        MQTTPacketInfo_t * pPacketInfo,
+        MQTTDeserializedInfo_t * pDeserializedInfo);
 
 //**************************************************************************************************
 //==================================================================================================
@@ -146,7 +160,7 @@ void vTaskMQTT(void *pvParameters)
 
     // Set buffer members.
     fixedBuffer.pBuffer = buffer;
-    fixedBuffer.size = 1024;
+    fixedBuffer.size = MQTT_BUF_SIZE;
 
     // Init MQTT
     MQTT_Init( &mqttContext, &transport, getTimeStampMs, eventCallback, &fixedBuffer );
@@ -235,13 +249,10 @@ void vTaskMQTT(void *pvParameters)
     USART_PutString(MQTT_UART_CH, "AT+CIFSR\r");
     vTaskDelay(2000/portTICK_RATE_MS);
 
-    // Start up connection
-    USART_PutString(MQTT_UART_CH, "AT+CIPSTART=\"TCP\",\"dev.rightech.io\",\"1883\"\r");
-    //USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTART);
-    vTaskDelay(8000/portTICK_RATE_MS);
 
-    USART_PutString(MQTT_UART_CH, "AT+CIPSEND\r");
-    vTaskDelay(3000/portTICK_RATE_MS);
+
+//    USART_PutString(MQTT_UART_CH, "AT+CIPSEND\r");
+//    vTaskDelay(3000/portTICK_RATE_MS);
 
 
 //    USART_PutString(MQTT_UART_CH, MQTT_AT_SAPBR_3_1);
@@ -345,28 +356,60 @@ void vTaskMQTT(void *pvParameters)
   //  USART_PutChar(MQTT_UART_CH,0x1a);
   //  vTaskDelay(3000/portTICK_RATE_MS);
 
-    MQTT_Connect( &mqttContext, &connectInfo, &willInfo, 100, &sessionPresent );
-    USART_PutChar(MQTT_UART_CH,0x1a);
-    vTaskDelay(3000/portTICK_RATE_MS);
+//    MQTT_Connect( &mqttContext, &connectInfo, &willInfo, 100, &sessionPresent );
+//    USART_PutChar(MQTT_UART_CH,0x1a);
+//    vTaskDelay(3000/portTICK_RATE_MS);
+
+    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
+    vTaskDelay(2000/portTICK_RATE_MS);
 
     float cnt = 0;
     char buf[30];
     while(1)
     {
-        ftoa(cnt, buf, 1);
-        packetId = MQTT_GetPacketId( &mqttContext );
-        publishInfo.qos = MQTTQoS0;
-        publishInfo.pTopicName = "base/state/meteostation";
-        publishInfo.topicNameLength = strlen( publishInfo.pTopicName );
-        publishInfo.pPayload = buf;
-        publishInfo.payloadLength = strlen( buf );
-        USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
-        vTaskDelay(3000/portTICK_RATE_MS);
-        MQTT_Publish( &mqttContext, &publishInfo, packetId );
-        USART_PutChar(MQTT_UART_CH,0x1a);
+
+        // Start up connection
+        USART_PutString(MQTT_UART_CH, "AT+CIPSTART=\"TCP\",\"dev.rightech.io\",\"1883\"\r");
+        //USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTART);
+        vTaskDelay(8000/portTICK_RATE_MS);
+
+        USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
+        vTaskDelay(2000/portTICK_RATE_MS);
+
+        if (MQTTNotConnected == mqttContext.connectStatus)
+        {
+            USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+            vTaskDelay(2000/portTICK_RATE_MS);
+            MQTT_Connect( &mqttContext, &connectInfo, &willInfo, 100, &sessionPresent );
+            USART_PutChar(MQTT_UART_CH,0x1a);
+            vTaskDelay(2000/portTICK_RATE_MS);
+
+            ftoa(cnt, buf, 1);
+            packetId = MQTT_GetPacketId( &mqttContext );
+            publishInfo.qos = MQTTQoS0;
+            publishInfo.pTopicName = "base/state/meteostation";
+            publishInfo.topicNameLength = strlen( publishInfo.pTopicName );
+            publishInfo.pPayload = buf;
+            publishInfo.payloadLength = strlen( buf );
+            USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+            vTaskDelay(2000/portTICK_RATE_MS);
+            MQTT_Publish( &mqttContext, &publishInfo, packetId );
+            USART_PutChar(MQTT_UART_CH,0x1a);
+            vTaskDelay(2000/portTICK_RATE_MS);
+
+            USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+            vTaskDelay(2000/portTICK_RATE_MS);
+            MQTT_Disconnect( &mqttContext );
+            USART_PutChar(MQTT_UART_CH,0x1a);
+            vTaskDelay(2000/portTICK_RATE_MS);
+            cnt += 0.1F;
+
+            USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
+            vTaskDelay(2000/portTICK_RATE_MS);
+        }
 
 
-        cnt += 0.1F;
+
 //        USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
 //        vTaskDelay(3000/portTICK_RATE_MS);
 //        MQTT_Disconnect( &mqttContext);
