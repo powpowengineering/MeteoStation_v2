@@ -48,7 +48,11 @@
 // FreeRtos
 #include "FreeRTOS.h"
 #include "task.h"
+#include "task_mqtt.h"
+#include "queue.h"
 
+// Queue handle for measure data
+extern xQueueHandle xQueueMeasureData;
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -96,6 +100,8 @@ static struct bmp2_dev bmp280;
 static uint8_t bmp280_addr = BMP2_I2C_ADDR_PRIM;
 
 static TF02_PRO_MEASURED_DATA TF02_PRO_Lidar;
+
+static TASK_SENSOR_READ_DATA TASK_SENSOR_READ_data;
 
 //**************************************************************************************************
 // Declarations of local (private) functions
@@ -160,27 +166,27 @@ void vTaskSensorsRead(void *pvParameters)
         printf("BME280 wasn't initialize\r\n");
     }
 
-//    // Get config
-//    bmp2_get_config(&bmp280Config, &bmp280);
-//
-//    bmp280Config.filter = BMP2_FILTER_OFF;
-//    bmp280Config.os_mode = BMP2_OS_MODE_LOW_POWER;
-//    bmp280Config.spi3w_en = BMP2_SPI3_WIRE_DISABLE;
-//    bmp280Config.odr = BMP2_ODR_125_MS;
-//
-//
-//    // Set config
-//    bmp2_set_config(&bmp280Config, &bmp280);
-//
-//    // set Power mode NORMAL BMP280
-//    bmp2_set_power_mode(BMP2_POWERMODE_FORCED, &bmp280Config, &bmp280);
-//
-//    // Calculate measurement time in microseconds
-//    bmp2_compute_meas_time(&meas_time, &bmp280Config, &bmp280);
-//    printf("Measurement time %d\r\n", meas_time);
-//
-//
-//    result = DS18B20_GetID(DS18B20_ONE_WIRE_CH,&ID);
+    // Get config
+    bmp2_get_config(&bmp280Config, &bmp280);
+
+    bmp280Config.filter = BMP2_FILTER_OFF;
+    bmp280Config.os_mode = BMP2_OS_MODE_LOW_POWER;//;
+    bmp280Config.spi3w_en = BMP2_SPI3_WIRE_DISABLE;
+    bmp280Config.odr = BMP2_ODR_125_MS;
+
+
+    // Set config
+    bmp2_set_config(&bmp280Config, &bmp280);
+
+    // set Power mode NORMAL BMP280
+    bmp2_set_power_mode(BMP2_POWERMODE_NORMAL, &bmp280Config, &bmp280);
+
+    // Calculate measurement time in microseconds
+    bmp2_compute_meas_time(&meas_time, &bmp280Config, &bmp280);
+    printf("Measurement time %d\r\n", meas_time);
+
+
+       result = DS18B20_GetID(DS18B20_ONE_WIRE_CH,&ID);
 ///*
 //    for (int i=0;i<TAS K_SENS_RD_SIZE_BUFF_PRINT;i++)
 //    {
@@ -201,53 +207,64 @@ void vTaskSensorsRead(void *pvParameters)
 
 
 
-
-//        result = AM2305_GetHumidityTemperature(&humidity,&tAM);
-//        if (result == RESULT_NOT_OK)
-//        {
-//            printf("AM2305 isn't OK\r\n");
-//        }
-//        else
-//        {
-//            ftoa(tAM, bufferPrintf, 4);
-//            printf("tAM = %s\r\n",bufferPrintf);
-//            ftoa(humidity, bufferPrintf, 3);
-//            printf("humidity = %s\r\n",bufferPrintf);
-//        }
-//
-//        result = DS18B20_GetTemperature(DS18B20_ONE_WIRE_CH,&ID,&tDS);
-//        //printf("ID = %llx\r\n",ID);
-//
-//        if (result == RESULT_NOT_OK)
-//        {
-//            printf("DS18B20 isn't OK\r\n");
-//        }
-//        else
-//        {
-//            ftoa(tDS, bufferPrintf, 4);
-//            printf("tDS = %s\r\n",bufferPrintf);
-//        }
-//        printf("I am ready!!!\r\n");
-
-
-
-//        bmp2_get_sensor_data(&bmp280Data, &bmp280);
-//        ftoa((float)bmp280Data.temperature, bufferPrintf, 1);
-//        printf("Temperature = %s\r\n",bufferPrintf);
-//
-//        ftoa((float)bmp280Data.pressure, bufferPrintf, 1);
-//        printf("Pressure = %s\r\n",bufferPrintf);
-//        bmp2_set_power_mode(BMP2_POWERMODE_FORCED, &bmp280Config, &bmp280);
-
         taskENTER_CRITICAL();
-        TF02_PRO_GetMeasuredData(&TF02_PRO_Lidar);
+        result = AM2305_GetHumidityTemperature(&humidity,&tAM);
         taskEXIT_CRITICAL();
+        if (result == RESULT_NOT_OK)
+        {
+            printf("AM2305 isn't OK\r\n");
+        }
+        else
+        {
+            ftoa(tAM, bufferPrintf, 4);
+            printf("tAM = %s\r\n",bufferPrintf);
+            ftoa(humidity, bufferPrintf, 3);
+            printf("humidity = %s\r\n",bufferPrintf);
+        }
 
-        printf("Strength = %d\r\n",TF02_PRO_Lidar.nStrength);
-        printf("Distance = %d\r\n",TF02_PRO_Lidar.nDistance);
-        printf("\r\n");
+        result = DS18B20_GetTemperature(DS18B20_ONE_WIRE_CH,&ID,&tDS);
+        //printf("ID = %llx\r\n",ID);
 
-        vTaskDelay(1000/portTICK_RATE_MS);
+        if (result == RESULT_NOT_OK)
+        {
+            printf("DS18B20 isn't OK\r\n");
+        }
+        else
+        {
+            ftoa(tDS, bufferPrintf, 4);
+            printf("tDS = %s\r\n",bufferPrintf);
+        }
+        printf("I am ready!!!\r\n");
+
+
+
+        bmp2_get_sensor_data(&bmp280Data, &bmp280);
+        ftoa((float)bmp280Data.temperature, bufferPrintf, 1);
+        printf("Temperature = %s\r\n",bufferPrintf);
+
+        ftoa((float)bmp280Data.pressure, bufferPrintf, 1);
+        printf("Pressure = %s\r\n",bufferPrintf);
+     //   bmp2_set_power_mode(BMP2_POWERMODE_FORCED, &bmp280Config, &bmp280);
+
+//        taskENTER_CRITICAL();
+//        TF02_PRO_GetMeasuredData(&TF02_PRO_Lidar);
+//        taskEXIT_CRITICAL();
+//
+//        printf("Strength = %d\r\n",TF02_PRO_Lidar.nStrength);
+//        printf("Distance = %d\r\n",TF02_PRO_Lidar.nDistance);
+//        printf("\r\n");
+
+        TASK_SENSOR_READ_data.temperature = tDS;
+        TASK_SENSOR_READ_data.humidity = humidity;
+        TASK_SENSOR_READ_data.pressure = (float)bmp280Data.pressure;
+
+        // Put data in queue
+        xQueueSendToBack( xQueueMeasureData, &TASK_SENSOR_READ_data, 0 );
+
+        // Resume MQTT task
+        vTaskResume( HandleTask_MQTT );
+
+        vTaskDelay((60000 * 5)/portTICK_RATE_MS);
     }
 }// end of vTaskSensorsRead
 

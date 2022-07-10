@@ -85,7 +85,7 @@
 #define USART_GPIO_RX_PIN_CH_1                  GPIOB
 #define USART_TX_PIN_CH_1                       (GPIO_Pin_10)
 #define USART_RX_PIN_CH_1                       (GPIO_Pin_11)
-#define USART_BAUDRATE_CH_1                     (115200)
+#define USART_BAUDRATE_CH_1                     (9600)
 #define USART_PARTY_BIT_CH_1                    USART_Parity_No
 #define USART_DATA_SIZE_BITS_CH_1               (8U)
 #define USART_NUM_STOP_BITS_CH_1                (1U)

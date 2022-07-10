@@ -47,12 +47,15 @@
 // Freertos
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 
 // Include task_sensors_read interface
 #include "tasks_sensors_read.h"
 // Include task_test_flash interface
 #include "task_test_flash.h"
 #include "task_mqtt.h"
+
+
 
 
 
@@ -67,7 +70,8 @@
 // Definitions of global (public) variables
 //**************************************************************************************************
 
-// None.
+// Queue handle for measure data
+xQueueHandle xQueueMeasureData;
 
 
 
@@ -97,7 +101,7 @@
 #define TASK_TEST_FLASH_PRIORITY             (1U)
 
 // Prm vTaskMQTT
-#define TASK_MQTT_STACK_DEPTH          (1024U)
+#define TASK_MQTT_STACK_DEPTH          (800U)
 #define TASK_MQTT_PARAMETERS           (NULL)
 #define TASK_MQTT_PRIORITY             (1U)
 
@@ -113,7 +117,7 @@
 // Declarations of local (private) functions
 //**************************************************************************************************
 
-static void init_thread(void* arg);
+
 
 
 //**************************************************************************************************
@@ -141,6 +145,8 @@ void main(void)
     AM2305_Init();
     USART_init();
 
+    xQueueMeasureData = xQueueCreate( 3, sizeof( TASK_SENSOR_READ_DATA ) );
+
 
 
     xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
@@ -151,12 +157,14 @@ void main(void)
 //                TASK_TEST_FLASH_PARAMETERS,\
 //                TASK_TEST_FLASH_PRIORITY,NULL);
 
-//    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
-//                TASK_MQTT_PARAMETERS,\
-//                TASK_MQTT_PRIORITY,NULL);
+    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
+                TASK_MQTT_PARAMETERS,\
+                TASK_MQTT_PRIORITY,&HandleTask_MQTT);
+
+    // Blocking MQTT task
+    vTaskSuspend( HandleTask_MQTT );
 
     vTaskStartScheduler();
-
 
 
 
@@ -189,6 +197,7 @@ void _putchar(char character)
 //==================================================================================================
 //**************************************************************************************************
 
-// None.
+
+
 
 //****************************************** end of file *******************************************

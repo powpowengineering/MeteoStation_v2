@@ -207,7 +207,7 @@ void USART_PutChar(const uint8_t channel, const char character)
 {
 
     uint32_t timeout = USART_TIMEOUT_TX;
-    while(1)//( timeout != 0)
+    while( timeout != 0)
     {
         if (SET == USART_GetFlagStatus(USART_Settings[channel].channel, USART_FLAG_TC))
         {

@@ -44,11 +44,10 @@
 #include "stdlib.h"
 #include "ftoa.h"
 #include "core_mqtt.h"
+#include "tasks_sensors_read.h"
+#include "queue.h"
+extern xQueueHandle xQueueMeasureData;
 
-
-// FreeRtos
-#include "FreeRTOS.h"
-#include "task.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -61,7 +60,7 @@
 // Definitions of global (public) variables
 //**************************************************************************************************
 
-// None.
+TaskHandle_t HandleTask_MQTT;
 
 
 
@@ -78,6 +77,7 @@
 
 #define MQTT_UART_CH            (1U)
 #define MQTT_BUF_SIZE           (1024U)
+#define TASK_SENS_RD_SIZE_BUFF_PRINT    (64U)
 
 static const int8_t MQTT_AT[] = {"AT\r"};
 static const int8_t MQTT_AT_CIPSTATUS[] = {"AT+CIPSTATUS\r"};
@@ -102,6 +102,7 @@ static const char MQTT_TOPIC[] = {"base/state/temperature"};
 static const char MQTT_MESSAGE[] = {"23"};
 static const char MQTT_USER_NAME[] = {"u_I8KUVV"};
 static const char MQTT_PSW[] = {"D1MoanFH"};
+
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -131,6 +132,13 @@ static void eventCallback(
         MQTTContext_t * pContext,
         MQTTPacketInfo_t * pPacketInfo,
         MQTTDeserializedInfo_t * pDeserializedInfo);
+
+static TASK_SENSOR_READ_DATA ReceivedQueue;
+
+// printf buffer.
+static char bufferPrintf[TASK_SENS_RD_SIZE_BUFF_PRINT];
+
+void TaskDelay(TickType_t ms);
 
 //**************************************************************************************************
 //==================================================================================================
@@ -196,7 +204,7 @@ void vTaskMQTT(void *pvParameters)
     // The last will and testament is optional, it will be published by the broker
     // should this client disconnect without sending a DISCONNECT packet.
     willInfo.qos = MQTTQoS0;
-    willInfo.pTopicName = "base/state/temperature";
+    willInfo.pTopicName = "base/state/humidity";
     willInfo.topicNameLength = strlen( willInfo.pTopicName );
     willInfo.pPayload = "100";
     willInfo.payloadLength = strlen( "100" );
@@ -220,35 +228,31 @@ void vTaskMQTT(void *pvParameters)
 //    USART_PutString(MQTT_UART_CH, "AT+CIPSEND\r");
 //    vTaskDelay(3000/portTICK_RATE_MS);
 
-    vTaskDelay(10000/portTICK_RATE_MS);
+
+
+//    vTaskDelay(2000/portTICK_RATE_MS);
+    TaskDelay(2000);
     // Whether some password is required or not
     USART_PutString(MQTT_UART_CH, "AT+CPIN?\r");
-    vTaskDelay(2000/portTICK_RATE_MS);
-
+TaskDelay(2000);
     // Received signal strength
     USART_PutString(MQTT_UART_CH, "AT+CSQ\r");
-    vTaskDelay(2000/portTICK_RATE_MS);
-
+TaskDelay(2000);
     // The tegistration of the ME
     USART_PutString(MQTT_UART_CH, "AT+CREG?\r");
-    vTaskDelay(2000/portTICK_RATE_MS);
-
+TaskDelay(2000);
     // GPRS Service's status
     USART_PutString(MQTT_UART_CH, "AT+CGATT?\r");
-    vTaskDelay(2000/portTICK_RATE_MS);
-
+TaskDelay(2000);
     // Start task and set APN
     USART_PutString(MQTT_UART_CH, "AT+CSTT=\"internet\"\r");
-    vTaskDelay(2000/portTICK_RATE_MS);
-
+TaskDelay(2000);
     // Bring up wireless connection
     USART_PutString(MQTT_UART_CH, "AT+CIICR\r");
-    vTaskDelay(2000/portTICK_RATE_MS);
-
+TaskDelay(2000);
     // Get local IP address
     USART_PutString(MQTT_UART_CH, "AT+CIFSR\r");
-    vTaskDelay(2000/portTICK_RATE_MS);
-
+TaskDelay(2000);
 
 
 //    USART_PutString(MQTT_UART_CH, "AT+CIPSEND\r");
@@ -360,61 +364,83 @@ void vTaskMQTT(void *pvParameters)
 //    USART_PutChar(MQTT_UART_CH,0x1a);
 //    vTaskDelay(3000/portTICK_RATE_MS);
 
-    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
-    vTaskDelay(2000/portTICK_RATE_MS);
 
-    float cnt = 0;
-    char buf[30];
     while(1)
     {
-
-        // Start up connection
-        USART_PutString(MQTT_UART_CH, "AT+CIPSTART=\"TCP\",\"dev.rightech.io\",\"1883\"\r");
-        //USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTART);
-        vTaskDelay(8000/portTICK_RATE_MS);
-
-        USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
-        vTaskDelay(2000/portTICK_RATE_MS);
-
-        if (MQTTNotConnected == mqttContext.connectStatus)
+        if (pdPASS == xQueueReceive( xQueueMeasureData, &ReceivedQueue,  10 / portTICK_RATE_MS ))
         {
-            USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
-            vTaskDelay(2000/portTICK_RATE_MS);
-            MQTT_Connect( &mqttContext, &connectInfo, &willInfo, 100, &sessionPresent );
-            USART_PutChar(MQTT_UART_CH,0x1a);
-            vTaskDelay(2000/portTICK_RATE_MS);
-
-            ftoa(cnt, buf, 1);
-            packetId = MQTT_GetPacketId( &mqttContext );
-            publishInfo.qos = MQTTQoS0;
-            publishInfo.pTopicName = "base/state/meteostation";
-            publishInfo.topicNameLength = strlen( publishInfo.pTopicName );
-            publishInfo.pPayload = buf;
-            publishInfo.payloadLength = strlen( buf );
-            USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
-            vTaskDelay(2000/portTICK_RATE_MS);
-            MQTT_Publish( &mqttContext, &publishInfo, packetId );
-            USART_PutChar(MQTT_UART_CH,0x1a);
-            vTaskDelay(2000/portTICK_RATE_MS);
-
-            USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
-            vTaskDelay(2000/portTICK_RATE_MS);
-            MQTT_Disconnect( &mqttContext );
-            USART_PutChar(MQTT_UART_CH,0x1a);
-            vTaskDelay(2000/portTICK_RATE_MS);
-            cnt += 0.1F;
+            USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
+            TaskDelay(2000);
+            // Start up connection
+            USART_PutString(MQTT_UART_CH, "AT+CIPSTART=\"TCP\",\"dev.rightech.io\",\"1883\"\r");
+            //USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTART);
+            TaskDelay(8000);
 
             USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
-            vTaskDelay(2000/portTICK_RATE_MS);
+            TaskDelay(2000);
+
+            if (MQTTNotConnected == mqttContext.connectStatus)
+            {
+                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+               TaskDelay(2000);
+                MQTT_Connect(&mqttContext, &connectInfo, &willInfo, 100, &sessionPresent);
+                USART_PutChar(MQTT_UART_CH, 0x1a);
+               TaskDelay(2000);
+
+                ftoa(ReceivedQueue.temperature, bufferPrintf, 3);
+                packetId = MQTT_GetPacketId(&mqttContext);
+                publishInfo.qos = MQTTQoS0;
+                publishInfo.pTopicName = "base/state/temperature";
+                publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
+                publishInfo.pPayload = bufferPrintf;
+                publishInfo.payloadLength = strlen(bufferPrintf);
+                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+               TaskDelay(2000);
+                MQTT_Publish(&mqttContext, &publishInfo, packetId);
+                USART_PutChar(MQTT_UART_CH, 0x1a);
+               TaskDelay(2000);
+
+                ftoa(ReceivedQueue.humidity, bufferPrintf, 3);
+                packetId = MQTT_GetPacketId(&mqttContext);
+                publishInfo.qos = MQTTQoS0;
+                publishInfo.pTopicName = "base/state/humidityyyy";
+                publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
+                publishInfo.pPayload = bufferPrintf;
+                publishInfo.payloadLength = strlen(bufferPrintf);
+                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+               TaskDelay(2000);
+                MQTT_Publish(&mqttContext, &publishInfo, packetId);
+                USART_PutChar(MQTT_UART_CH, 0x1a);
+               TaskDelay(2000);
+
+                ftoa(ReceivedQueue.pressure, bufferPrintf, 3);
+                packetId = MQTT_GetPacketId(&mqttContext);
+                publishInfo.qos = MQTTQoS0;
+                publishInfo.pTopicName = "base/state/pressureeee";
+                publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
+                publishInfo.pPayload = bufferPrintf;
+                publishInfo.payloadLength = strlen(bufferPrintf);
+                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+                TaskDelay(2000);
+                MQTT_Publish(&mqttContext, &publishInfo, packetId);
+                USART_PutChar(MQTT_UART_CH, 0x1a);
+                TaskDelay(2000);
+
+                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+               TaskDelay(2000);
+                MQTT_Disconnect(&mqttContext);
+                USART_PutChar(MQTT_UART_CH, 0x1a);
+               TaskDelay(2000);
+
+
+                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
+               TaskDelay(2000);
+            }
         }
+        // Blocking MQTT task
+       //TaskDelay(1000);
+        vTaskSuspend( HandleTask_MQTT );
 
-
-
-//        USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
-//        vTaskDelay(3000/portTICK_RATE_MS);
-//        MQTT_Disconnect( &mqttContext);
-//        USART_PutChar(MQTT_UART_CH,0x1a);
-        vTaskDelay(3000/portTICK_RATE_MS);
     }
 }// end of vTaskMQTT
 
@@ -459,6 +485,13 @@ static void eventCallback(
 static uint32_t getTimeStampMs(void)
 {
     return 0;
+}
+
+void TaskDelay(TickType_t ms)
+{
+    TickType_t currentTick = xTaskGetTickCount();
+
+    while ((xTaskGetTickCount() - currentTick) < ms);
 }
 
 //****************************************** end of file *******************************************
