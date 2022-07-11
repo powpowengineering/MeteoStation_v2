@@ -271,6 +271,11 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
     // Start parsing received data.
     if (0 != cnt)
     {
+        // Clear buf
+        for (int i=0; i < AM2305_QTY_DATA_BITS/8; i++)
+        {
+            data[i] = 0;
+        }
         for(int i = 0; i<AM2305_QTY_MEAS;i++)
         {
             switch(AM2305_SignalStatus)
