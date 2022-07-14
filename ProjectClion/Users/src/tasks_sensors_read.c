@@ -177,10 +177,10 @@ void vTaskSensorsRead(void *pvParameters)
 
     // Set config
     bmp2_set_config(&bmp280Config, &bmp280);
-
+    taskENTER_CRITICAL();
     // set Power mode NORMAL BMP280
-    bmp2_set_power_mode(BMP2_POWERMODE_NORMAL, &bmp280Config, &bmp280);
-
+    bmp2_set_power_mode(BMP2_POWERMODE_FORCED, &bmp280Config, &bmp280);
+    taskEXIT_CRITICAL();
     // Calculate measurement time in microseconds
     bmp2_compute_meas_time(&meas_time, &bmp280Config, &bmp280);
     printf("Measurement time %d\r\n", meas_time);
@@ -237,15 +237,18 @@ void vTaskSensorsRead(void *pvParameters)
         printf("I am ready!!!\r\n");
 
 
-
+        taskENTER_CRITICAL();
         bmp2_get_sensor_data(&bmp280Data, &bmp280);
+        taskEXIT_CRITICAL();
+
         ftoa((float)bmp280Data.temperature, bufferPrintf, 1);
         printf("Temperature = %s\r\n",bufferPrintf);
 
         ftoa((float)bmp280Data.pressure, bufferPrintf, 1);
         printf("Pressure = %s\r\n",bufferPrintf);
-     //   bmp2_set_power_mode(BMP2_POWERMODE_FORCED, &bmp280Config, &bmp280);
-
+        taskENTER_CRITICAL();
+        bmp2_set_power_mode(BMP2_POWERMODE_FORCED, &bmp280Config, &bmp280);
+        taskEXIT_CRITICAL();
 //        taskENTER_CRITICAL();
 //        TF02_PRO_GetMeasuredData(&TF02_PRO_Lidar);
 //        taskEXIT_CRITICAL();
