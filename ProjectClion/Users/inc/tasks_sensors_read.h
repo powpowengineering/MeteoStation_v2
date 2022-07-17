@@ -29,7 +29,12 @@
 // Declarations of global (public) data types
 //**************************************************************************************************
 
-// None.
+typedef struct TASK_SENSOR_READ_DATA_struct
+{
+    float temperature;
+    float humidity;
+    float pressure;
+}TASK_SENSOR_READ_DATA;
 
 
 //**************************************************************************************************

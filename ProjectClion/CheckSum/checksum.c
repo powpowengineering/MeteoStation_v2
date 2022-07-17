@@ -1,12 +1,12 @@
 //**************************************************************************************************
-// @Module        MAIN
-// @Filename      main.c
+// @Module        CH_SUM
+// @Filename      checksum.c
 //--------------------------------------------------------------------------------------------------
-// @Platform      STM32
+// @Platform      stm32
 //--------------------------------------------------------------------------------------------------
-// @Compatible    STM32L151
+// @Compatible    stm32
 //--------------------------------------------------------------------------------------------------
-// @Description   Implementation of the AM2305 functionality.
+// @Description   Implementation of the CH_SUM functionality.
 //
 //
 //                Abbreviations:
@@ -19,11 +19,10 @@
 //                Local (private) functions:
 //
 //
-//
 //--------------------------------------------------------------------------------------------------
 // @Version       1.0.0
 //--------------------------------------------------------------------------------------------------
-// @Date          XX.XX.XXXX
+// @Date          xx.xx.xxxx
 //--------------------------------------------------------------------------------------------------
 // @History       Version  Author      Comment
 // XX.XX.XXXX     1.0.0    KPS         First release.
@@ -34,30 +33,11 @@
 //**************************************************************************************************
 // Project Includes
 //**************************************************************************************************
-// stm32 STL
-#include "stm32l1xx.h"
-// drivers
-#include "OneWire.h"
-#include "usart_drv.h"
+
+// Native header
+#include "checksum.h"
+
 #include "Init.h"
-#include "ds18b20.h"
-#include "am2305_drv.h"
-#include "ftoa.h"
-#include "printf.h"
-// Freertos
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
-
-// Include task_sensors_read interface
-#include "tasks_sensors_read.h"
-// Include task_test_flash interface
-#include "task_test_flash.h"
-#include "task_mqtt.h"
-
-
-
-
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -70,40 +50,21 @@
 // Definitions of global (public) variables
 //**************************************************************************************************
 
-// Queue handle for measure data
-xQueueHandle xQueueMeasureData;
-
+// None.
 
 
 //**************************************************************************************************
 // Declarations of local (private) data types
-//**************************************************************************************************
+//*************************************************************************************************
 
 // None.
-
 
 
 //**************************************************************************************************
 // Definitions of local (private) constants
 //**************************************************************************************************
-#define PRINTF_DISABLE_SUPPORT_FLOAT
-#define PRINTF_DISABLE_SUPPORT_EXPONENTIAL
-#define TLM_CHANNEL                     (0)
 
-// Prm vTaskSensorsRead
-#define TASK_SEN_R_STACK_DEPTH          (256U)
-#define TASK_SEN_R_PARAMETERS           (NULL)
-#define TASK_SEN_R_PRIORITY             (1U)
-
-// Prm vTaskTestFlash
-#define TASK_TEST_FLASH_STACK_DEPTH          (256U)
-#define TASK_TEST_FLASH_PARAMETERS           (NULL)
-#define TASK_TEST_FLASH_PRIORITY             (1U)
-
-// Prm vTaskMQTT
-#define TASK_MQTT_STACK_DEPTH          (800U)
-#define TASK_MQTT_PARAMETERS           (NULL)
-#define TASK_MQTT_PRIORITY             (1U)
+// None.
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -112,11 +73,11 @@ xQueueHandle xQueueMeasureData;
 // None.
 
 
-
 //**************************************************************************************************
 // Declarations of local (private) functions
 //**************************************************************************************************
 
+// None.
 
 
 
@@ -127,67 +88,34 @@ xQueueHandle xQueueMeasureData;
 //**************************************************************************************************
 
 //**************************************************************************************************
-// @Function      main()
+// @Function      CH_SUM_CalculateCRC8
 //--------------------------------------------------------------------------------------------------
-// @Description   Main function.
+// @Description   Calculate CRC8.
 //--------------------------------------------------------------------------------------------------
-// @Notes         None.
+// @Notes         Poly  : 0x31    x^8 + x^5 + x^4 + 1
 //--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
+// @ReturnValue   crc8
 //--------------------------------------------------------------------------------------------------
-// @Parameters    None.
+// @Parameters    data - pointer to data to calculate crc8
+//                len - length data
 //**************************************************************************************************
-void main(void)
+uint8_t CH_SUM_CalculateCRC8(uint8_t* data, uint32_t len)
 {
-    Init();
-    // Init OneWire
-    ONE_WIRE_init();
-    AM2305_Init();
-    USART_init();
+    uint8_t crc = 0xFF;
+    uint32_t i;
 
-    xQueueMeasureData = xQueueCreate( 3, sizeof( TASK_SENSOR_READ_DATA ) );
+    while (len--)
+    {
+        crc ^= *data++;
 
+        for (i = 0; i < 8; i++)
+            crc = crc & 0x80 ? (crc << 1) ^ 0x31 : crc << 1;
+    }
 
-
-    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
-                TASK_SEN_R_PARAMETERS,\
-                TASK_SEN_R_PRIORITY,NULL);
-
-//    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
-//                TASK_TEST_FLASH_PARAMETERS,\
-//                TASK_TEST_FLASH_PRIORITY,NULL);
-
-    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
-                TASK_MQTT_PARAMETERS,\
-                TASK_MQTT_PRIORITY,&HandleTask_MQTT);
-
-    // Blocking MQTT task
-    vTaskSuspend( HandleTask_MQTT );
-
-    vTaskStartScheduler();
+    return crc;
+}// end of CH_SUM_CalculateCRC8
 
 
-
-    while(1);
-}// end of main
-
-
-
-//**************************************************************************************************
-// @Function      _putchar()
-//--------------------------------------------------------------------------------------------------
-// @Description   Put char function used by printf.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-void _putchar(char character)
-{
-    USART_PutChar(TLM_CHANNEL, character);
-}// end of _putchar
 
 
 
@@ -196,8 +124,6 @@ void _putchar(char character)
 // Definitions of local (private) functions
 //==================================================================================================
 //**************************************************************************************************
-
-
 
 
 //****************************************** end of file *******************************************
