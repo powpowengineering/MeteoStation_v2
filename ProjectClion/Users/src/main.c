@@ -54,8 +54,7 @@
 // Include task_test_flash interface
 #include "task_test_flash.h"
 #include "task_mqtt.h"
-
-
+#include "task_test_EE.h"
 
 
 
@@ -105,6 +104,11 @@ xQueueHandle xQueueMeasureData;
 #define TASK_MQTT_PARAMETERS           (NULL)
 #define TASK_MQTT_PRIORITY             (1U)
 
+// Prm vTaskEE
+#define TASK_EE_STACK_DEPTH          (800U)
+#define TASK_EE_PARAMETERS           (NULL)
+#define TASK_EE_PRIORITY             (1U)
+
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
@@ -149,20 +153,24 @@ void main(void)
 
 
 
-    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
-                TASK_SEN_R_PARAMETERS,\
-                TASK_SEN_R_PRIORITY,NULL);
+//    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
+//                TASK_SEN_R_PARAMETERS,\
+//                TASK_SEN_R_PRIORITY,NULL);
 
 //    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
 //                TASK_TEST_FLASH_PARAMETERS,\
 //                TASK_TEST_FLASH_PRIORITY,NULL);
 
-    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
-                TASK_MQTT_PARAMETERS,\
-                TASK_MQTT_PRIORITY,&HandleTask_MQTT);
+//    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
+//                TASK_MQTT_PARAMETERS,\
+//                TASK_MQTT_PRIORITY,&HandleTask_MQTT);
+
+    xTaskCreate(vTaskTestEE,"TaskTestEE",TASK_EE_STACK_DEPTH,\
+                TASK_EE_PARAMETERS,\
+                TASK_EE_PRIORITY,NULL);
 
     // Blocking MQTT task
-    vTaskSuspend( HandleTask_MQTT );
+//    vTaskSuspend( HandleTask_MQTT );
 
     vTaskStartScheduler();
 

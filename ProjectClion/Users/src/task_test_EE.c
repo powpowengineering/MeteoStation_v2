@@ -77,17 +77,15 @@
 // Definitions of local (private) constants
 //**************************************************************************************************
 
-#define SIZE_BUF            (0x400UL)
-
-// Test constants
-#define TEST_FLASH_NUMBER_OF_ITERATIONS_TEST_1          (10U)
+// Virtual address 1
+#define EE_VER_ADR_1          (uint16_t)(0x1)
+#define EE_VER_ADR_2          (uint16_t)(0x2)
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-uint8_t dataRead[SIZE_BUF];
-uint8_t dataWrite[SIZE_BUF];
+
 
 
 //**************************************************************************************************
@@ -117,18 +115,16 @@ uint8_t dataWrite[SIZE_BUF];
 //**************************************************************************************************
 void vTaskTestEE(void *pvParameters)
 {
-    uint64_t ID;
-    uint32_t nSizeRead=0;
+    // Init EEPROM
+    EE_Init();
+    uint16_t result;
 
-    // Format EEPROM
-    EE_Format();
-
-    printf("EEPROM format\n\r");
+    printf("EEPROM Init\n\r");
 
     while(1)
     {
-
-        
+        result = EE_WriteVariable(EE_VER_ADR_1, 0xBEEF);
+        result = EE_WriteVariable(EE_VER_ADR_2, 0xDEED);
 
         vTaskDelay(1000/portTICK_RATE_MS);
     }
