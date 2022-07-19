@@ -60,6 +60,7 @@ file(GLOB_RECURSE W25Q_FLASH_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/W25Q_FLASH/W25Q
 file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/BMP2-Sensor-API-master/bmp2.c")
 file(GLOB_RECURSE TF02_PRO "${CMAKE_SOURCE_DIR}/TF02_PRO/tf02Pro_drv.c")
 file(GLOB_RECURSE CORE_MQTT "${CMAKE_SOURCE_DIR}/coreMQTT/source/*.c")
+file(GLOB_RECURSE EEPROM_EMULATION "${CMAKE_SOURCE_DIR}/EEPROM_Emulation/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/api/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/apps/mqtt/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/lwgsm/*.c")
@@ -98,6 +99,7 @@ include_directories(${CMAKE_SOURCE_DIR}/BMP2-Sensor-API-master)
 include_directories(${CMAKE_SOURCE_DIR}/coreMQTT/source/include)
 include_directories(${CMAKE_SOURCE_DIR}/coreMQTT/source/interface)
 include_directories(${CMAKE_SOURCE_DIR}/TF02_PRO)
+include_directories(${CMAKE_SOURCE_DIR}/EEPROM_Emulation)
 
 #include_directories(${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/include)
 #include_directories(${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/include/system)
@@ -150,7 +152,7 @@ add_executable( ${PROJECT_NAME}
         ${E_PAPER}
         ${E_PAPER_TEST}
         ${E_PAPER_GUI}
-
+        ${EEPROM_EMULATION}
 
         ${PRINTF_SOURCES}
         ${FREERTOS_SOURCES}
