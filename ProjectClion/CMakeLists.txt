@@ -142,7 +142,7 @@ add_executable( ${PROJECT_NAME}
         ${AM2305_SOURCES}
         ${BMP280}
         ${CORE_MQTT}
-        ${TF02_PRO}
+#        ${TF02_PRO}
         ${USART_DRIVER_SOURCES}
         ${HAL_SOURCES}
         ${E_PAPER_FONTS}
