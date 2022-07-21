@@ -63,7 +63,7 @@ static uint16_t DataVar = 0;
 
 // ����������: ��������� �� ���� FLASH, ������� ��������� ������� ������ ������ ����������� (���� ��� ������������ ��� ������ �����)
 #define EEPROM_INDENT_PAGES_FROM_END      0
-#define FLASH_SIZE                        (0x20000 - 0x2800)
+#define FLASH_SIZE                        (0x20000)
 #define FLASH_END                         (FLASH_BASE + FLASH_SIZE - 1)
 #define FLASH_QTY_PAGES_IN_SECTOR         (16)
 
