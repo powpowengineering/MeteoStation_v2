@@ -37,6 +37,10 @@
 // Native header
 #include "W25Q_drv.h"
 
+// LL HAL
+#include "stm32l4xx_ll_spi.h"
+#include "stm32l4xx_ll_gpio.h"
+
 #include "Init.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -213,6 +217,9 @@ static const W25Q_TIMES W25Q_Times= {
         {W25Q_NONE_TIME_US,W25Q_NONE_QTY_TIMEOUT}
         };
 
+// SPI handler
+SPI_HandleTypeDef SpiHandle;
+
 
 
 //**************************************************************************************************
@@ -249,57 +256,57 @@ static STD_RESULT W25Q_WriteSPI(uint8_t *data, const uint32_t len);
 //**************************************************************************************************
 void W25Q_Init(void)
 {
-    // Init GPIO
-    // SCK
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.GPIO_Pin  = W25Q_PIN_SCK;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(W25Q_GPIO_PORT_SCK, &GPIO_InitStruct);
-    GPIO_PinAFConfig(W25Q_GPIO_PORT_SCK, W25Q_SCK_PinSource, W25Q_GPIO_AF);
+    GPIO_InitTypeDef  GPIO_InitStruct = {0};
 
-    // MISO
-    GPIO_InitStruct.GPIO_Pin  = W25Q_PIN_MISO;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(W25Q_GPIO_PORT_MISO, &GPIO_InitStruct);
-    GPIO_PinAFConfig(W25Q_GPIO_PORT_MISO, W25Q_MISO_PinSource, W25Q_GPIO_AF);
+    // Configure the CS pin SPI for W25Q
+    GPIO_InitStruct.Pin   = W25Q_SPI_CS_PIN;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(W25Q_SPI_CS_PORT, &GPIO_InitStruct);
 
-    // MOSI
-    GPIO_InitStruct.GPIO_Pin  = W25Q_PIN_MOSI;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(W25Q_GPIO_PORT_MOSI, &GPIO_InitStruct);
-    GPIO_PinAFConfig(W25Q_GPIO_PORT_MOSI, W25Q_MOSI_PinSource, W25Q_GPIO_AF);
+    // Configure the SCK pin SPI for W25Q
+    GPIO_InitStruct.Pin        = W25Q_SPI_SCK_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = W25Q_SPI_SCK_AF;
+    HAL_GPIO_Init(W25Q_SPI_SCK_PORT, &GPIO_InitStruct);
 
-    // CS
-    GPIO_InitStruct.GPIO_Pin  = W25Q_PIN_CS;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(W25Q_GPIO_PORT_CS, &GPIO_InitStruct);
+    // Configure the MOSI pin SPI for W25Q
+    GPIO_InitStruct.Pin        = W25Q_SPI_MOSI_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLDOWN;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = W25Q_SPI_MOSI_AF;
+    HAL_GPIO_Init(W25Q_SPI_MOSI_PORT, &GPIO_InitStruct);
+
+    // Configure the MISO pin SPI for W25Q
+    GPIO_InitStruct.Pin        = W25Q_SPI_MISO_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLDOWN;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = W25Q_SPI_MISO_AF;
+    HAL_GPIO_Init(W25Q_SPI_MISO_PORT, &GPIO_InitStruct);
 
     // Init SPI
-    SPI_InitTypeDef SPI_InitStruct;
-    SPI_InitStruct.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-    SPI_InitStruct.SPI_Mode = SPI_Mode_Master;
-    SPI_InitStruct.SPI_DataSize = SPI_DataSize_8b;
-    SPI_InitStruct.SPI_CPOL = SPI_CPOL_Low;
-    SPI_InitStruct.SPI_CPHA = SPI_CPHA_1Edge;
-    SPI_InitStruct.SPI_NSS = SPI_NSS_Soft;
-    SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32;
-    SPI_InitStruct.SPI_FirstBit = SPI_FirstBit_MSB;
-    SPI_InitStruct.SPI_CRCPolynomial = 7;
-    SPI_Init(W25Q_SPI,&SPI_InitStruct);
+    SpiHandle.Instance               = W25Q_SPI_NUM;
+    SpiHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+    SpiHandle.Init.Direction         = SPI_DIRECTION_2LINES;
+    SpiHandle.Init.CLKPhase          = SPI_PHASE_1EDGE;
+    SpiHandle.Init.CLKPolarity       = SPI_POLARITY_LOW;
+    SpiHandle.Init.DataSize          = SPI_DATASIZE_8BIT;
+    SpiHandle.Init.FirstBit          = SPI_FIRSTBIT_MSB;
+    SpiHandle.Init.TIMode            = SPI_TIMODE_DISABLE;
+    SpiHandle.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLE;
+    SpiHandle.Init.CRCPolynomial     = 7;
+    SpiHandle.Init.CRCLength         = SPI_CRC_LENGTH_8BIT;
+    SpiHandle.Init.NSS               = SPI_NSS_SOFT;
+    SpiHandle.Init.NSSPMode          = SPI_NSS_PULSE_DISABLE;
+    SpiHandle.Init.Mode              = SPI_MODE_MASTER;
+    HAL_SPI_Init(&SpiHandle);
 
-    SPI_Cmd(W25Q_SPI, ENABLE);
+    LL_SPI_Enable(SpiHandle.Instance);
 
     pW25Q_Delay = W25Q_Delay;
 }// end of W25Q_Init()
@@ -829,7 +836,7 @@ static STD_RESULT W25Q_ReadWriteSPI(uint8_t *dataPut, const uint32_t lenPut, uin
         cntTimeout=0;
         while(1)
         {
-            if (SET == SPI_I2S_GetFlagStatus(W25Q_SPI,SPI_I2S_FLAG_TXE))
+            if (SET == LL_SPI_IsActiveFlag_TXE(W25Q_SPI_NUM))
             {
                 break;
             }
@@ -846,11 +853,12 @@ static STD_RESULT W25Q_ReadWriteSPI(uint8_t *dataPut, const uint32_t lenPut, uin
             break;
         }
          // Clear RXNE
-        SPI_I2S_ReceiveData(W25Q_SPI);
+        LL_SPI_ReceiveData8(W25Q_SPI_NUM);
+
         if (i < lenPut)
         {
             taskENTER_CRITICAL();
-            SPI_I2S_SendData(W25Q_SPI, *dataPut);
+            LL_SPI_TransmitData8(W25Q_SPI_NUM, *dataPut);
             taskEXIT_CRITICAL();
             dataPut++;
         }
@@ -858,7 +866,7 @@ static STD_RESULT W25Q_ReadWriteSPI(uint8_t *dataPut, const uint32_t lenPut, uin
         {
             taskENTER_CRITICAL();
             // Send byte(garbage data)
-            SPI_I2S_SendData(W25Q_SPI, *dataGet);
+            LL_SPI_TransmitData8(W25Q_SPI_NUM, *dataGet);
             taskEXIT_CRITICAL();
         }
         // read byte
@@ -867,10 +875,10 @@ static STD_RESULT W25Q_ReadWriteSPI(uint8_t *dataPut, const uint32_t lenPut, uin
         cntTimeout=0;
         while(1)
         {
-            if (SET == SPI_I2S_GetFlagStatus(W25Q_SPI,SPI_I2S_FLAG_RXNE))
+            if (SET == LL_SPI_IsActiveFlag_RXNE(W25Q_SPI_NUM))
             {
                 // set test pin
-                GPIOA->BSRRL = GPIO_Pin_1;
+//                GPIOA->BSRRL = GPIO_Pin_1;
                 break;
             }
             if (cntTimeout > W25Q_QTY_TIMEOUT)
@@ -889,10 +897,10 @@ static STD_RESULT W25Q_ReadWriteSPI(uint8_t *dataPut, const uint32_t lenPut, uin
         {
             if (dataGet != 0)
             {
-                *dataGet = SPI_I2S_ReceiveData(W25Q_SPI);
+                *dataGet = LL_SPI_ReceiveData8(W25Q_SPI_NUM);
                 dataGet++;
                 //test pin low
-                GPIOA->BSRRH = GPIO_Pin_1;
+//                GPIOA->BSRRH = GPIO_Pin_1;
             }
             else
             {
@@ -910,7 +918,7 @@ static STD_RESULT W25Q_ReadWriteSPI(uint8_t *dataPut, const uint32_t lenPut, uin
     cntTimeout=0;
     while(1)
     {
-        if (RESET == SPI_I2S_GetFlagStatus(W25Q_SPI,SPI_I2S_FLAG_BSY))
+        if (RESET == LL_SPI_IsActiveFlag_BSY(W25Q_SPI_NUM))
         {
             break;
         }
@@ -954,7 +962,7 @@ static STD_RESULT W25Q_WriteSPI(uint8_t *data, const uint32_t len)
         cntTimeout=0;
         while(1)
         {
-            if (SET == SPI_I2S_GetFlagStatus(W25Q_SPI,SPI_I2S_FLAG_TXE))
+            if (SET == LL_SPI_IsActiveFlag_TXE(W25Q_SPI_NUM))
             {
                 break;
             }
@@ -971,7 +979,7 @@ static STD_RESULT W25Q_WriteSPI(uint8_t *data, const uint32_t len)
             break;
         }
         // Send byte
-        SPI_I2S_SendData(W25Q_SPI, &data);
+        LL_SPI_TransmitData8(W25Q_SPI_NUM, *data);
         data++;
     }
 
@@ -995,11 +1003,11 @@ static void W25Q_SPI_SetCS(SPI_CS_LEVEL csLevel)
 {
     if (LOW == csLevel)
     {
-        W25Q_GPIO_PORT_CS->BSRRH = W25Q_PIN_CS;
+        LL_GPIO_ResetOutputPin(W25Q_SPI_CS_PORT,W25Q_SPI_CS_PIN);
     }
     else
     {
-        W25Q_GPIO_PORT_CS->BSRRL = W25Q_PIN_CS;
+        LL_GPIO_SetOutputPin(W25Q_SPI_CS_PORT,W25Q_SPI_CS_PIN);
     }
 }// end of W25Q_SPI_SetCS()
 

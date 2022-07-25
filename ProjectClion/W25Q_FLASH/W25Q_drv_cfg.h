@@ -32,32 +32,20 @@
 // Valid values: ON / OFF
 #define MODULE_INTERNAL_DIAGNOSTICS             (OFF)
 
-// Macros for SPI structure SPL
-#define W25Q_SPI                     SPI1
-// Specify port SCK
-#define W25Q_GPIO_PORT_SCK          (GPIOB)
-// Specify port MOSI
-#define W25Q_GPIO_PORT_MOSI         (GPIOB)
-// Specify port MISO
-#define W25Q_GPIO_PORT_MISO         (GPIOB)
-// Specify port CS
-#define W25Q_GPIO_PORT_CS           (GPIOB)
-// Specify pin SCK
-#define W25Q_PIN_SCK                (GPIO_Pin_3)
-// Specify pin MOSI
-#define W25Q_PIN_MOSI               (GPIO_Pin_5)
-// Specify pin MISO
-#define W25Q_PIN_MISO               (GPIO_Pin_4)
-// Specify pin CS
-#define W25Q_PIN_CS                 (GPIO_Pin_15)
-// Specify SCK PinSource
-#define W25Q_SCK_PinSource          (GPIO_PinSource3)
-// Specify MOSI PinSource
-#define W25Q_MOSI_PinSource         (GPIO_PinSource5)
-// Specify MISO PinSource
-#define W25Q_MISO_PinSource         (GPIO_PinSource4)
-// Specify GPIO_AF
-#define W25Q_GPIO_AF                (GPIO_AF_SPI1)
+// Confugure SPI for W25Q
+#define W25Q_SPI_NUM                       SPI1
+#define W25Q_SPI_SCK_PIN                   GPIO_PIN_3
+#define W25Q_SPI_SCK_PORT                  GPIOB
+#define W25Q_SPI_MISO_PIN                  GPIO_PIN_6
+#define W25Q_SPI_MISO_PORT                 GPIOA
+#define W25Q_SPI_MOSI_PIN                  GPIO_PIN_7
+#define W25Q_SPI_MOSI_PORT                 GPIOA
+#define W25Q_SPI_CS_PIN                    GPIO_PIN_8
+#define W25Q_SPI_CS_PORT                   GPIOA
+#define W25Q_SPI_SCK_AF                    GPIO_AF5_SPI1
+#define W25Q_SPI_MOSI_AF                   GPIO_AF5_SPI1
+#define W25Q_SPI_MISO_AF                   GPIO_AF5_SPI1
+
 // User specify pointer delay function
 #define W25Q_Delay                   INIT_Delay
 
