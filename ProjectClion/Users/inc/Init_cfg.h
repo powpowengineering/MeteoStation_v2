@@ -32,12 +32,21 @@
 // Valid values: ON / OFF
 #define MODULE_INTERNAL_DIAGNOSTICS             (OFF)
 
+// Confugure UART for TLM
+#define INIT_TLM_USART_NUM                      USART1
+#define INIT_TLM_USART_TX_PIN                   GPIO_PIN_6
+#define INIT_TLM_USART_TX_PORT                  GPIOB
+#define INIT_TLM_USART_RX_PIN                   GPIO_PIN_7
+#define INIT_TLM_USART_RX_PORT                  GPIOB
+#define INIT_TLM_USART_TX_AF                    GPIO_AF7_USART1
+#define INIT_TLM_USART_RX_AF                    GPIO_AF7_USART1
 
-// User specify Timer for one wire delay
+
+//  Confugure for one wire delay
 #define INIT_TIMER_DELAY                          TIM6
 // User specify prescaler for one wire delay timer
 // Valid value: [0,0xFF]
-#define INIT_PSC_TIMER_DELAY                      (31U)
+#define INIT_PSC_TIMER_DELAY                      (79U)
 // User specify period for one wire delay timer
 // Valid value: [0,0xFF]
 #define INIT_PERIOD_TIMER_DELAY                   (0xFFFFU)

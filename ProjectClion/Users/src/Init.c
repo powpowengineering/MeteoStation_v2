@@ -39,7 +39,7 @@
 // Native header
 #include "Init.h"
 
-
+#include "stm32l4xx_ll_tim.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -52,7 +52,12 @@
 // Definitions of global (public) variables
 //**************************************************************************************************
 
-// None.
+// TLM handel
+USART_HandleTypeDef UsartTLMHandle;
+
+// Tme delay handel
+TIM_HandleTypeDef    TimDelayHandle;
+
 
 
 //**************************************************************************************************
@@ -89,45 +94,7 @@
 //==================================================================================================
 //**************************************************************************************************
 
-//**************************************************************************************************
-// @Function      InitGpioSpi1OutBoard()
-//--------------------------------------------------------------------------------------------------
-// @Description   Init Spi1 on pin PB3,PB4,PB5
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-void InitGpioSpi1OutBoard(void)
-{
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_3;// PB3 SPI1_SCK
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource3, GPIO_AF_SPI1);
-
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_4;// PB4 SPI1_MISO
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_DOWN;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-    //GPIO_PinAFConfig(GPIOB, GPIO_Pin_4, GPIO_AF_SPI1);
-
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_5;// PB5 SPI1_MOSI
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource5, GPIO_AF_SPI1);
-}
-// end of InitGpioSpi1OutBoard()
+// None.
 
 
 
@@ -144,149 +111,145 @@ void InitGpioSpi1OutBoard(void)
 //**************************************************************************************************
 void Init(void)
 {
-    /*Enable Periph*/
-    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
-    RCC_APB2PeriphClockCmd(    RCC_APB2Periph_TIM9, ENABLE);
-    RCC_APB2PeriphClockCmd(    RCC_APB2Periph_ADC1, ENABLE); //activated ADC
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);
-    RCC_APB1PeriphClockCmd(    RCC_APB1Periph_USART3, ENABLE);
-    RCC_APB1PeriphClockCmd(    RCC_APB1Periph_I2C1, ENABLE);
+    GPIO_InitTypeDef  GPIO_InitStruct = {0};
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_SPI1_CLK_ENABLE();
+    __HAL_RCC_USART1_CLK_ENABLE();
+    __HAL_RCC_TIM6_CLK_ENABLE();
+
+    // Configure the GPIO_LED pin
+    GPIO_InitStruct.Pin   = GPIO_PIN_5;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    // Configure the TX pin UART for TLM
+    GPIO_InitStruct.Pin        = INIT_TLM_USART_TX_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = INIT_TLM_USART_TX_AF;
+    HAL_GPIO_Init(INIT_TLM_USART_TX_PORT, &GPIO_InitStruct);
+
+    // Configure the RX pin UART for TLM
+    GPIO_InitStruct.Pin        = INIT_TLM_USART_RX_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = INIT_TLM_USART_RX_AF;
+    HAL_GPIO_Init(INIT_TLM_USART_RX_PORT, &GPIO_InitStruct);
 
 
-    /*GPIO Init*/
-    // test pin
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_8;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-    //initialize pin A2 for anemometer
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_2;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AN; //because signal is analogue
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz; //speed for digital
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-    // test pin
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_1;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
+//    //initialize pin A2 for anemometer
+//    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_2;
+//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AN; //because signal is analogue
+//    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz; //speed for digital
+//    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+//    GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 
-    /*USART1 TX*/
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_9;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_USART1);
+//    /*USART3 TX*/
+//    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_10;
+//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+//    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+//    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+//    GPIO_Init(GPIOB, &GPIO_InitStruct);
+//    GPIO_PinAFConfig(GPIOB, GPIO_PinSource10, GPIO_AF_USART3);
+//
+//    /*USART3 RX*/
+//    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_11;
+//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+//    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+//    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+//    GPIO_Init(GPIOB, &GPIO_InitStruct);
+//    GPIO_PinAFConfig(GPIOB, GPIO_PinSource11, GPIO_AF_USART3);
+//
+//    // I2C1 SCL
+//    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_8;
+//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+//    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+//    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
+//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+//    GPIO_Init(GPIOB, &GPIO_InitStruct);
+//    GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_I2C1);
+//
+//    // I2C1 SDA
+//    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_9;
+//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+//    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
+//    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
+//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+//    GPIO_Init(GPIOB, &GPIO_InitStruct);
+//    GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_I2C1);
 
-    /*USART1 RX*/
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_10;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1);
+    // Configure UART for TLM
+    UsartTLMHandle.Instance            = INIT_TLM_USART_NUM;
+    UsartTLMHandle.Init.BaudRate       = 115200;
+    UsartTLMHandle.Init.WordLength     = USART_WORDLENGTH_8B;
+    UsartTLMHandle.Init.StopBits       = USART_STOPBITS_1;
+    UsartTLMHandle.Init.Parity         = USART_PARITY_NONE;
+    UsartTLMHandle.Init.Mode           = USART_MODE_TX_RX;
 
-    /*USART3 TX*/
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_10;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource10, GPIO_AF_USART3);
+    HAL_USART_DeInit(&UsartTLMHandle);
+    // Init UART TLM
+    HAL_USART_Init(&UsartTLMHandle);
 
-    /*USART3 RX*/
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_11;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource11, GPIO_AF_USART3);
+    TimDelayHandle.Instance = INIT_TIMER_DELAY;
 
-    // I2C1 SCL
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_8;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_I2C1);
+    /* Initialize TIMx peripheral as follows:
+         + Period = 10000 - 1
+         + Prescaler = (SystemCoreClock/10000) - 1
+         + ClockDivision = 0
+         + Counter direction = Up
+    */
+    TimDelayHandle.Init.Period            = INIT_PERIOD_TIMER_DELAY;
+    TimDelayHandle.Init.Prescaler         = INIT_PSC_TIMER_DELAY;
+    TimDelayHandle.Init.ClockDivision     = 0;
+    TimDelayHandle.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    TimDelayHandle.Init.RepetitionCounter = 0;
 
-    // I2C1 SDA
-    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_9;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_I2C1);
+    HAL_TIM_Base_Init(&TimDelayHandle);
 
-    // Init Gpio SPI1
-    //InitGpioSpi1OutBoard();
 
-    /*Init SPI1*/
- /*   SPI_InitTypeDef SPI_InitStruct;
-    SPI_InitStruct.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-    SPI_InitStruct.SPI_Mode = SPI_Mode_Master;
-    SPI_InitStruct.SPI_DataSize = SPI_DataSize_8b;
-    SPI_InitStruct.SPI_CPOL = SPI_CPOL_Low;
-    SPI_InitStruct.SPI_CPHA = SPI_CPHA_1Edge;
-    SPI_InitStruct.SPI_NSS = SPI_NSS_Soft;
-    SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32;
-    SPI_InitStruct.SPI_FirstBit = SPI_FirstBit_MSB;
-    SPI_InitStruct.SPI_CRCPolynomial = 7;
-    SPI_Init(SPI1, &SPI_InitStruct);
-
-    SPI_Cmd(SPI1, ENABLE);
-*/
-
-    /*Init TIM6 for OneWire delay*/
-    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
-    TIM_TimeBaseInitStruct.TIM_Period = INIT_PERIOD_TIMER_DELAY;
-    TIM_TimeBaseInitStruct.TIM_Prescaler = INIT_PSC_TIMER_DELAY;
-    TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
-    TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit(INIT_TIMER_DELAY, &TIM_TimeBaseInitStruct);
-    //ADC set
-    ADC_InitTypeDef ADC_InitStruct;
-    /* Reset ADC init structure parameters values */
-    ADC_InitStruct.ADC_Resolution = ADC_Resolution_12b;
-    ADC_InitStruct.ADC_ScanConvMode = DISABLE;
-    ADC_InitStruct.ADC_ContinuousConvMode = ENABLE;
-    ADC_InitStruct.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-    ADC_InitStruct.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T2_CC2;
-    ADC_InitStruct.ADC_DataAlign = ADC_DataAlign_Right;
-    ADC_InitStruct.ADC_NbrOfConversion = 1;
-    ADC_Init(ADC1, &ADC_InitStruct);
-
-    ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 1, ADC_SampleTime_24Cycles);
-
-    ADC_Cmd(ADC1, ENABLE);
-
-    // Init I2C1
-    I2C_InitTypeDef I2C_InitStruct;
-    I2C_InitStruct.I2C_ClockSpeed = 100000;
-    I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
-    I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;
-    I2C_InitStruct.I2C_OwnAddress1 = 0;
-    I2C_InitStruct.I2C_Ack = I2C_Ack_Disable;
-    I2C_InitStruct.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
-    I2C_Init(I2C1, &I2C_InitStruct);
-    I2C_Cmd(I2C1, ENABLE);
+//    /*Init TIM6 for OneWire delay*/
+//    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
+//    TIM_TimeBaseInitStruct.TIM_Period = INIT_PERIOD_TIMER_DELAY;
+//    TIM_TimeBaseInitStruct.TIM_Prescaler = INIT_PSC_TIMER_DELAY;
+//    TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
+//    TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
+//    TIM_TimeBaseInit(INIT_TIMER_DELAY, &TIM_TimeBaseInitStruct);
+//    //ADC set
+//    ADC_InitTypeDef ADC_InitStruct;
+//    /* Reset ADC init structure parameters values */
+//    ADC_InitStruct.ADC_Resolution = ADC_Resolution_12b;
+//    ADC_InitStruct.ADC_ScanConvMode = DISABLE;
+//    ADC_InitStruct.ADC_ContinuousConvMode = ENABLE;
+//    ADC_InitStruct.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+//    ADC_InitStruct.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T2_CC2;
+//    ADC_InitStruct.ADC_DataAlign = ADC_DataAlign_Right;
+//    ADC_InitStruct.ADC_NbrOfConversion = 1;
+//    ADC_Init(ADC1, &ADC_InitStruct);
+//
+//    ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 1, ADC_SampleTime_24Cycles);
+//
+//    ADC_Cmd(ADC1, ENABLE);
+//
+//    // Init I2C1
+//    I2C_InitTypeDef I2C_InitStruct;
+//    I2C_InitStruct.I2C_ClockSpeed = 100000;
+//    I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
+//    I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;
+//    I2C_InitStruct.I2C_OwnAddress1 = 0;
+//    I2C_InitStruct.I2C_Ack = I2C_Ack_Disable;
+//    I2C_InitStruct.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
+//    I2C_Init(I2C1, &I2C_InitStruct);
+//    I2C_Cmd(I2C1, ENABLE);
 
 
 }
@@ -326,20 +289,20 @@ void INIT_Delay(uint32_t us)
             /* Disable the TIM Counter */
             INIT_TIMER_DELAY->CR1 &= (uint16_t) (~((uint16_t) TIM_CR1_CEN));
             /* Clear the flags */
-            INIT_TIMER_DELAY->SR = (uint16_t) ~TIM_FLAG_Update;
+            INIT_TIMER_DELAY->SR = (uint16_t) ~LL_TIM_SR_UIF;
             /* Clear counter */
             INIT_TIMER_DELAY->CNT = 0;
             /* Enable the TIM Counter */
             INIT_TIMER_DELAY->CR1 |= TIM_CR1_CEN;
             // wait
-            while ((INIT_TIMER_DELAY->SR & TIM_FLAG_Update) != TIM_FLAG_Update);
+            while ((INIT_TIMER_DELAY->SR & LL_TIM_SR_UIF) != LL_TIM_SR_UIF);
         }
     }
 
     /* Disable the TIM Counter */
     INIT_TIMER_DELAY->CR1 &= (uint16_t) (~((uint16_t) TIM_CR1_CEN));
     /* Clear the flags */
-    INIT_TIMER_DELAY->SR = (uint16_t) ~TIM_FLAG_Update;
+    INIT_TIMER_DELAY->SR = (uint16_t) ~LL_TIM_SR_UIF;
     // Set auto-reload register
     INIT_TIMER_DELAY->ARR = us - (nPeriods * INIT_PERIOD_TIMER_DELAY);
     /* Clear counter */
@@ -347,8 +310,7 @@ void INIT_Delay(uint32_t us)
     /* Enable the TIM Counter */
     INIT_TIMER_DELAY->CR1 |= TIM_CR1_CEN;
     // wait
-    while ((INIT_TIMER_DELAY->SR & TIM_FLAG_Update) != TIM_FLAG_Update);
-
+    while ((INIT_TIMER_DELAY->SR & LL_TIM_SR_UIF) != LL_TIM_SR_UIF);
 }
 // end of INIT_Delay()
 

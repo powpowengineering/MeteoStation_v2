@@ -34,26 +34,27 @@
 //**************************************************************************************************
 // Project Includes
 //**************************************************************************************************
-// stm32 STL
-#include "stm32l1xx.h"
+
 // drivers
-#include "OneWire.h"
-#include "usart_drv.h"
+//#include "OneWire.h"
+//#include "usart_drv.h"
 #include "Init.h"
-#include "ds18b20.h"
-#include "am2305_drv.h"
+//#include "ds18b20.h"
+//#include "am2305_drv.h"
 #include "ftoa.h"
 #include "printf.h"
 // Freertos
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
+//#include "FreeRTOS.h"
+//#include "task.h"
+//#include "queue.h"
+#include "cmsis_os.h"
+
 
 // Include task_sensors_read interface
-#include "tasks_sensors_read.h"
+//#include "tasks_sensors_read.h"
 // Include task_test_flash interface
 #include "task_test_flash.h"
-#include "task_mqtt.h"
+//#include "task_mqtt.h"
 #include "task_test_EE.h"
 
 
@@ -69,8 +70,7 @@
 // Definitions of global (public) variables
 //**************************************************************************************************
 
-// Queue handle for measure data
-xQueueHandle xQueueMeasureData;
+// None.
 
 
 
@@ -78,7 +78,11 @@ xQueueHandle xQueueMeasureData;
 // Declarations of local (private) data types
 //**************************************************************************************************
 
-// None.
+typedef enum
+{
+    THREAD_TEST_FLASH = 0,
+    THREAD_TEST_EE
+} Thread_TypeDef;
 
 
 
@@ -105,7 +109,7 @@ xQueueHandle xQueueMeasureData;
 #define TASK_MQTT_PRIORITY             (1U)
 
 // Prm vTaskEE
-#define TASK_EE_STACK_DEPTH          (800U)
+#define TASK_EE_STACK_DEPTH          (256U)
 #define TASK_EE_PARAMETERS           (NULL)
 #define TASK_EE_PRIORITY             (1U)
 
@@ -113,7 +117,7 @@ xQueueHandle xQueueMeasureData;
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-// None.
+char dataTest[] = {"Start HAL\r\n"};
 
 
 
@@ -121,7 +125,8 @@ xQueueHandle xQueueMeasureData;
 // Declarations of local (private) functions
 //**************************************************************************************************
 
-
+// System clock configuration
+static void SystemClock_Config(void);
 
 
 //**************************************************************************************************
@@ -143,40 +148,51 @@ xQueueHandle xQueueMeasureData;
 //**************************************************************************************************
 void main(void)
 {
+
+    HAL_Init();
+
+    /* Configure the system clock to 80 MHz */
+    SystemClock_Config();
+
     Init();
     // Init OneWire
-    ONE_WIRE_init();
-    AM2305_Init();
-    USART_init();
+//    ONE_WIRE_init();
+//    AM2305_Init();
+//    USART_init();
 
-    xQueueMeasureData = xQueueCreate( 3, sizeof( TASK_SENSOR_READ_DATA ) );
-
-
+//    osThreadDef(THREAD_TEST_FLASH, vTaskTestFlash, osPriorityNormal, 0, TASK_TEST_FLASH_STACK_DEPTH);
+    osThreadDef(THREAD_TEST_EE, vTaskTestEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
 
 //    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
 //                TASK_SEN_R_PARAMETERS,\
 //                TASK_SEN_R_PRIORITY,NULL);
 
-//    xTaskCreate(vTaskTestFlash,"TaskTestFlash",TASK_TEST_FLASH_STACK_DEPTH,\
-//                TASK_TEST_FLASH_PARAMETERS,\
-//                TASK_TEST_FLASH_PRIORITY,NULL);
-
 //    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
 //                TASK_MQTT_PARAMETERS,\
 //                TASK_MQTT_PRIORITY,&HandleTask_MQTT);
 
-    xTaskCreate(vTaskTestEE,"TaskTestEE",TASK_EE_STACK_DEPTH,\
-                TASK_EE_PARAMETERS,\
-                TASK_EE_PRIORITY,NULL);
+//    xTaskCreate(vTaskTestEE,"TaskTestEE",TASK_EE_STACK_DEPTH,\
+//                TASK_EE_PARAMETERS,\
+//                TASK_EE_PRIORITY,NULL);
+
+//    osThreadCreate(osThread(THREAD_TEST_FLASH), NULL);
+
+//    osThreadCreate(osThread(THREAD_TEST_FLASH), NULL);
+    osThreadCreate(osThread(THREAD_TEST_EE), NULL);
+
 
     // Blocking MQTT task
 //    vTaskSuspend( HandleTask_MQTT );
 
-    vTaskStartScheduler();
+    /* Start scheduler */
+    printf("Start scheduler\r\n");
+    osKernelStart();
 
-
-
-    while(1);
+    while(1)
+    {
+//        HAL_USART_Transmit(&UsartTLMHandle, dataTest, sizeof(dataTest),1000);
+//        HAL_Delay(1000);
+    }
 }// end of main
 
 
@@ -194,7 +210,8 @@ void main(void)
 //**************************************************************************************************
 void _putchar(char character)
 {
-    USART_PutChar(TLM_CHANNEL, character);
+//    USART_PutChar(TLM_CHANNEL, character);
+    HAL_USART_Transmit(&UsartTLMHandle, &character, 1,1000);
 }// end of _putchar
 
 
@@ -205,7 +222,53 @@ void _putchar(char character)
 //==================================================================================================
 //**************************************************************************************************
 
+//**************************************************************************************************
+// @Function      SystemClock_Config()
+//--------------------------------------------------------------------------------------------------
+// @Description   Put char function used by printf.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void SystemClock_Config(void)
+{
+    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 
+    /* MSI is enabled after System reset, activate PLL with MSI as source */
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
+    RCC_OscInitStruct.MSIState = RCC_MSI_ON;
+    RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
+    RCC_OscInitStruct.MSICalibrationValue = RCC_MSICALIBRATION_DEFAULT;
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_MSI;
+    RCC_OscInitStruct.PLL.PLLM = 1;
+    RCC_OscInitStruct.PLL.PLLN = 40;
+    RCC_OscInitStruct.PLL.PLLR = 2;
+    RCC_OscInitStruct.PLL.PLLP = 7;
+    RCC_OscInitStruct.PLL.PLLQ = 4;
+    if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+    {
+        /* Initialization Error */
+        while(1);
+    }
+
+    /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2
+       clocks dividers */
+    RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+    if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
+    {
+        /* Initialization Error */
+        while(1);
+    }
+} // end of SystemClock_Config()
 
 
 //****************************************** end of file *******************************************

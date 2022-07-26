@@ -21,7 +21,7 @@
 // Project Includes
 //**************************************************************************************************
 
-#include "stm32l1xx.h"
+#include "stm32l4xx_hal.h"
 
 #include "general_types.h"
 
@@ -45,7 +45,9 @@
 // Declarations of global (public) variables
 //**************************************************************************************************
 
-// None.
+extern USART_HandleTypeDef UsartTLMHandle;
+
+extern TIM_HandleTypeDef    TimDelayHandle;
 
 
 //**************************************************************************************************
