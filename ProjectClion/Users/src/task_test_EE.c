@@ -59,7 +59,7 @@
 // Definitions of global (public) variables
 //**************************************************************************************************
 
-uint16_t VirtAddVarTab[NB_OF_VAR];
+// None.
 
 
 

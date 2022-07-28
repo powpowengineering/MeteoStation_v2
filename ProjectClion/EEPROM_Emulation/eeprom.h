@@ -33,7 +33,7 @@
 
 /* Define the size of the sectors to be used */
 //#define PAGE_SIZE               (uint32_t)0x4000  /* Page size = 16KByte */
-#define PAGE_SIZE                                   (uint32_t)0x1000  /* Page size = 4KByte */
+#define PAGE_SIZE                                   W25Q_CAPACITY_SECTOR_BYTES  /* Page size = 4KByte */
 #define EEPROM_FLASH_BANK_LOCATION                  FLASH_BANK_2
 #define EEPROM_NUM_FLASH_PAGES_USE_IN_EE_PAGE       (1U)
 
@@ -45,7 +45,7 @@
 //#define EEPROM_START_ADDRESS  ((uint32_t)0x08008000) /* EEPROM emulation start address:
 //                                                  from sector2 : after 16KByte of used
 //                                                  Flash memory */
-#define EEPROM_START_ADDRESS    (0U)
+#define EEPROM_START_ADDRESS    (W25Q_CAPACITY_ALL_MEMORY_BYTES - (2 * PAGE_SIZE))
 
 /* Pages 0 and 1 base and end addresses */
 #define PAGE0_BASE_ADDRESS    ((uint32_t)(EEPROM_START_ADDRESS + 0x0000))
@@ -54,7 +54,7 @@
 
 //#define PAGE1_BASE_ADDRESS    ((uint32_t)(EEPROM_START_ADDRESS + 0x4000))
 #define PAGE1_BASE_ADDRESS    ((uint32_t)(EEPROM_START_ADDRESS + PAGE_SIZE))
-#define PAGE1_END_ADDRESS     ((uint32_t)(EEPROM_START_ADDRESS + (2 * PAGE_SIZE - 1)))
+#define PAGE1_END_ADDRESS     ((uint32_t)(EEPROM_START_ADDRESS + ((2 * PAGE_SIZE) - 1)))
 #define PAGE1_ID               (1U)
 
 /* Used Flash pages for EEPROM emulation */
@@ -77,7 +77,10 @@
 #define PAGE_FULL             ((uint8_t)0x80)
 
 /* Variables' number */
-#define NB_OF_VAR             ((uint8_t)0x03)
+#define NB_OF_VAR             ((uint8_t)0x04)
+
+extern uint16_t VirtAddVarTab[NB_OF_VAR];
+
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/

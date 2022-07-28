@@ -1,3 +1,4 @@
+#include <argz.h>
 //**************************************************************************************************
 // @Module        TASK_TEST_FLASH
 // @Filename      task_test_flash.c
@@ -45,6 +46,9 @@
 #include "ftoa.h"
 
 #include "cmsis_os.h"
+#include "eeprom.h"
+
+
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -65,7 +69,17 @@
 // Declarations of local (private) data types
 //**************************************************************************************************
 
-// None.
+// Type of meteo data. Only 32-bit data!!!
+typedef struct TEST_EE_METEO_DATA_struct
+{
+    uint32_t nTimeUnixTime;
+    float fTemperature;
+    float fPressure;
+    float fHumidity;
+    float fWindSpeed;
+    float dVoltageBattery;
+}TEST_EE_METEO_DATA;
+
 
 
 //**************************************************************************************************
@@ -77,6 +91,22 @@
 // Test constants
 #define TEST_FLASH_NUMBER_OF_ITERATIONS_TEST_1          (10U)
 
+// Virtual address
+#define EE_VER_ADR_LSB_LAST_RECORD           (uint16_t)(0x0)
+#define EE_VER_ADR_MSB_LAST_RECORD           (uint16_t)(0x1)
+#define EE_VER_ADR_LSB_NEXT_RECORD           (uint16_t)(0x2)
+#define EE_VER_ADR_MSB_NEXT_RECORD           (uint16_t)(0x2)
+
+// Header record
+#define TEST_FLASH_RECORD_HEADER_MARKER           (0x10U)
+// End marker record
+#define TEST_FLASH_RECORD_END_MARKER              (0x03U)
+// Max record package in bytes
+#define TEST_FLASH_MAX_SIZE_RECORD                 (100U)
+// Quantity records to send to server
+#define TEST_FLASH_QTY_REC_SEND_SERVER             (10U)
+
+
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
@@ -84,12 +114,19 @@
 uint8_t dataRead[SIZE_BUF];
 uint8_t dataWrite[SIZE_BUF];
 
+TEST_EE_METEO_DATA TEST_EE_MeteoData;
+uint8_t aRecordDataPackage[TEST_FLASH_MAX_SIZE_RECORD];
+uint32_t nSizeDataRecord;
 
 //**************************************************************************************************
 // Declarations of local (private) functions
 //**************************************************************************************************
 
-// None.
+// Create record package
+static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
+                                       uint8_t *pDataRecord,
+                                       uint32_t *pSizeDataRecord);
+
 
 
 //**************************************************************************************************
@@ -301,12 +338,182 @@ void vTaskTestFlash(void *pvParameters)
 
 
 //**************************************************************************************************
+// @Function      vTaskTestFlashWithEE()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+_Noreturn void vTaskTestFlashWithEE(void *pvParameters)
+{
+    uint32_t nAdrNextRecord = 0U;
+    uint32_t nAdrLastRecordSendGSM = 0U;
+
+    uint64_t ID;
+    uint16_t ManufID;
+
+    // Init EEPROM
+    W25Q_Init();
+    W25Q_ReadUniqueID(&ID);
+    W25Q_ReadManufactureID(&ManufID);
+    W25Q_UnLockGlobal();
+    EE_Init();
+    VirtAddVarTab[0] = EE_VER_ADR_LSB_LAST_RECORD;
+    VirtAddVarTab[1] = EE_VER_ADR_MSB_LAST_RECORD;
+    VirtAddVarTab[2] = EE_VER_ADR_LSB_NEXT_RECORD;
+    VirtAddVarTab[3] = EE_VER_ADR_MSB_NEXT_RECORD;
+
+    EE_WriteVariable(EE_VER_ADR_LSB_LAST_RECORD, (uint16_t)nAdrNextRecord);
+    EE_WriteVariable(EE_VER_ADR_MSB_LAST_RECORD, (uint16_t)(nAdrNextRecord >> 16));
+    EE_WriteVariable(EE_VER_ADR_LSB_LAST_RECORD, (uint16_t)nAdrLastRecordSendGSM);
+    EE_WriteVariable(EE_VER_ADR_MSB_LAST_RECORD, (uint16_t)(nAdrLastRecordSendGSM >> 16));
+
+    while(1)
+    {
+        // Prepare test data
+        TEST_EE_MeteoData.fTemperature = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TEST_EE_MeteoData.fHumidity = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TEST_EE_MeteoData.fPressure = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TEST_EE_MeteoData.fWindSpeed = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TEST_EE_MeteoData.dVoltageBattery = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TEST_EE_MeteoData.nTimeUnixTime = rand();
+
+        if (RESULT_OK == TEST_FLASH_CreateRecord(&TEST_EE_MeteoData,
+                                              aRecordDataPackage,
+                                              &nSizeDataRecord))
+        {
+            uint16_t nTemp = 0;
+            EE_ReadVariable(EE_VER_ADR_LSB_NEXT_RECORD,
+                            &nTemp);
+
+            nAdrNextRecord = nTemp;
+
+            EE_ReadVariable(EE_VER_ADR_MSB_NEXT_RECORD,
+                            &nTemp);
+
+            nAdrNextRecord |= (((uint32_t)nTemp) << 16) & 0xFFFF0000;
+
+            EE_ReadVariable(EE_VER_ADR_LSB_LAST_RECORD,
+                            &nTemp);
+
+            nAdrLastRecordSendGSM = nTemp;
+
+            EE_ReadVariable(EE_VER_ADR_MSB_LAST_RECORD,
+                            &nTemp);
+
+            nAdrLastRecordSendGSM |= (((uint32_t)nTemp) << 16) & 0xFFFF0000;
+
+            // Write record in flash
+            if (RESULT_OK == W25Q_WriteData(nAdrNextRecord,
+                                            aRecordDataPackage,
+                                            nSizeDataRecord))
+            {
+                printf("Record was written in flash\r\n");
+
+            }
+            else
+            {
+                printf("Record wasn't written in flash\r\n");
+            }
+
+            // Check the number of records that were not sent to the server
+            if (TEST_FLASH_QTY_REC_SEND_SERVER <= (nAdrNextRecord - nAdrLastRecordSendGSM))
+            {
+                printf("Send data to the server\r\n");
+            }
+            else
+            {
+                printf("Number of records that were not sent to the server %d\r\n",nAdrNextRecord - nAdrLastRecordSendGSM);
+            }
+        }
+        else
+        {
+            printf("Record package didn't create\r\n");
+        }
+
+
+        vTaskDelay(1000/portTICK_RATE_MS);
+    }
+
+
+} // end of vTaskTestFlashWithEE()
+
+
+
+//**************************************************************************************************
 //==================================================================================================
 // Definitions of local (private) functions
 //==================================================================================================
 //**************************************************************************************************
 
-// None.
+//**************************************************************************************************
+// @Function      TEST_FLASH_CreateRecord()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
+                                        uint8_t *pDataRecord,
+                                        uint32_t *pSizeDataRecord)
+{
+    STD_RESULT enResult = RESULT_OK;
+    uint32_t nSizeRecord = 0;
+    uint8_t *pMeteoDataByte = (uint8_t*)pMeteoData;
+
+    // Write header
+    pDataRecord[nSizeRecord] = (uint8_t)TEST_FLASH_RECORD_HEADER_MARKER;
+    nSizeRecord++;
+
+    for (int i = 0; i < sizeof (TEST_EE_METEO_DATA) / sizeof (uint8_t); i++)
+    {
+        if (TEST_FLASH_MAX_SIZE_RECORD > nSizeRecord)
+        {
+            pDataRecord[nSizeRecord] = *pMeteoDataByte;
+            nSizeRecord++;
+
+        }
+        else
+        {
+            enResult = RESULT_NOT_OK;
+            break;
+        }
+
+        if (TEST_FLASH_MAX_SIZE_RECORD > nSizeRecord)
+        {
+            // Byte stuffing
+            if ((TEST_FLASH_RECORD_HEADER_MARKER == *pMeteoDataByte) || \
+            (TEST_FLASH_RECORD_END_MARKER == *pMeteoDataByte))
+            {
+                pDataRecord[nSizeRecord] = (uint8_t)TEST_FLASH_RECORD_HEADER_MARKER;
+                nSizeRecord++;
+            }
+        }
+        else
+        {
+            enResult = RESULT_NOT_OK;
+            break;
+        }
+    }
+
+    if ((RESULT_OK == enResult) && (TEST_FLASH_MAX_SIZE_RECORD > nSizeRecord))
+    {
+        pDataRecord[nSizeRecord] = CH_SUM_CalculateCRC8(pDataRecord,
+                                                        nSizeRecord-1);
+    }
+
+    *pSizeDataRecord = nSizeRecord;
+
+    return enResult;
+} // end of TEST_FLASH_CreateRecord()
 
 
 
