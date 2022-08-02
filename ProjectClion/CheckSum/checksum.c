@@ -99,7 +99,7 @@
 // @Parameters    data - pointer to data to calculate crc8
 //                len - length data
 //**************************************************************************************************
-uint8_t CH_SUM_CalculateCRC8(uint8_t* data, uint32_t len)
+uint8_t CH_SUM_CalculateCRC8(const uint8_t* data, uint32_t len)
 {
     uint8_t crc = 0xFF;
     uint32_t i;

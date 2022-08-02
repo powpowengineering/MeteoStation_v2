@@ -81,6 +81,7 @@
 typedef enum
 {
     THREAD_TEST_FLASH = 0,
+    THREAD_TEST_FLASH_WITH_EE,
     THREAD_TEST_EE
 } Thread_TypeDef;
 
@@ -161,7 +162,8 @@ void main(void)
 //    USART_init();
 
 //    osThreadDef(THREAD_TEST_FLASH, vTaskTestFlash, osPriorityNormal, 0, TASK_TEST_FLASH_STACK_DEPTH);
-    osThreadDef(THREAD_TEST_EE, vTaskTestEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
+//    osThreadDef(THREAD_TEST_EE, vTaskTestEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
+    osThreadDef(THREAD_TEST_FLASH_WITH_EE, vTaskTestFlashWithEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
 
 //    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
 //                TASK_SEN_R_PARAMETERS,\
@@ -176,9 +178,8 @@ void main(void)
 //                TASK_EE_PRIORITY,NULL);
 
 //    osThreadCreate(osThread(THREAD_TEST_FLASH), NULL);
-
-//    osThreadCreate(osThread(THREAD_TEST_FLASH), NULL);
-    osThreadCreate(osThread(THREAD_TEST_EE), NULL);
+//    osThreadCreate(osThread(THREAD_TEST_EE), NULL);
+    osThreadCreate(osThread(THREAD_TEST_FLASH_WITH_EE), NULL);
 
 
     // Blocking MQTT task

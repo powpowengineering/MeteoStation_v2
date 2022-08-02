@@ -53,6 +53,10 @@
 // Task sensors read.
 extern void vTaskTestFlash(void *pvParameters);
 
+// Task test flash with EE
+_Noreturn extern void vTaskTestFlashWithEE(void *pvParameters);
+
+
 #endif // #ifndef TASK_SENSOR_READ_H
 
 //****************************************** end of file *******************************************

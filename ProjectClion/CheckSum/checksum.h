@@ -51,7 +51,7 @@
 //**************************************************************************************************
 // Declarations of global (public) functions
 //**************************************************************************************************
-extern uint8_t CH_SUM_CalculateCRC8(uint8_t* data, uint32_t len);
+extern uint8_t CH_SUM_CalculateCRC8(const uint8_t* data, uint32_t len);
 
 
 #endif // #ifndef W25Q_H
