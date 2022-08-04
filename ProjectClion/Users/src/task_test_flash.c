@@ -123,6 +123,7 @@ TEST_EE_METEO_DATA TEST_EE_MeteoData;
 uint8_t aRecordDataPackage[TEST_FLASH_MAX_SIZE_RECORD];
 uint8_t aRecordReadBack[TEST_FLASH_MAX_SIZE_RECORD];
 uint32_t nSizeDataRecord;
+RTC_HandleTypeDef stRTC;
 
 //**************************************************************************************************
 // Declarations of local (private) functions
@@ -360,9 +361,27 @@ _Noreturn void vTaskTestFlashWithEE(void *pvParameters)
 {
     uint32_t nAdrNextRecord = 0U;
     uint32_t nAdrLastRecordSendGSM = 0U;
+    uint32_t nNumberRecordStore = 0U;
 
     uint64_t ID;
     uint16_t ManufID;
+
+    // RTC Init
+//    stRTC.Instance = RTC;
+//    stRTC.Init.HourFormat = RTC_HOURFORMAT_24;
+//    stRTC.Init.AsynchPrediv = 0x7F;
+//    stRTC.Init.SynchPrediv = 0xFF;
+//
+//
+//
+//    if (HAL_OK == HAL_RTC_Init(RTC_HandleTypeDef *hrtc))
+//    {
+//        printf("RTC init OK\r\n");
+//    }
+//    else
+//    {
+//        printf("RTC init ERROR\r\n");
+//    }
 
     // Init EEPROM
     W25Q_Init();
@@ -371,7 +390,7 @@ _Noreturn void vTaskTestFlashWithEE(void *pvParameters)
     W25Q_UnLockGlobal();
     W25Q_EraseBlock(PAGE0_BASE_ADDRESS, W25Q_BLOCK_MEMORY_4KB);
     W25Q_EraseBlock(PAGE1_BASE_ADDRESS, W25Q_BLOCK_MEMORY_4KB);
-    W25Q_EraseBlock(0, W25Q_BLOCK_MEMORY_4KB);
+    W25Q_EraseBlock(0, W25Q_BLOCK_MEMORY_64KB);
 
     EE_Init();
     VirtAddVarTab[0] = EE_VER_ADR_LSB_LAST_RECORD;
@@ -431,7 +450,8 @@ _Noreturn void vTaskTestFlashWithEE(void *pvParameters)
                                             nSizeDataRecord))
             {
                 printf("Record was written in flash\r\n");
-
+                nNumberRecordStore++;
+                printf("Number of records saved %d\r\n",nNumberRecordStore);
             }
             else
             {
@@ -600,10 +620,14 @@ static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
         if (TEST_FLASH_MAX_SIZE_RECORD > nSizeRecord)
         {
             // Byte stuffing
-            if ((TEST_FLASH_RECORD_HEADER_MARKER == *pMeteoDataByte) || \
-            (TEST_FLASH_RECORD_END_MARKER == *pMeteoDataByte))
+            if (TEST_FLASH_RECORD_HEADER_MARKER == *pMeteoDataByte)
             {
                 pDataRecord[nSizeRecord] = (uint8_t)TEST_FLASH_RECORD_HEADER_MARKER;
+                nSizeRecord++;
+            }
+            else if  (TEST_FLASH_RECORD_END_MARKER == *pMeteoDataByte)
+            {
+                pDataRecord[nSizeRecord] = (uint8_t)TEST_FLASH_RECORD_END_MARKER;
                 nSizeRecord++;
             }
         }
@@ -665,7 +689,7 @@ static STD_RESULT TEST_FLASH_ParsingRecord(TEST_EE_METEO_DATA *pMeteoData,
                 break;
             case TEST_FLASH_STATE_PARSING_PAYLOAD :
                 if ((TEST_FLASH_RECORD_END_MARKER == *pDataRecord) ||
-                    (TEST_FLASH_STATE_PARSING_START_MARKER == *pDataRecord))
+                    (TEST_FLASH_RECORD_HEADER_MARKER == *pDataRecord))
                 {
                     nStateMachine = TEST_FLASH_STATE_PARSING_BYTE_STUFFING;
                 }
@@ -673,7 +697,7 @@ static STD_RESULT TEST_FLASH_ParsingRecord(TEST_EE_METEO_DATA *pMeteoData,
                 break;
             case TEST_FLASH_STATE_PARSING_BYTE_STUFFING :
                 if ((TEST_FLASH_RECORD_END_MARKER == *pDataRecord) ||
-                    (TEST_FLASH_STATE_PARSING_START_MARKER == *pDataRecord))
+                    (TEST_FLASH_RECORD_HEADER_MARKER == *pDataRecord))
                 {
                     nStateMachine = TEST_FLASH_STATE_PARSING_PAYLOAD;
                     pDataRecord++;

@@ -104,13 +104,17 @@ uint8_t CH_SUM_CalculateCRC8(const uint8_t* data, uint32_t len)
     uint8_t crc = 0xFF;
     uint32_t i;
 
-    while (len--)
+    if (0U != len)
     {
-        crc ^= *data++;
+        while (len--)
+        {
+            crc ^= *data++;
 
-        for (i = 0; i < 8; i++)
-            crc = crc & 0x80 ? (crc << 1) ^ 0x31 : crc << 1;
+            for (i = 0; i < 8; i++)
+                crc = crc & 0x80 ? (crc << 1) ^ 0x31 : crc << 1;
+        }
     }
+
 
     return crc;
 }// end of CH_SUM_CalculateCRC8
