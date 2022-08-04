@@ -37,7 +37,7 @@
 
 // Native header
 #include "task_mqtt.h"
-#include "usart_drv.h"
+//#include "usart_drv.h"
 #include "string.h"
 // drivers
 #include "printf.h"
@@ -113,6 +113,12 @@ MQTTFixedBuffer_t fixedBuffer;
 MQTTContext_t mqttContext;
 uint8_t buffer[MQTT_BUF_SIZE];
 MQTTPublishInfo_t publishInfo;
+
+// GSM uart handler
+USART_HandleTypeDef stUartGSMHandler;
+
+
+
 //**************************************************************************************************
 // Declarations of local (private) functions
 //**************************************************************************************************
@@ -139,6 +145,11 @@ static TASK_SENSOR_READ_DATA ReceivedQueue;
 static char bufferPrintf[TASK_SENS_RD_SIZE_BUFF_PRINT];
 
 void TaskDelay(TickType_t ms);
+
+static void USART_PutString(const char* s);
+
+static void USART_PutChar(const char character);
+
 
 //**************************************************************************************************
 //==================================================================================================
@@ -169,6 +180,39 @@ void vTaskMQTT(void *pvParameters)
     // Set buffer members.
     fixedBuffer.pBuffer = buffer;
     fixedBuffer.size = MQTT_BUF_SIZE;
+
+    // Init GSM UART port
+    __HAL_RCC_USART2_CLK_ENABLE();
+    GPIO_InitTypeDef  GPIO_InitStruct = {0};
+
+    // Configure the TX pin UART for GSM
+    GPIO_InitStruct.Pin        = INIT_GSM_USART_TX_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = INIT_GSM_USART_TX_AF;
+    HAL_GPIO_Init(INIT_GSM_USART_TX_PORT, &GPIO_InitStruct);
+
+    // Configure the RX pin UART for GSM
+    GPIO_InitStruct.Pin        = INIT_GSM_USART_RX_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = INIT_GSM_USART_RX_AF;
+    HAL_GPIO_Init(INIT_GSM_USART_RX_PORT, &GPIO_InitStruct);
+
+
+    stUartGSMHandler.Instance            = INIT_GSM_USART_NUM;
+    stUartGSMHandler.Init.BaudRate       = 115200;
+    stUartGSMHandler.Init.WordLength     = USART_WORDLENGTH_8B;
+    stUartGSMHandler.Init.StopBits       = USART_STOPBITS_1;
+    stUartGSMHandler.Init.Parity         = USART_PARITY_NONE;
+    stUartGSMHandler.Init.Mode           = USART_MODE_TX_RX;
+
+    HAL_USART_DeInit(&stUartGSMHandler);
+
+    // Init UART GSM
+    HAL_USART_Init(&stUartGSMHandler);
 
     // Init MQTT
     MQTT_Init( &mqttContext, &transport, getTimeStampMs, eventCallback, &fixedBuffer );
@@ -233,80 +277,81 @@ void vTaskMQTT(void *pvParameters)
 //    vTaskDelay(2000/portTICK_RATE_MS);
     TaskDelay(2000);
     // Whether some password is required or not
-    USART_PutString(MQTT_UART_CH, "AT+CPIN?\r");
+    USART_PutString("AT+CPIN?\r");
+
 TaskDelay(2000);
     // Received signal strength
-    USART_PutString(MQTT_UART_CH, "AT+CSQ\r");
+    USART_PutString( "AT+CSQ\r");
 TaskDelay(2000);
     // The tegistration of the ME
-    USART_PutString(MQTT_UART_CH, "AT+CREG?\r");
+    USART_PutString( "AT+CREG?\r");
 TaskDelay(2000);
     // GPRS Service's status
-    USART_PutString(MQTT_UART_CH, "AT+CGATT?\r");
+    USART_PutString( "AT+CGATT?\r");
 TaskDelay(2000);
     // Start task and set APN
-    USART_PutString(MQTT_UART_CH, "AT+CSTT=\"internet\"\r");
+    USART_PutString( "AT+CSTT=\"internet\"\r");
 TaskDelay(2000);
     // Bring up wireless connection
-    USART_PutString(MQTT_UART_CH, "AT+CIICR\r");
+    USART_PutString( "AT+CIICR\r");
 TaskDelay(2000);
     // Get local IP address
-    USART_PutString(MQTT_UART_CH, "AT+CIFSR\r");
+    USART_PutString( "AT+CIFSR\r");
 TaskDelay(2000);
 
 
-//    USART_PutString(MQTT_UART_CH, "AT+CIPSEND\r");
+//    USART_PutString( "AT+CIPSEND\r");
 //    vTaskDelay(3000/portTICK_RATE_MS);
 
 
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_SAPBR_3_1);
+//    USART_PutString( MQTT_AT_SAPBR_3_1);
 //    vTaskDelay(2000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_SAPBR_3_1_APN);
+//    USART_PutString( MQTT_AT_SAPBR_3_1_APN);
 //    vTaskDelay(2000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_SAPBR_1_1_);
+//    USART_PutString( MQTT_AT_SAPBR_1_1_);
 //    vTaskDelay(2000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_SAPBR_2_1_);
+//    USART_PutString( MQTT_AT_SAPBR_2_1_);
 //    vTaskDelay(2000/portTICK_RATE_MS);
 //
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPMODE);
+//    USART_PutString( MQTT_AT_CIPMODE);
 //    vTaskDelay(2000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPMUX);
+//    USART_PutString( MQTT_AT_CIPMUX);
 //    vTaskDelay(2000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
+//    USART_PutString( MQTT_AT_CIPSTATUS);
 //    vTaskDelay(2000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CSTT);
+//    USART_PutString( MQTT_AT_CSTT);
 //    vTaskDelay(2000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIICR);
+//    USART_PutString( MQTT_AT_CIICR);
 //    vTaskDelay(2000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIFSR);
+//    USART_PutString( MQTT_AT_CIFSR);
 //    vTaskDelay(2000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTART);
+//    USART_PutString( MQTT_AT_CIPSTART);
 //    vTaskDelay(5000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND_QTY_SEND);
+//    USART_PutString( MQTT_AT_CIPSEND_QTY_SEND);
 //    vTaskDelay(1000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPQSEND);
+//    USART_PutString( MQTT_AT_CIPQSEND);
 //    vTaskDelay(1000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+//    USART_PutString( MQTT_AT_CIPSEND);
 //    vTaskDelay(3000/portTICK_RATE_MS);
 
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTART);
+//    USART_PutString( MQTT_AT_CIPSTART);
 //    vTaskDelay(5000/portTICK_RATE_MS);
 //
-//    USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+//    USART_PutString( MQTT_AT_CIPSEND);
 //    vTaskDelay(3000/portTICK_RATE_MS);
 
 //    // Connect mqtt
@@ -327,10 +372,10 @@ TaskDelay(2000);
 //
 //    memcpy(&MQTT_AT_CONNECT[14],MQTT_CID, strlen(MQTT_CID));
 //
-//    USART_PutRAWData(MQTT_UART_CH, MQTT_AT_CONNECT,strlen(MQTT_CID)+12+2);
-//    //USART_PutChar(MQTT_UART_CH, 0x1a);
+//    USART_PutRAWData( MQTT_AT_CONNECT,strlen(MQTT_CID)+12+2);
+//    //USART_PutChar( 0x1a);
 //
-//    //USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+//    //USART_PutString( MQTT_AT_CIPSEND);
 //    //vTaskDelay(3000/portTICK_RATE_MS);
 //
 //    // pub mqtt
@@ -343,25 +388,25 @@ TaskDelay(2000);
 //    memcpy(&MQTT_AT_CONNECT[4+strlen(MQTT_TOPIC)],MQTT_MESSAGE, strlen(MQTT_MESSAGE)); // Message
 //    //MQTT_AT_CONNECT[4+strlen(MQTT_TOPIC)] = 23; // Message
 //
-//    //USART_PutRAWData(MQTT_UART_CH, MQTT_AT_CONNECT, 4+strlen(MQTT_TOPIC) + strlen(MQTT_MESSAGE) );
-//    USART_PutRAWData(MQTT_UART_CH, MQTT_AT_CONNECT, 4+strlen(MQTT_TOPIC) + 1 );
+//    //USART_PutRAWData( MQTT_AT_CONNECT, 4+strlen(MQTT_TOPIC) + strlen(MQTT_MESSAGE) );
+//    USART_PutRAWData( MQTT_AT_CONNECT, 4+strlen(MQTT_TOPIC) + 1 );
 //
-//    USART_PutChar(MQTT_UART_CH, 0x1a);
+//    USART_PutChar( 0x1a);
 
 //    mqtt_init(&broker, MQTT_CID);
 //    mqtt_init_auth(&broker, MQTT_USER_NAME, MQTT_PSW);
 //    mqtt_connect(&broker);
-    //USART_PutChar(MQTT_UART_CH,0x1a);
+    //USART_PutChar(0x1a);
     //vTaskDelay(2000/portTICK_RATE_MS);
 
-    //USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+    //USART_PutString( MQTT_AT_CIPSEND);
     //vTaskDelay(1000/portTICK_RATE_MS);
   //  mqtt_publish(&broker, MQTT_TOPIC,MQTT_MESSAGE, 0);
-  //  USART_PutChar(MQTT_UART_CH,0x1a);
+  //  USART_PutChar(0x1a);
   //  vTaskDelay(3000/portTICK_RATE_MS);
 
 //    MQTT_Connect( &mqttContext, &connectInfo, &willInfo, 100, &sessionPresent );
-//    USART_PutChar(MQTT_UART_CH,0x1a);
+//    USART_PutChar(0x1a);
 //    vTaskDelay(3000/portTICK_RATE_MS);
 
 
@@ -369,22 +414,22 @@ TaskDelay(2000);
     {
         if (pdPASS == xQueueReceive( xQueueMeasureData, &ReceivedQueue,  10 / portTICK_RATE_MS ))
         {
-            USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
+            USART_PutString( MQTT_AT_CIPSTATUS);
             TaskDelay(2000);
             // Start up connection
-            USART_PutString(MQTT_UART_CH, "AT+CIPSTART=\"TCP\",\"dev.rightech.io\",\"1883\"\r");
-            //USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTART);
+            USART_PutString( "AT+CIPSTART=\"TCP\",\"dev.rightech.io\",\"1883\"\r");
+            //USART_PutString( MQTT_AT_CIPSTART);
             TaskDelay(8000);
 
-            USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
+            USART_PutString( MQTT_AT_CIPSTATUS);
             TaskDelay(2000);
 
             if (MQTTNotConnected == mqttContext.connectStatus)
             {
-                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+                USART_PutString( MQTT_AT_CIPSEND);
                TaskDelay(2000);
                 MQTT_Connect(&mqttContext, &connectInfo, &willInfo, 100, &sessionPresent);
-                USART_PutChar(MQTT_UART_CH, 0x1a);
+                USART_PutChar( 0x1a);
                TaskDelay(2000);
 
                 ftoa(ReceivedQueue.temperature, bufferPrintf, 3);
@@ -394,10 +439,10 @@ TaskDelay(2000);
                 publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
                 publishInfo.pPayload = bufferPrintf;
                 publishInfo.payloadLength = strlen(bufferPrintf);
-                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+                USART_PutString( MQTT_AT_CIPSEND);
                TaskDelay(4000);
                 MQTT_Publish(&mqttContext, &publishInfo, packetId);
-                USART_PutChar(MQTT_UART_CH, 0x1a);
+                USART_PutChar( 0x1a);
                TaskDelay(4000);
 
                 ftoa(ReceivedQueue.humidity, bufferPrintf, 3);
@@ -407,10 +452,10 @@ TaskDelay(2000);
                 publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
                 publishInfo.pPayload = bufferPrintf;
                 publishInfo.payloadLength = strlen(bufferPrintf);
-                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+                USART_PutString( MQTT_AT_CIPSEND);
                TaskDelay(4000);
                 MQTT_Publish(&mqttContext, &publishInfo, packetId);
-                USART_PutChar(MQTT_UART_CH, 0x1a);
+                USART_PutChar( 0x1a);
                TaskDelay(4000);
 
                 ftoa(ReceivedQueue.pressure, bufferPrintf, 3);
@@ -420,20 +465,20 @@ TaskDelay(2000);
                 publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
                 publishInfo.pPayload = bufferPrintf;
                 publishInfo.payloadLength = strlen(bufferPrintf);
-                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+                USART_PutString( MQTT_AT_CIPSEND);
                 TaskDelay(4000);
                 MQTT_Publish(&mqttContext, &publishInfo, packetId);
-                USART_PutChar(MQTT_UART_CH, 0x1a);
+                USART_PutChar( 0x1a);
                 TaskDelay(4000);
 
-                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSEND);
+                USART_PutString( MQTT_AT_CIPSEND);
                TaskDelay(4000);
                 MQTT_Disconnect(&mqttContext);
-                USART_PutChar(MQTT_UART_CH, 0x1a);
+                USART_PutChar( 0x1a);
                TaskDelay(2000);
 
 
-                USART_PutString(MQTT_UART_CH, MQTT_AT_CIPSTATUS);
+                USART_PutString( MQTT_AT_CIPSTATUS);
                TaskDelay(2000);
             }
         }
@@ -454,8 +499,13 @@ TaskDelay(2000);
 
 static int SIM800send(void* socket_info, const void* buf, unsigned int count)
 {
-    USART_PutRAWData(MQTT_UART_CH, buf, count);
-    //USART_PutChar(MQTT_UART_CH,0x1a);
+//    USART_PutRAWData( buf, count);
+    //USART_PutChar(0x1a);
+    HAL_USART_Transmit(&stUartGSMHandler,
+                       buf,
+                       count,
+                    10000);
+
     return count;
 }
 
@@ -463,8 +513,13 @@ static int32_t MQTTCoreSIM800send(NetworkContext_t * pNetworkContext,
                               const void * pBuffer,
                               size_t bytesToSend)
 {
-    USART_PutRAWData(MQTT_UART_CH, pBuffer, bytesToSend);
-    //USART_PutChar(MQTT_UART_CH,0x1a);
+//    USART_PutRAWData( pBuffer, bytesToSend);
+    //USART_PutChar(0x1a);
+    HAL_USART_Transmit(&stUartGSMHandler,
+                       pBuffer,
+                       bytesToSend,
+                       10000);
+
     return bytesToSend;
 }
 
@@ -493,6 +548,31 @@ void TaskDelay(TickType_t ms)
 
     while ((xTaskGetTickCount() - currentTick) < ms);
 }
+
+static void USART_PutString(const char* s)
+{
+    uint32_t len = strlen(s);
+
+    if (0 < len)
+    {
+        HAL_USART_Transmit(&stUartGSMHandler,
+                           s,
+                           len,
+                           10000);
+
+    }
+
+}// end of USART_PutString()
+
+static void USART_PutChar( const char character)
+{
+    HAL_USART_Transmit(&stUartGSMHandler,
+                       &character,
+                       1,
+                       10000);
+}
+
+
 
 //****************************************** end of file *******************************************
 

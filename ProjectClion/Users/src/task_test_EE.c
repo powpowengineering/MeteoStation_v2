@@ -194,7 +194,11 @@ void vTaskTestEE(void *pvParameters)
             {
                 for (int j = 0; j < TEST_EE_SIZE_READ_BUF; j++)
                 {
-                    printf("%x|",nReadBuf[j]);
+                    if (j%4 == 0)
+                    {
+                        printf("|");
+                    }
+                    printf("%x",nReadBuf[j]);
                 }
                 printf("\r\n");
             }
