@@ -51,10 +51,10 @@
 
 
 // Include task_sensors_read interface
-//#include "tasks_sensors_read.h"
+#include "task_read_sensors.h"
 // Include task_test_flash interface
 #include "task_test_flash.h"
-//#include "task_mqtt.h"
+#include "task_mqtt.h"
 #include "task_test_EE.h"
 
 
@@ -82,7 +82,9 @@ typedef enum
 {
     THREAD_TEST_FLASH = 0,
     THREAD_TEST_FLASH_WITH_EE,
-    THREAD_TEST_EE
+    THREAD_TEST_EE,
+    THREAD_TEST_MQTT,
+    THREAD_MASTER
 } Thread_TypeDef;
 
 
@@ -118,7 +120,7 @@ typedef enum
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-char dataTest[] = {"Start HAL\r\n"};
+// None.
 
 
 
@@ -161,9 +163,14 @@ void main(void)
 //    AM2305_Init();
 //    USART_init();
 
+    xQueue = xQueueCreate( 5, sizeof( TASK_SENSOR_READ_DATA ) );
+
+
 //    osThreadDef(THREAD_TEST_FLASH, vTaskTestFlash, osPriorityNormal, 0, TASK_TEST_FLASH_STACK_DEPTH);
 //    osThreadDef(THREAD_TEST_EE, vTaskTestEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
-    osThreadDef(THREAD_TEST_FLASH_WITH_EE, vTaskTestFlashWithEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
+//    osThreadDef(THREAD_TEST_FLASH_WITH_EE, vTaskTestFlashWithEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
+    osThreadDef(THREAD_TEST_MQTT, vTaskMQTT, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
+    osThreadDef(THREAD_MASTER, vTaskMQTT, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
 
 //    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
 //                TASK_SEN_R_PARAMETERS,\
@@ -179,7 +186,8 @@ void main(void)
 
 //    osThreadCreate(osThread(THREAD_TEST_FLASH), NULL);
 //    osThreadCreate(osThread(THREAD_TEST_EE), NULL);
-    osThreadCreate(osThread(THREAD_TEST_FLASH_WITH_EE), NULL);
+//    osThreadCreate(osThread(THREAD_TEST_FLASH_WITH_EE), NULL);
+    osThreadCreate(osThread(THREAD_TEST_MQTT), NULL);
 
 
     // Blocking MQTT task

@@ -17,24 +17,31 @@
 #define TASK_SENSOR_READ_H
 
 
+
 //**************************************************************************************************
 // Project Includes
 //**************************************************************************************************
 
-#include "stm32l1xx.h"
+// Get HAL interface
+#include "stm32l4xx_hal.h"
 
+// Get general types
 #include "general_types.h"
+
+// Get module cfg
+#include "task_read_sensors_cfg.h"
+
+// Get RTOS interface
+#include "cmsis_os.h"
+
+
 
 //**************************************************************************************************
 // Declarations of global (public) data types
 //**************************************************************************************************
 
-typedef struct TASK_SENSOR_READ_DATA_struct
-{
-    float temperature;
-    float humidity;
-    float pressure;
-}TASK_SENSOR_READ_DATA;
+// None.
+
 
 
 //**************************************************************************************************
@@ -51,12 +58,15 @@ typedef struct TASK_SENSOR_READ_DATA_struct
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of global (public) functions
 //**************************************************************************************************
 
 // Task sensors read.
-extern void vTaskSensorsRead(void *pvParameters);
+extern void vTaskReadSensors(void *pvParameters);
+
+
 
 #endif // #ifndef TASK_SENSOR_READ_H
 
