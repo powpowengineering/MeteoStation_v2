@@ -20,8 +20,9 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include "eeprom.h"
 #include "W25Q_drv.h"
+#include "eeprom.h"
+
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -32,7 +33,7 @@
 uint16_t DataVar = 0;
 
 /* Virtual address defined by the user: 0xFFFF value is prohibited */
-extern uint16_t VirtAddVarTab[NB_OF_VAR];
+uint16_t VirtAddVarTab[NB_OF_VAR];
 
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
@@ -669,7 +670,7 @@ static uint16_t EE_PageTransfer(uint16_t VirtAddress, uint16_t Data)
     }
 
     /* Set the new Page status to RECEIVE_DATA status */
-    FlashStatus =FLASH_ProgramHalfWord(NewPageAddress,RECEIVE_DATA);
+    FlashStatus = FLASH_ProgramHalfWord(NewPageAddress,RECEIVE_DATA);
     /* If program operation was failed, a Flash error code is returned */
     if (FlashStatus != HAL_OK)
     {
@@ -738,11 +739,11 @@ static HAL_StatusTypeDef FLASH_Erase(FLASH_EraseInitTypeDef *pEraseInit, uint32_
 
     if (pEraseInit->Page == 0U)
     {
-        nAdr = 0U;
+        nAdr = PAGE0_BASE_ADDRESS;
     }
     else
     {
-        nAdr = 1U;
+        nAdr = PAGE1_BASE_ADDRESS;
     }
 
     W25Q_UnLockGlobal();

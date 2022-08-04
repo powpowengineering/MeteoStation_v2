@@ -51,7 +51,7 @@
 //**************************************************************************************************
 
 // Task sensors read.
-extern void vTaskTestEE(void *pvParameters);
+_Noreturn extern void vTaskTestEE(void *pvParameters);
 
 #endif // #ifndef TASK_TEST_EE_H
 

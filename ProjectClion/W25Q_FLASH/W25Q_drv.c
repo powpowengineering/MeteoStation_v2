@@ -291,7 +291,7 @@ void W25Q_Init(void)
 
     // Init SPI
     SpiHandle.Instance               = W25Q_SPI_NUM;
-    SpiHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+    SpiHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
     SpiHandle.Init.Direction         = SPI_DIRECTION_2LINES;
     SpiHandle.Init.CLKPhase          = SPI_PHASE_1EDGE;
     SpiHandle.Init.CLKPolarity       = SPI_POLARITY_LOW;

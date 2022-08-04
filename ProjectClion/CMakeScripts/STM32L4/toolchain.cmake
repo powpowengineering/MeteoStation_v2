@@ -5,7 +5,8 @@ set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_VERSION 1)
 
 # Set paths to GCC
-set(GCC_ROOT_PATH "C:/soft/gcc-arm-none-eabi-10.3-2021.10-win32/gcc-arm-none-eabi-10.3-2021.10/bin")
+#set(GCC_ROOT_PATH "C:/soft/gcc-arm-none-eabi-10.3-2021.10-win32/gcc-arm-none-eabi-10.3-2021.10/bin")
+set(GCC_ROOT_PATH "C:/soft/gcc-arm-none-eabi-10.3-2021.10/bin")
 #set(GCC_ROOT_PATH "D:/GCC_ARM/10 2021.10/bin")
 #set(GCC_ROOT_PATH "/Applications/ARM/bin")
 set(GCC_PREFIX "arm-none-eabi")

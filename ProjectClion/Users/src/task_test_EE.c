@@ -1,3 +1,4 @@
+#include <argz.h>
 //**************************************************************************************************
 // @Module        TASK_TEST_EE
 // @Filename      task_test_EE.c
@@ -59,7 +60,7 @@
 // Definitions of global (public) variables
 //**************************************************************************************************
 
-uint16_t VirtAddVarTab[NB_OF_VAR];
+// None.
 
 
 
@@ -84,7 +85,8 @@ uint16_t VirtAddVarTab[NB_OF_VAR];
 #define TEST_EE_SIZE_CRC8               (1U)
 #define TEST_EE_SIZE_RECORD_BUF         (TEST_EE_SIZE_RECORD_DATA + TEST_EE_SIZE_CRC8)
 
-#define TEST_EE_SIZE_READ_BUF           (32U)
+#define TEST_EE_SIZE_READ_BUF           (64U)
+
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -106,7 +108,6 @@ uint8_t nReadBuf[TEST_EE_SIZE_READ_BUF];
 //==================================================================================================
 //**************************************************************************************************
 
-
 //**************************************************************************************************
 // @Function      vTaskTestEE()
 //--------------------------------------------------------------------------------------------------
@@ -127,14 +128,23 @@ void vTaskTestEE(void *pvParameters)
     W25Q_ReadUniqueID(&ID);
     W25Q_ReadManufactureID(&ManufID);
     W25Q_UnLockGlobal();
+
+    W25Q_EraseBlock(PAGE0_BASE_ADDRESS, W25Q_BLOCK_MEMORY_4KB);
+    W25Q_EraseBlock(PAGE1_BASE_ADDRESS, W25Q_BLOCK_MEMORY_4KB);
+
     EE_Init();
     uint16_t result;
-    STD_RESULT enResult;
+    uint8_t nWriteDataTest = 0;
     uint32_t nCurrentAdr = 0;
     uint32_t nNumberOfRec = 0;
-    VirtAddVarTab[0] = 1;
-    VirtAddVarTab[1] = 2;
-    VirtAddVarTab[2] = 3;
+
+    // Init virtual address table EE
+    for (int i = 0; i < NB_OF_VAR; i++)
+    {
+        VirtAddVarTab[i] = i;
+    }
+
+
 
     printf("EEPROM Init\n\r");
 
@@ -182,23 +192,54 @@ void vTaskTestEE(void *pvParameters)
 //            nCurrentAdr += TEST_EE_SIZE_RECORD_BUF;
 //            nNumberOfRec++;
 //        }
+        uint16_t resultEEWrite = 0;
+        for (int i = 0; i < NB_OF_VAR; i++)
+        {
+            resultEEWrite = EE_WriteVariable(i, i);
 
-        result = EE_WriteVariable(EE_VER_ADR_LAST_SEND, 0xBEEF);
-        result = EE_WriteVariable(EE_VER_ADR_CURRENT_WR, 0xDEED);
+            switch(resultEEWrite)
+            {
+                case (PAGE_FULL):
+                    printf("PAGE_FULL\r\n");
+                    break;
+                case (NO_VALID_PAGE):
+                    printf("NO_VALID_PAGE\r\n");
+                    break;
+                case (HAL_OK):
+//                    printf("FLASH_COMPLETE\r\n");
+                    break;
+                case (HAL_ERROR):
+                    printf("FLASH_ERROR\r\n");
+                    break;
+                case (HAL_BUSY):
+                    printf("FLASH_BUSY\r\n");
+                    break;
+                case (HAL_TIMEOUT):
+                    printf("FLASH_TIMEOUT\r\n");
+                    break;
+                default:break;
+            }
+        }
+
 
         // Read PAGE0 EE
-        int nAdr = 0;
-        while (nAdr < PAGE_SIZE)
+        printf("Page0\r\n");
+        uint32_t nAdr = PAGE0_BASE_ADDRESS;
+        while (nAdr < PAGE0_BASE_ADDRESS + PAGE_SIZE)
         {
             if (RESULT_OK == W25Q_ReadData(nAdr,nReadBuf, TEST_EE_SIZE_READ_BUF))
             {
+                uint32_t nWord = 0;
                 for (int j = 0; j < TEST_EE_SIZE_READ_BUF; j++)
                 {
-                    if (j%4 == 0)
+                    nWord |= (uint32_t)nReadBuf[j] << ((j%4) * 8);
+                    if ((j%4 == 0x0) && (j != 0))
                     {
                         printf("|");
+                        printf("%08x",nWord);
+                        nWord = 0;
                     }
-                    printf("%x",nReadBuf[j]);
+
                 }
                 printf("\r\n");
             }
@@ -209,9 +250,35 @@ void vTaskTestEE(void *pvParameters)
             nAdr += TEST_EE_SIZE_READ_BUF;
         }
 
+        printf("\r\n\r\nPage1\r\n");
 
+        // Read PAGE1 EE
+         nAdr = PAGE1_BASE_ADDRESS;
+        while (nAdr < PAGE1_BASE_ADDRESS + PAGE_SIZE)
+        {
+            if (RESULT_OK == W25Q_ReadData(nAdr,nReadBuf, TEST_EE_SIZE_READ_BUF))
+            {
+                uint32_t nWord = 0;
+                for (int j = 0; j < TEST_EE_SIZE_READ_BUF; j++)
+                {
+                    nWord |= (uint32_t)nReadBuf[j] << ((j%4) * 8);
+                    if ((j%4 == 0x0) && (j != 0))
+                    {
+                        printf("|");
+                        printf("%08x",nWord);
+                        nWord = 0;
+                    }
 
-        vTaskDelay(1000/portTICK_RATE_MS);
+                }
+                printf("\r\n");
+            }
+            else
+            {
+                printf("Error read\r\n");
+            }
+            nAdr += TEST_EE_SIZE_READ_BUF;
+        }
+        vTaskDelay(100/portTICK_RATE_MS);
     }
 }// end vTaskTestEE()
 
