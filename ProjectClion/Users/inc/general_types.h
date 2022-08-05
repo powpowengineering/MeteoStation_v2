@@ -50,6 +50,8 @@
 #define LOGIC_1             (1U)
 #endif
 
+// The function doing nothing definition
+#define DoNothing()
 
 // Standard result type
 typedef enum STD_RESULT_enum

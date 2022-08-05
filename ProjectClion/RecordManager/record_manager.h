@@ -63,10 +63,24 @@
 // Declarations of global (public) functions
 //**************************************************************************************************
 
-// None.
+// Init record manager
+extern void RECORD_MAN_Init(void);
+
+// Store data
+extern STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
+                                   uint32_t nQtyData);
+
+// Load data
+extern STD_RESULT RECORD_MAN_Load(uint8_t *pData,
+                                  uint32_t nQtyData);
+
+// Get available memory
+extern STD_RESULT RECORD_MAN_GetAvailableMem(uint32_t *pQtyByte);
 
 
 
 #endif // #ifndef RECORD_MAN_H
+
+
 
 //****************************************** end of file *******************************************
