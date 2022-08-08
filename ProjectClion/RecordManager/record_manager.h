@@ -55,7 +55,8 @@
 // Declarations of global (public) variables
 //**************************************************************************************************
 
-// None.
+// Mutex to get resource
+extern xSemaphoreHandle RECORD_MAN_xMutex;
 
 
 
@@ -70,9 +71,14 @@ extern void RECORD_MAN_Init(void);
 extern STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
                                    uint32_t nQtyData);
 
-// Load data
-extern STD_RESULT RECORD_MAN_Load(uint8_t *pData,
-                                  uint32_t nQtyData);
+// Load record
+extern STD_RESULT RECORD_MAN_Load(uint32_t nAdrRecord,
+                                  uint8_t *pRecord,
+                                  uint32_t* nQtyBytes);
+
+// Get number of records in flash
+extern STD_RESULT RECORD_MAN_GetNumberOfRecords(uint32_t* nNumberOfRecords);
+
 
 // Get available memory
 extern STD_RESULT RECORD_MAN_GetAvailableMem(uint32_t *pQtyByte);
