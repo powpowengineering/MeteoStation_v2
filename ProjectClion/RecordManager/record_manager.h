@@ -47,7 +47,8 @@
 // Definitions of global (public) constants
 //**************************************************************************************************
 
-// None.
+// Max record package in bytes
+#define RECORD_MAN_MAX_SIZE_RECORD                 (100U)
 
 
 

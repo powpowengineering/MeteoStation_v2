@@ -117,14 +117,12 @@ typedef struct TEST_EE_METEO_DATA_struct
 #define RECORD_MAN_HEADER_MARKER           (0x10U)
 // End marker record
 #define RECORD_MAN_END_MARKER              (0x03U)
-// Max record package in bytes
-#define RECORD_MAN_MAX_SIZE_RECORD                 (100U)
 
 // State machine
 #define RECORD_MAN_STATE_PARSING_START_MARKER      (0U)
 #define RECORD_MAN_STATE_PARSING_NUM_PACKAGE       (1U)
 #define RECORD_MAN_STATE_PARSING_PAYLOAD           (2U)
-#define RECORD_MAN_STATE_PARSING_BYTE_STUFFING     (3U)
+#define RECORD_MAN_STATE_PARSING_DOUBLE_HEADER_MARKER     (3U)
 #define RECORD_MAN_STATE_PARSING_END_MARKER        (4U)
 
 
@@ -352,16 +350,36 @@ static STD_RESULT RECORD_MAN_CreateRecord(const uint8_t *pDataSource,
     STD_RESULT enResult = RESULT_OK;
     uint32_t nSizeRecord = 0U;
     const uint8_t *pItem = (uint8_t*)&nRecordNumber;
+    uint8_t nCRC8 = 0U;
+
+    // Clear buf
+    for (uint32_t nIndex = 0; nIndex < RECORD_MAN_MAX_SIZE_RECORD; nIndex++)
+    {
+        pDataRecord[nIndex] = 0U;
+    }
+
+    // Calculate crc8 of number package
+    nCRC8 = CH_SUM_CalculateCRC8(pItem,
+                                 4U);
+
+    // Calculate crc8 of number package and data
+    nCRC8 = CH_SUM_CalculateCRC8WithBegin(pDataSource,
+                                          nDataSourceQty,
+                                          nCRC8);
 
     // Write header
     pDataRecord[nSizeRecord] = (uint8_t)RECORD_MAN_HEADER_MARKER;
     nSizeRecord++;
 
-    for (int i = 0; i < nDataSourceQty + RECORD_MAN_SIZE_RECORD_NUM_BYTES; i++)
+    for (int i = 0; i < nDataSourceQty + RECORD_MAN_SIZE_RECORD_NUM_BYTES + RECORD_MAN_SIZE_CRC8; i++)
     {
         if (RECORD_MAN_SIZE_RECORD_NUM_BYTES == i)
         {
             pItem = pDataSource;
+        }
+        else if ((nDataSourceQty + RECORD_MAN_SIZE_RECORD_NUM_BYTES) == i)
+        {
+            pItem = &nCRC8;
         }
 
         if (RECORD_MAN_MAX_SIZE_RECORD > nSizeRecord)
@@ -397,13 +415,13 @@ static STD_RESULT RECORD_MAN_CreateRecord(const uint8_t *pDataSource,
         pItem++;
     }
 
-    if ((RESULT_OK == enResult) && (RECORD_MAN_MAX_SIZE_RECORD > (nSizeRecord + 2U)))
+    if ((RESULT_OK == enResult) && (RECORD_MAN_MAX_SIZE_RECORD > (nSizeRecord + 1U)))
     {
-        pDataRecord[nSizeRecord] = CH_SUM_CalculateCRC8(pDataRecord,
-                                                        nSizeRecord-1U);
-
-        nSizeRecord++;
         pDataRecord[nSizeRecord] = RECORD_MAN_END_MARKER;
+    }
+    else
+    {
+        enResult = RESULT_NOT_OK;
     }
 
     *pSizeDataRecord = nSizeRecord + 1U;
@@ -432,47 +450,82 @@ static STD_RESULT RECORD_MAN_ParsingRecord(const uint8_t *pDataRecord,
     STD_RESULT enResult = RESULT_NOT_OK;
     uint8_t nStateMachine = RECORD_MAN_STATE_PARSING_START_MARKER;
     uint32_t nSizeData = 0U;
+    uint32_t nIndexDataRecord = 0U;
 
     while ((0U != nSizeRecord) && (RESULT_NOT_OK == enResult))
     {
         switch (nStateMachine)
         {
             case RECORD_MAN_STATE_PARSING_START_MARKER :
-                if (RECORD_MAN_HEADER_MARKER == *pDataRecord)
+                if (RECORD_MAN_HEADER_MARKER == pDataRecord[nIndexDataRecord])
                 {
                     nStateMachine = RECORD_MAN_STATE_PARSING_PAYLOAD;
                 }
-                pDataRecord++;
+                nIndexDataRecord++;
                 break;
             case RECORD_MAN_STATE_PARSING_PAYLOAD :
-                if ((RECORD_MAN_END_MARKER == *pDataRecord) ||
-                    (RECORD_MAN_HEADER_MARKER == *pDataRecord))
+                if (RECORD_MAN_HEADER_MARKER == pDataRecord[nIndexDataRecord])
                 {
-                    nStateMachine = RECORD_MAN_STATE_PARSING_BYTE_STUFFING;
+                    nStateMachine = RECORD_MAN_STATE_PARSING_DOUBLE_HEADER_MARKER;
+                }
+                else if (RECORD_MAN_END_MARKER == pDataRecord[nIndexDataRecord])
+                {
+                    if (0U == (nSizeRecord - 1U))
+                    {
+                        if (pDataRecord[nIndexDataRecord - 1U] != CH_SUM_CalculateCRC8(pData,
+                                                                                       nSizeData))
+                        {
+                            enResult = RESULT_NOT_OK;
+                        }
+                        else
+                        {
+                            enResult = RESULT_OK;
+                            *pSizeData = nSizeData - 1U;
+                        }
+                    }
+                    else
+                    {
+                        nStateMachine = RECORD_MAN_STATE_PARSING_END_MARKER;
+                    }
                 }
                 else
                 {
-                    pData[nSizeData] = *pDataRecord;
+                    pData[nSizeData] = pDataRecord[nIndexDataRecord];
                     nSizeData++;
                 }
-                pDataRecord++;
+                nIndexDataRecord++;
                 break;
-            case RECORD_MAN_STATE_PARSING_BYTE_STUFFING :
-                if ((RECORD_MAN_END_MARKER == *pDataRecord) ||
-                    (RECORD_MAN_HEADER_MARKER == *pDataRecord))
+            case RECORD_MAN_STATE_PARSING_DOUBLE_HEADER_MARKER :
+                if (RECORD_MAN_HEADER_MARKER == pDataRecord[nIndexDataRecord])
                 {
                     nStateMachine = RECORD_MAN_STATE_PARSING_PAYLOAD;
-                    pData[nSizeData] = *pDataRecord;
+                    pData[nSizeData] = pDataRecord[nIndexDataRecord];
                     nSizeData++;
-                    pDataRecord++;
+                    nIndexDataRecord++;
                 }
                 else
                 {
-                    if (*(pDataRecord - 2U) != CH_SUM_CalculateCRC8(pData,
-                                                                    nSizeData))
+                    nStateMachine = RECORD_MAN_STATE_PARSING_PAYLOAD;
+                    nSizeData = 0U;
+                    nIndexDataRecord++;
+                }
+                break;
+            case RECORD_MAN_STATE_PARSING_END_MARKER :
+                if (RECORD_MAN_END_MARKER == pDataRecord[nIndexDataRecord])
+                {
+                    nStateMachine = RECORD_MAN_STATE_PARSING_PAYLOAD;
+                    pData[nSizeData] = pDataRecord[nIndexDataRecord];
+                    nSizeData++;
+                    nIndexDataRecord++;
+                }
+                else
+                {
+                    if (pDataRecord[nIndexDataRecord - 2U] != CH_SUM_CalculateCRC8(pData,
+                                                                                   nSizeData - 1U))
                     {
                         enResult = RESULT_NOT_OK;
                     }
+                    else
                     {
                         enResult = RESULT_OK;
                         *pSizeData = nSizeData;
