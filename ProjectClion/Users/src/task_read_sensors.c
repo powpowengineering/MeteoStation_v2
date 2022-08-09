@@ -298,8 +298,8 @@ void vTaskReadSensors(void *pvParameters)
     if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_READ_SENS_MUTEX_DELAY))
     {
         // Store record
-        RECORD_MAN_Store((uint8_t*)&TASK_READ_SENS_stMeasData,
-                         sizeof (TASK_READ_SENS_stMeasData) / sizeof (uint8_t));
+//        RECORD_MAN_Store((uint8_t*)&TASK_READ_SENS_stMeasData,
+//                         sizeof (TASK_READ_SENS_stMeasData) / sizeof (uint8_t));
 
         // Return mutex
         xSemaphoreGive(RECORD_MAN_xMutex);

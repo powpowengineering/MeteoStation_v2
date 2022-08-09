@@ -53,6 +53,10 @@
 
 #include "stdlib.h"
 
+#include "eeprom.h"
+
+#include "printf.h"
+
 
 
 //**************************************************************************************************
@@ -102,11 +106,14 @@ static uint8_t TASK_MASTER_aRecord[RECORD_MAN_MAX_SIZE_RECORD];
 static void test_cmd1(const char* data);
 static void TASK_MASTER_ReadRecordCMD(const char* data);
 static void TASK_MASTER_WriteRecordCMD(const char* data);
+static void TASK_MASTER_TestEECMD(const char* data);
+
 
 static term_srv_cmd_t cmd_list[] = {
         { .cmd = "command1", .len = 8, .handler = test_cmd1 },
-        { .cmd = "readRecord", .len = 10, .handler = TASK_MASTER_ReadRecordCMD },
+        { .cmd = "ReadRecord", .len = 10, .handler = TASK_MASTER_ReadRecordCMD },
         { .cmd = "StoreRecord", .len = 11, .handler = TASK_MASTER_WriteRecordCMD },
+        { .cmd = "TestEE", .len = 6, .handler = TASK_MASTER_TestEECMD },
 };
 
 
@@ -130,16 +137,18 @@ static term_srv_cmd_t cmd_list[] = {
 //**************************************************************************************************
 void vTaskMaster(void *pvParameters)
 {
-
-    // Clear w25q
-    W25Q_Init();
-
     W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_4KB);
+
+    EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
+                       0);
+
+    EE_WriteVariable32(RECORD_MAN_VIR_ADR32_QTY_RECORD,
+                       0);
 
     // Init Terminal
     term_srv_init(INIT_TerminalSend,
                   cmd_list,
-                  2);
+                  4);
 
     for(;;)
     {
@@ -215,8 +224,6 @@ static void TASK_MASTER_ReadRecordCMD(const char* data)
     {
         DoNothing();
     }
-
-
 } // end of TASK_MASTER_ReadRecordCMD()
 
 
@@ -236,7 +243,7 @@ static void TASK_MASTER_WriteRecordCMD(const char* data)
 {
 
     uint8_t aDataSource[RECORD_MAN_MAX_SIZE_RECORD / 2];
-
+    uint32_t nQtyRecord = 0U;
 
     // Clear buf
     for (int i = 0; i < RECORD_MAN_MAX_SIZE_RECORD / 2; ++i)
@@ -254,20 +261,70 @@ static void TASK_MASTER_WriteRecordCMD(const char* data)
     if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_MASTER_MUTEX_DELAY))
     {
         if (RESULT_OK == RECORD_MAN_Store(aDataSource,
-                                          RECORD_MAN_MAX_SIZE_RECORD / 2))
+                                          RECORD_MAN_MAX_SIZE_RECORD / 2,
+                                          &nQtyRecord))
         {
-            INIT_TerminalSend("Record store OK", strlen("Record store Ok"));
+            printf("Record store OK; Quantity records %d",nQtyRecord);
         }
         else
         {
             INIT_TerminalSend("Record store error", strlen("Record store error"));
         }
+
+        // Return mutex
+        xSemaphoreGive(RECORD_MAN_xMutex);
     }
     else
     {
         INIT_TerminalSend("Mutex is busy", strlen("Mutex is busy"));
     }
 } // end of TASK_MASTER_WriteRecordCMD()
+
+
+
+//**************************************************************************************************
+// @Function      TASK_MASTER_TestEECMD()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void TASK_MASTER_TestEECMD(const char* data)
+{
+    uint32_t nAdr32Value_A = 0x00010002;
+    uint32_t nValue_A = 0xBEEFDEED;
+
+    VirtAddVarTab[0] = 0x0001;
+    VirtAddVarTab[1] = 0x0002;
+
+    // Write word in EE
+    if (RESULT_OK == EE_WriteVariable32(nAdr32Value_A,
+                       nValue_A))
+    {
+        nValue_A = 0;
+        // Read word
+        if (RESULT_OK == EE_ReadVariable32(nAdr32Value_A,
+                                           &nValue_A))
+        {
+            printf("Value_A = %x",nValue_A);
+        }
+        else
+        {
+            INIT_TerminalSend("Read EE 32-bit value ERROR",
+                              strlen("Read EE 32-bit value ERROR"));
+        }
+    }
+    else
+    {
+        INIT_TerminalSend("Write EE 32-bit value ERROR",
+                          strlen("Write EE 32-bit value ERROR"));
+    }
+
+} // end of TASK_MASTER_TestEECMD()
 
 
 
