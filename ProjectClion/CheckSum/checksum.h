@@ -38,7 +38,7 @@
 // Definitions of global (public) constants
 //**************************************************************************************************
 
-// None.
+#define RECORD_MAN_SIZE_CRC8                (1U)
 
 
 //**************************************************************************************************
@@ -53,7 +53,9 @@
 //**************************************************************************************************
 extern uint8_t CH_SUM_CalculateCRC8(const uint8_t* data, uint32_t len);
 
-
+extern uint8_t CH_SUM_CalculateCRC8WithBegin(const uint8_t* data,
+                                      uint32_t len,
+                                      uint8_t nCrcBegin);
 #endif // #ifndef W25Q_H
 
 //****************************************** end of file *******************************************
