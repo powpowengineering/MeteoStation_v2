@@ -24,6 +24,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l4xx_hal.h"
 
+// Get general types
+#include "general_types.h"
+
 /* Exported constants --------------------------------------------------------*/
 /* EEPROM emulation firmware error codes */
 #define EE_OK      (uint32_t)HAL_OK
@@ -88,5 +91,11 @@ extern uint16_t VirtAddVarTab[NB_OF_VAR];
 uint16_t EE_Init(void);
 uint16_t EE_ReadVariable(uint16_t VirtAddress, uint16_t* Data);
 uint16_t EE_WriteVariable(uint16_t VirtAddress, uint16_t Data);
+extern STD_RESULT EE_ReadVariable32(uint32_t nVirtAdr,
+                                    uint32_t* pData);
+
+extern STD_RESULT EE_WriteVariable32(const uint32_t nVirAdr,
+                                     const uint32_t nData);
+
 
 #endif /* __EEPROM_H */

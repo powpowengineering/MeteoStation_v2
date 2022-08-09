@@ -347,6 +347,40 @@ uint16_t EE_VerifyPageFullyErased(uint32_t Address)
     return ReadStatus;
 }
 
+
+
+STD_RESULT EE_ReadVariable32(uint32_t nVirtAdr,
+                             uint32_t* pData)
+{
+    STD_RESULT enResult = RESULT_NOT_OK;
+    uint16_t nTemp = 0U;
+
+    // Read LSB data
+    if (0U == EE_ReadVariable((uint16_t)nVirtAdr,
+                              &nTemp))
+    {
+        *pData = nTemp;
+        // Read MSB
+        if (0U == EE_ReadVariable((uint16_t)(nVirtAdr >> 16U),
+                                  &nTemp))
+        {
+            *pData |= ((uint32_t)nTemp) << 16U;
+            enResult = RESULT_OK;
+        }
+        else
+        {
+            enResult = RESULT_NOT_OK;
+        }
+    }
+    else
+    {
+        enResult = RESULT_NOT_OK;
+    }
+
+    return enResult;
+}
+
+
 /**
   * @brief  Returns the last stored variable data, if found, which correspond to
   *   the passed virtual address
@@ -407,6 +441,34 @@ uint16_t EE_ReadVariable(uint16_t VirtAddress, uint16_t* Data)
     /* Return ReadStatus value: (0: variable exist, 1: variable doesn't exist) */
     return ReadStatus;
 }
+
+STD_RESULT EE_WriteVariable32(const uint32_t nVirAdr,
+                              const uint32_t nData)
+{
+    STD_RESULT enResult = RESULT_NOT_OK;
+
+    // Write LSB data in LSB address
+    if (0U == EE_WriteVariable((uint16_t)nVirAdr,
+                               (uint16_t)nData))
+    {
+        // Write MSB data in MSB address
+        if (0U != EE_WriteVariable((uint16_t)(nVirAdr >> 16U),
+                                   (uint16_t)(nData >> 16U)))
+        {
+            enResult = RESULT_OK;
+        }
+        else
+        {
+            enResult = RESULT_NOT_OK;
+        }
+    }
+    else
+    {
+        enResult = RESULT_NOT_OK;
+    }
+    return enResult;
+} // end of EE_WriteVariable32()
+
 
 /**
   * @brief  Writes/updates variable data in EEPROM.
