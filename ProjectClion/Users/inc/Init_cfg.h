@@ -41,6 +41,17 @@
 #define INIT_TLM_USART_TX_AF                    GPIO_AF7_USART1
 #define INIT_TLM_USART_RX_AF                    GPIO_AF7_USART1
 
+// Confugure UART for TERMINAL
+#define INIT_TERMINAL_USART_NUM                 USART2
+#define INIT_TERMINAL_USART_TX_PIN              GPIO_PIN_2
+#define INIT_TERMINAL_USART_TX_PORT             GPIOA
+#define INIT_TERMINAL_USART_RX_PIN              GPIO_PIN_3
+#define INIT_TERMINAL_USART_RX_PORT             GPIOA
+#define INIT_TERMINAL_USART_TX_AF               GPIO_AF7_USART2
+#define INIT_TERMINAL_USART_RX_AF               GPIO_AF7_USART2
+#define INIT_TERMINAL_DTR_PORT                  GPIOA
+#define INIT_TERMINAL_DTR_PIN                   GPIO_PIN_4
+
 //  Confugure for one wire delay
 #define INIT_TIMER_DELAY                          TIM6
 // User specify prescaler for one wire delay timer

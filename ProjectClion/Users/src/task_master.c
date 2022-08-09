@@ -37,6 +37,22 @@
 // Native header
 #include "task_master.h"
 
+// Get terminal inteface
+#include "term-srv.h"
+
+// Init interface
+#include "Init.h"
+
+// STD lib
+#include "string.h"
+
+// Get record manager interface
+#include "record_manager.h"
+
+#include "W25Q_drv.h"
+
+#include "stdlib.h"
+
 
 
 //**************************************************************************************************
@@ -65,7 +81,8 @@
 // Definitions of local (private) constants
 //**************************************************************************************************
 
-// None.
+// Mutex Acquisition Delay
+#define TASK_MASTER_MUTEX_DELAY      (1000U)
 
 
 
@@ -73,7 +90,8 @@
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-// None.
+// Buff for record
+static uint8_t TASK_MASTER_aRecord[RECORD_MAN_MAX_SIZE_RECORD];
 
 
 
@@ -81,7 +99,15 @@
 // Declarations of local (private) functions
 //**************************************************************************************************
 
-// None.
+static void test_cmd1(const char* data);
+static void TASK_MASTER_ReadRecordCMD(const char* data);
+static void TASK_MASTER_WriteRecordCMD(const char* data);
+
+static term_srv_cmd_t cmd_list[] = {
+        { .cmd = "command1", .len = 8, .handler = test_cmd1 },
+        { .cmd = "readRecord", .len = 10, .handler = TASK_MASTER_ReadRecordCMD },
+        { .cmd = "StoreRecord", .len = 11, .handler = TASK_MASTER_WriteRecordCMD },
+};
 
 
 
@@ -105,9 +131,25 @@
 void vTaskMaster(void *pvParameters)
 {
 
+    // Clear w25q
+    W25Q_Init();
+
+    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_4KB);
+
+    // Init Terminal
+    term_srv_init(INIT_TerminalSend,
+                  cmd_list,
+                  2);
+
     for(;;)
     {
-        vTaskDelay(1000/portTICK_RATE_MS);
+        if (USART2->ISR & USART_ISR_RXNE)
+        {
+            uint8_t data = USART2->RDR;
+            term_srv_process(data);
+        }
+
+//        vTaskDelay(1000/portTICK_RATE_MS);
     }
 } // end of vTaskMaster()
 
@@ -119,7 +161,113 @@ void vTaskMaster(void *pvParameters)
 //==================================================================================================
 //**************************************************************************************************
 
-// None.
+//**************************************************************************************************
+// @Function      test_cmd1()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void test_cmd1(const char* data)
+{
+    INIT_TerminalSend("test_cmd1", strlen("test_cmd1"));
+}// end of test_cmd1()
+
+
+
+//**************************************************************************************************
+// @Function      TASK_MASTER_ReadRecordCMD()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void TASK_MASTER_ReadRecordCMD(const char* data)
+{
+    uint32_t nRecordSize = 0U;
+
+    // Attempt get mutex
+    if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_MASTER_MUTEX_DELAY))
+    {
+        // Load record
+        if (RESULT_OK == RECORD_MAN_Load(0,TASK_MASTER_aRecord,
+                                         &nRecordSize))
+        {
+            INIT_TerminalSend("Record load successful", strlen("Record load successful"));
+        }
+        else
+        {
+            INIT_TerminalSend("Record load error", strlen("Record load error"));
+        }
+
+        // Return mutex
+        xSemaphoreGive(RECORD_MAN_xMutex);
+    }
+    else
+    {
+        DoNothing();
+    }
+
+
+} // end of TASK_MASTER_ReadRecordCMD()
+
+
+
+//**************************************************************************************************
+// @Function      TASK_MASTER_WriteRecordCMD()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void TASK_MASTER_WriteRecordCMD(const char* data)
+{
+
+    uint8_t aDataSource[RECORD_MAN_MAX_SIZE_RECORD / 2];
+
+
+    // Clear buf
+    for (int i = 0; i < RECORD_MAN_MAX_SIZE_RECORD / 2; ++i)
+    {
+        aDataSource[i] = 0U;
+    }
+
+    // Prepare data
+    for (int i = 0; i < RECORD_MAN_MAX_SIZE_RECORD / 2; ++i)
+    {
+        aDataSource[i] = rand()%255;
+    }
+
+    // Attempt get mutex
+    if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_MASTER_MUTEX_DELAY))
+    {
+        if (RESULT_OK == RECORD_MAN_Store(aDataSource,
+                                          RECORD_MAN_MAX_SIZE_RECORD / 2))
+        {
+            INIT_TerminalSend("Record store OK", strlen("Record store Ok"));
+        }
+        else
+        {
+            INIT_TerminalSend("Record store error", strlen("Record store error"));
+        }
+    }
+    else
+    {
+        INIT_TerminalSend("Mutex is busy", strlen("Mutex is busy"));
+    }
+} // end of TASK_MASTER_WriteRecordCMD()
 
 
 

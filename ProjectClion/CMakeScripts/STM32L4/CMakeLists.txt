@@ -46,13 +46,15 @@ set(FREERTOS_DIR ${CMAKE_SOURCE_DIR}/../../../STM32CubeL4-master/Middlewares/Thi
 #file(GLOB_RECURSE ONE_WIRE_SOURCES "${CMAKE_SOURCE_DIR}/OneWire/OneWire.c")
 #file(GLOB_RECURSE DS18B20_SOURCES "${CMAKE_SOURCE_DIR}/DS18B20/ds18b20.c")
 #file(GLOB_RECURSE AM2305_SOURCES "${CMAKE_SOURCE_DIR}/AM2305/am2305_drv.c")
+file(GLOB_RECURSE RECORD_MAN "${CMAKE_SOURCE_DIR}/../../RecordManager/record_manager.c")
 file(GLOB_RECURSE CheckSum_SOURCES "${CMAKE_SOURCE_DIR}/../../CheckSum/checksum.c")
 file(GLOB_RECURSE PRINTF_SOURCES "${CMAKE_SOURCE_DIR}/../../printf-master/printf.c")
+file(GLOB_RECURSE TERMINAL "${CMAKE_SOURCE_DIR}/../../TERMINAL/term-srv.c")
 #file(GLOB_RECURSE USART_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/USART_Driver/usart_drv.c")
 file(GLOB_RECURSE W25Q_FLASH_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/../../W25Q_FLASH/W25Q_drv.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/BMP2-Sensor-API-master/bmp2.c")
 #file(GLOB_RECURSE TF02_PRO "${CMAKE_SOURCE_DIR}/TF02_PRO/tf02Pro_drv.c")
-file(GLOB_RECURSE CORE_MQTT "${CMAKE_SOURCE_DIR}/../../coreMQTT/source/*.c")
+#file(GLOB_RECURSE CORE_MQTT "${CMAKE_SOURCE_DIR}/../../coreMQTT/source/*.c")
 file(GLOB_RECURSE EEPROM_EMULATION "${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/api/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/apps/mqtt/*.c")
@@ -66,9 +68,9 @@ file(GLOB_RECURSE MAIN_SOURCES
         "${CMAKE_SOURCE_DIR}/../../Users/src/system_stm32l4xx.c"
         "${CMAKE_SOURCE_DIR}/../../Users/src/main.c"
         "${CMAKE_SOURCE_DIR}/../../Users/src/stm32l4xx_it.c"
-        "${CMAKE_SOURCE_DIR}/../../Users/src/task_test_flash.c"
-        "${CMAKE_SOURCE_DIR}/../../Users/src/task_test_EE.c"
-        "${CMAKE_SOURCE_DIR}/../../Users/src/task_mqtt.c"
+#        "${CMAKE_SOURCE_DIR}/../../Users/src/task_test_flash.c"
+#        "${CMAKE_SOURCE_DIR}/../../Users/src/task_test_EE.c"
+#        "${CMAKE_SOURCE_DIR}/../../Users/src/task_mqtt.c"
         "${CMAKE_SOURCE_DIR}/../../Users/src/task_read_sensors.c"
         "${CMAKE_SOURCE_DIR}/../../Users/src/task_master.c"
         )
@@ -119,7 +121,9 @@ file(
 include_directories(${CMAKE_SOURCE_DIR}/../../W25Q_FLASH)
 #include_directories(${CMAKE_SOURCE_DIR}/USART_Driver)
 include_directories(${CMAKE_SOURCE_DIR}/../../printf-master)
+include_directories(${CMAKE_SOURCE_DIR}/../../TERMINAL)
 include_directories(${CMAKE_SOURCE_DIR}/../../CheckSum)
+include_directories(${CMAKE_SOURCE_DIR}/../../RecordManager)
 #include_directories(${CMAKE_SOURCE_DIR}/BMP2-Sensor-API-master)
 include_directories(${CMAKE_SOURCE_DIR}/../../coreMQTT/source/include)
 include_directories(${CMAKE_SOURCE_DIR}/../../coreMQTT/source/interface)
@@ -155,6 +159,8 @@ add_executable( ${PROJECT_NAME}
         ${MAIN_SOURCES}
         ${HAL_RECURSE}
         ${STARTUP_FILE}
+        ${RECORD_MAN}
+        ${TERMINAL}
 #        ${ONE_WIRE_SOURCES}
 #        ${USER_SOURCES}
 #        ${DS18B20_SOURCES}

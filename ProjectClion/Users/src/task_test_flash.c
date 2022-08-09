@@ -102,7 +102,7 @@ typedef struct TEST_EE_METEO_DATA_struct
 // End marker record
 #define TEST_FLASH_RECORD_END_MARKER              (0x03U)
 // Max record package in bytes
-#define TEST_FLASH_MAX_SIZE_RECORD                 (100U)
+#define RECORD_MAN_MAX_SIZE_RECORD                 (100U)
 // Quantity records to send to server
 #define TEST_FLASH_QTY_REC_SEND_SERVER             (10U)
 
@@ -120,8 +120,8 @@ static uint8_t dataRead[SIZE_BUF];
 static uint8_t dataWrite[SIZE_BUF];
 
 TEST_EE_METEO_DATA TEST_EE_MeteoData;
-uint8_t aRecordDataPackage[TEST_FLASH_MAX_SIZE_RECORD];
-uint8_t aRecordReadBack[TEST_FLASH_MAX_SIZE_RECORD];
+uint8_t aRecordDataPackage[RECORD_MAN_MAX_SIZE_RECORD];
+uint8_t aRecordReadBack[RECORD_MAN_MAX_SIZE_RECORD];
 uint32_t nSizeDataRecord;
 RTC_HandleTypeDef stRTC;
 
@@ -413,7 +413,7 @@ _Noreturn void vTaskTestFlashWithEE(void *pvParameters)
         TEST_EE_MeteoData.nTimeUnixTime = rand();
 
         // Clear buffer
-        for(int i = 0; i < TEST_FLASH_MAX_SIZE_RECORD; i++)
+        for(int i = 0; i < RECORD_MAN_MAX_SIZE_RECORD; i++)
         {
             aRecordDataPackage[i] = 0;
         }
@@ -460,13 +460,13 @@ _Noreturn void vTaskTestFlashWithEE(void *pvParameters)
             // Read record from flash
             if (RESULT_OK == W25Q_ReadData(nAdrNextRecord,
                                            aRecordReadBack,
-                                           TEST_FLASH_MAX_SIZE_RECORD))
+                                           RECORD_MAN_MAX_SIZE_RECORD))
             {
                 printf("Flash read OK\r\n");
 
                 if (RESULT_OK == TEST_FLASH_ParsingRecord(NULL,
                                                           aRecordReadBack,
-                                                          TEST_FLASH_MAX_SIZE_RECORD))
+                                                          RECORD_MAN_MAX_SIZE_RECORD))
                 {
                     printf("Record read OK\r\n");
                 }
@@ -485,7 +485,7 @@ _Noreturn void vTaskTestFlashWithEE(void *pvParameters)
             nAdrNextRecord += nSizeDataRecord;
 
             // Check the number of records that were not sent to the server
-            if (TEST_FLASH_QTY_REC_SEND_SERVER <= ((nAdrNextRecord - nAdrLastRecordSendGSM) / TEST_FLASH_MAX_SIZE_RECORD))
+            if (TEST_FLASH_QTY_REC_SEND_SERVER <= ((nAdrNextRecord - nAdrLastRecordSendGSM) / RECORD_MAN_MAX_SIZE_RECORD))
             {
                 printf("Send data to the server\r\n");
                 nAdrLastRecordSendGSM = nAdrNextRecord;
@@ -604,7 +604,7 @@ static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
 
     for (int i = 0; i < sizeof (TEST_EE_METEO_DATA) / sizeof (uint8_t); i++)
     {
-        if (TEST_FLASH_MAX_SIZE_RECORD > nSizeRecord)
+        if (RECORD_MAN_MAX_SIZE_RECORD > nSizeRecord)
         {
             pDataRecord[nSizeRecord] = *pMeteoDataByte;
             nSizeRecord++;
@@ -616,7 +616,7 @@ static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
             break;
         }
 
-        if (TEST_FLASH_MAX_SIZE_RECORD > nSizeRecord)
+        if (RECORD_MAN_MAX_SIZE_RECORD > nSizeRecord)
         {
             // Byte stuffing
             if (TEST_FLASH_RECORD_HEADER_MARKER == *pMeteoDataByte)
@@ -638,7 +638,7 @@ static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
         pMeteoDataByte++;
     }
 
-    if ((RESULT_OK == enResult) && (TEST_FLASH_MAX_SIZE_RECORD > (nSizeRecord + 2)))
+    if ((RESULT_OK == enResult) && (RECORD_MAN_MAX_SIZE_RECORD > (nSizeRecord + 2)))
     {
         pDataRecord[nSizeRecord] = CH_SUM_CalculateCRC8(pDataRecord,
                                                         nSizeRecord-1);

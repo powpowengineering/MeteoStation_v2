@@ -55,6 +55,9 @@
 // TLM handel
 USART_HandleTypeDef UsartTLMHandle;
 
+// TERMINAL UART handel
+UART_HandleTypeDef UartTERMINALHandle;
+
 // Tme delay handel
 TIM_HandleTypeDef    TimDelayHandle;
 
@@ -117,6 +120,7 @@ void Init(void)
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_SPI1_CLK_ENABLE();
     __HAL_RCC_USART1_CLK_ENABLE();
+    __HAL_RCC_USART2_CLK_ENABLE();
     __HAL_RCC_TIM6_CLK_ENABLE();
 
     // Configure the GPIO_LED pin
@@ -135,13 +139,35 @@ void Init(void)
     HAL_GPIO_Init(INIT_TLM_USART_TX_PORT, &GPIO_InitStruct);
 
     // Configure the RX pin UART for TLM
-    GPIO_InitStruct.Pin        = INIT_TLM_USART_RX_PIN;
+    GPIO_InitStruct.Pin        = INIT_TERMINAL_USART_RX_PIN;
     GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull       = GPIO_PULLUP;
     GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate  = INIT_TLM_USART_RX_AF;
-    HAL_GPIO_Init(INIT_TLM_USART_RX_PORT, &GPIO_InitStruct);
+    GPIO_InitStruct.Alternate  = INIT_TERMINAL_USART_RX_AF;
+    HAL_GPIO_Init(INIT_TERMINAL_USART_RX_PORT, &GPIO_InitStruct);
 
+    // Configure the TX pin UART for TERMINAL
+    GPIO_InitStruct.Pin        = INIT_TERMINAL_USART_TX_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = INIT_TERMINAL_USART_TX_AF;
+    HAL_GPIO_Init(INIT_TERMINAL_USART_TX_PORT, &GPIO_InitStruct);
+
+    // Configure the RX pin UART for TERMINAL
+    GPIO_InitStruct.Pin        = INIT_TERMINAL_USART_RX_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = INIT_TERMINAL_USART_RX_AF;
+    HAL_GPIO_Init(INIT_TERMINAL_USART_RX_PORT, &GPIO_InitStruct);
+
+    // Configure the RX pin UART for TERMINAL DTR
+    GPIO_InitStruct.Pin        = INIT_TERMINAL_DTR_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    HAL_GPIO_Init(INIT_TERMINAL_DTR_PORT, &GPIO_InitStruct);
 
 //    //initialize pin A2 for anemometer
 //    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_2;
@@ -150,7 +176,6 @@ void Init(void)
 //    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
 //    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
 //    GPIO_Init(GPIOA, &GPIO_InitStruct);
-
 
 //    /*USART3 TX*/
 //    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_10;
@@ -199,6 +224,19 @@ void Init(void)
     HAL_USART_DeInit(&UsartTLMHandle);
     // Init UART TLM
     HAL_USART_Init(&UsartTLMHandle);
+
+    // Configure UART for TERMINAL
+    UartTERMINALHandle.Instance            = INIT_TERMINAL_USART_NUM;
+    UartTERMINALHandle.Init.BaudRate       = 9600;
+    UartTERMINALHandle.Init.WordLength     = USART_WORDLENGTH_8B;
+    UartTERMINALHandle.Init.StopBits       = USART_STOPBITS_1;
+    UartTERMINALHandle.Init.Parity         = USART_PARITY_NONE;
+    UartTERMINALHandle.Init.Mode           = USART_MODE_TX_RX;
+
+    HAL_UART_DeInit(&UartTERMINALHandle);
+    // Init UART TERMINAL
+//    HAL_USART_Init(&UsartTERMINALHandle);
+    HAL_UART_Init(&UartTERMINALHandle);
 
     TimDelayHandle.Instance = INIT_TIMER_DELAY;
 
@@ -254,6 +292,28 @@ void Init(void)
 
 }
 // end of Init()
+
+
+//**************************************************************************************************
+// @Function      INIT_TerminalSend()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+void INIT_TerminalSend(const char* data, int16_t size)
+{
+    while (size) {
+        while ((INIT_TERMINAL_USART_NUM->ISR & USART_ISR_TXE) != USART_ISR_TXE);
+        INIT_TERMINAL_USART_NUM->TDR = *data;
+        ++data;
+        --size;
+    }
+} // end of INIT_TerminalSend()
 
 
 
@@ -313,5 +373,7 @@ void INIT_Delay(uint32_t us)
     while ((INIT_TIMER_DELAY->SR & LL_TIM_SR_UIF) != LL_TIM_SR_UIF);
 }
 // end of INIT_Delay()
+
+
 
 //****************************************** end of file *******************************************

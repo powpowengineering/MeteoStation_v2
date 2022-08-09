@@ -36,15 +36,23 @@
 //**************************************************************************************************
 
 // Native header
-// drivers
+#include "record_manager.h"
+
+// Get W25Q module interface
 #include "W25Q_drv.h"
+
+// Get checksum module interface
 #include "checksum.h"
+
 #include "printf.h"
 #include "stdlib.h"
 #include "ftoa.h"
 
-#include "cmsis_os.h"
+// Get eeprom emulation interface
 #include "eeprom.h"
+
+// RTOS
+#include "FreeRTOS.h"
 
 
 
@@ -55,11 +63,13 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Definitions of global (public) variables
 //**************************************************************************************************
 
-// None.
+// Mutex to get resource
+xSemaphoreHandle RECORD_MAN_xMutex;
 
 
 
@@ -84,57 +94,67 @@ typedef struct TEST_EE_METEO_DATA_struct
 // Definitions of local (private) constants
 //**************************************************************************************************
 
-#define SIZE_BUF            (64UL)
-
-// Test constants
-#define TEST_FLASH_NUMBER_OF_ITERATIONS_TEST_1          (10U)
-
 // Virtual address
-#define EE_VER_ADR_LSB_LAST_RECORD           (uint16_t)(0xCC)
-#define EE_VER_ADR_MSB_LAST_RECORD           (uint16_t)(0xDD)
-#define EE_VER_ADR_LSB_NEXT_RECORD           (uint16_t)(0xAA)
-#define EE_VER_ADR_MSB_NEXT_RECORD           (uint16_t)(0xBB)
+#define RECORD_MAN_VIR_ADR_LSB_LAST_RECORD           (uint16_t)(0x01)
+#define RECORD_MAN_VIR_ADR_MSB_LAST_RECORD           (uint16_t)(0x02)
+#define RECORD_MAN_VIR_ADR32_LAST_RECORD             ((uint32_t)(RECORD_MAN_VIR_ADR_LSB_LAST_RECORD) | \
+                                                     ((uint32_t)(RECORD_MAN_VIR_ADR_MSB_LAST_RECORD) << 16U))
+
+#define RECORD_MAN_VIR_ADR_LSB_NEXT_RECORD           (uint16_t)(0x03)
+#define RECORD_MAN_VIR_ADR_MSB_NEXT_RECORD           (uint16_t)(0x04)
+#define RECORD_MAN_VIR_ADR32_NEXT_RECORD             ((uint32_t)(RECORD_MAN_VIR_ADR_LSB_NEXT_RECORD) | \
+                                                     ((uint32_t)(RECORD_MAN_VIR_ADR_MSB_NEXT_RECORD) << 16U))
+
+#define RECORD_MAN_VIR_ADR_LSB_QTY_RECORD            (uint16_t)(0x05)
+#define RECORD_MAN_VIR_ADR_MSB_QTY_RECORD            (uint16_t)(0x06)
+#define RECORD_MAN_VIR_ADR32_QTY_RECORD              ((uint32_t)(RECORD_MAN_VIR_ADR_LSB_QTY_RECORD) | \
+                                                     ((uint32_t)(RECORD_MAN_VIR_ADR_MSB_QTY_RECORD) << 16U))
+
+// Size record number in bytes
+#define RECORD_MAN_SIZE_RECORD_NUM_BYTES        (4U)
 
 // Header record
-#define TEST_FLASH_RECORD_HEADER_MARKER           (0x10U)
+#define RECORD_MAN_HEADER_MARKER           (0x10U)
 // End marker record
-#define TEST_FLASH_RECORD_END_MARKER              (0x03U)
-// Max record package in bytes
-#define TEST_FLASH_MAX_SIZE_RECORD                 (100U)
-// Quantity records to send to server
-#define TEST_FLASH_QTY_REC_SEND_SERVER             (10U)
+#define RECORD_MAN_END_MARKER              (0x03U)
 
 // State machine
-#define TEST_FLASH_STATE_PARSING_START_MARKER      (0U)
-#define TEST_FLASH_STATE_PARSING_PAYLOAD           (1U)
-#define TEST_FLASH_STATE_PARSING_BYTE_STUFFING     (2U)
-#define TEST_FLASH_STATE_PARSING_END_MARKER        (3U)
+#define RECORD_MAN_STATE_PARSING_START_MARKER      (0U)
+#define RECORD_MAN_STATE_PARSING_NUM_PACKAGE       (1U)
+#define RECORD_MAN_STATE_PARSING_PAYLOAD           (2U)
+#define RECORD_MAN_STATE_PARSING_DOUBLE_HEADER_MARKER     (3U)
+#define RECORD_MAN_STATE_PARSING_END_MARKER        (4U)
+
+
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-static uint8_t dataRead[SIZE_BUF];
-static uint8_t dataWrite[SIZE_BUF];
+// Init flag
+uint8_t RECORD_MAN_bInitialezed = FALSE;
 
-TEST_EE_METEO_DATA TEST_EE_MeteoData;
-uint8_t aRecordDataPackage[TEST_FLASH_MAX_SIZE_RECORD];
-uint8_t aRecordReadBack[TEST_FLASH_MAX_SIZE_RECORD];
-uint32_t nSizeDataRecord;
-RTC_HandleTypeDef stRTC;
+// Array max size data record
+static uint8_t RECORD_MAN_aRecordDataPackage[RECORD_MAN_MAX_SIZE_RECORD];
 
 //**************************************************************************************************
 // Declarations of local (private) functions
 //**************************************************************************************************
 
 // Create record package
-static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
+static STD_RESULT RECORD_MAN_CreateRecord(const uint8_t *pDataSource,
+                                          const uint32_t nDataSourceQty,
                                           uint8_t *pDataRecord,
-                                          uint32_t *pSizeDataRecord);
+                                          uint32_t *pSizeDataRecord,
+                                          uint32_t nRecordNumber);
 
-static STD_RESULT TEST_FLASH_ParsingRecord(TEST_EE_METEO_DATA *pMeteoData,
-                                           const uint8_t *pDataRecord,
-                                           uint32_t pSizeDataRecord);
+// Parsing record
+static STD_RESULT RECORD_MAN_ParsingRecord(const uint8_t *pDataRecord,
+                                           uint32_t nSizeRecord,
+                                           uint8_t *pData,
+                                           uint32_t *pSizeData);
+
+
 
 //**************************************************************************************************
 //==================================================================================================
@@ -143,7 +163,7 @@ static STD_RESULT TEST_FLASH_ParsingRecord(TEST_EE_METEO_DATA *pMeteoData,
 //**************************************************************************************************
 
 //**************************************************************************************************
-// @Function      vTaskTestFlash()
+// @Function      RECORD_MAN_Init()
 //--------------------------------------------------------------------------------------------------
 // @Description   None.
 //--------------------------------------------------------------------------------------------------
@@ -153,198 +173,37 @@ static STD_RESULT TEST_FLASH_ParsingRecord(TEST_EE_METEO_DATA *pMeteoData,
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-void vTaskTestFlash(void *pvParameters)
+void RECORD_MAN_Init(void)
 {
     uint64_t ID;
     uint16_t ManufID;
-    uint32_t adr=0;
-    uint16_t nNumberOfPass=0;
-    uint16_t nNumberOfFail=0;
-    uint16_t nNumberOfEmpty=0;
-    uint16_t nNumberOfNotEmpty=0;
-    uint32_t nSizeRead=0;
 
-    W25Q_Init();
-
-    vTaskDelay(1000/portTICK_RATE_MS);
-
-    W25Q_ReadUniqueID(&ID);
-    W25Q_ReadManufactureID(&ManufID);
-
-    printf("Manufacture ID %d\n\r",(uint8_t)(ManufID>>8));
-
-    // Test 1: Erase/write/read random number of 4k sectors. Address multiple of 4K.
-    printf("Start Test 1:\n\r");
-    // erase/write/read/check data
-    // Unlock global
-    if (RESULT_OK == W25Q_UnLockGlobal())
+    if (FALSE == RECORD_MAN_bInitialezed)
     {
-        printf("Unlock global was successful\r\n");
+        // Init W25Q
+        W25Q_Init();
+
+        // Read ID W25Q
+        W25Q_ReadUniqueID(&ID);
+
+        // Read manufacture ID
+        W25Q_ReadManufactureID(&ManufID);
+
+        // Init eeprom emulation
+        EE_Init();
+
+        RECORD_MAN_bInitialezed = TRUE;
     }
     else
     {
-        printf("Unlock global failed\r\n");
+        DoNothing();
     }
-
-    for (int i=0;i<TEST_FLASH_NUMBER_OF_ITERATIONS_TEST_1;i++)
-    {
-        // get address
-        adr = ((rand()%W25Q_CAPACITY_ALL_MEMORY_BYTES) / W25Q_QTY_SECTORS) * W25Q_CAPACITY_SECTOR_BYTES;
-
-        printf("Address %x; ",adr);
-
-        uint8_t lock=0;
-        // Check lock
-        if (RESULT_OK == W25Q_GetLock(adr,&lock))
-        {
-            if ((lock & 0x01) == 0x01)
-            {
-                printf("Block locked; ");
-            }
-            else
-            {
-                printf("Block Unlocked; ");
-            }
-        }
-        else
-        {
-            printf("Error Read; ");
-        }
-
-
-        // Erase sector 4K
-        if (RESULT_OK == W25Q_EraseBlock(adr,W25Q_BLOCK_MEMORY_4KB))
-        {
-            printf("Erase 4K PASS; ");
-        }
-        else
-        {
-            printf("Erase 4K BREAK; ");
-        }
-
-        // Prepare dataWrite
-        for(int j=0;j<SIZE_BUF-1;j++)
-        {
-            dataWrite[j] = rand()%255;
-        }
-        dataWrite[SIZE_BUF-1] = CH_SUM_CalculateCRC8(dataWrite, SIZE_BUF-1);
-
-        // Write sector 4K
-        if (RESULT_OK == W25Q_WriteData(adr,dataWrite,SIZE_BUF))
-        {
-            printf("Write 4K PASS; ");
-        }
-        else
-        {
-            printf("Write 4K BREAK; ");
-        }
-
-        // Read sector 4K
-        if (RESULT_OK == W25Q_ReadData(adr,dataRead, SIZE_BUF))
-        {
-            printf("Read 4K PASS; ");
-        }
-        else
-        {
-            printf("Read 4K BREAK; ");
-        }
-
-        // Check data
-        if (dataRead[SIZE_BUF-1] == CH_SUM_CalculateCRC8(dataRead, SIZE_BUF-1))
-        {
-            printf("Check Sum PASS; TEST 1.%d PASS\r\n",i);
-            nNumberOfPass++;
-        }
-        else
-        {
-            printf("Check Sum FAIL; TEST 1.%d FAIL\r\n",i);
-            nNumberOfFail++;
-        }
-    }
-    printf("Finished Test 1: Tests passed %d ; Tests failed %d\n\r",nNumberOfPass,nNumberOfFail);
-    printf("\r\n");
-    // End Test 1
-
-    // Test 2: Erase Chip
-    printf("Test 2 started\r\n");
-    printf("Reading all memory\r\n");
-    // Read all sectors
-    uint32_t nNumberReadBytes=0;
-    for (uint8_t step=0;step<2;step++)
-    {
-        adr = 0;
-        nSizeRead = SIZE_BUF & (W25Q_CAPACITY_SECTOR_BYTES-1);
-        nNumberOfNotEmpty = 0;
-        nNumberReadBytes = 0;
-
-        for (int i=0;i<W25Q_QTY_SECTORS;i++)
-        {
-            // Read next sector 4K
-            for (uint32_t cntBytes=0; cntBytes < W25Q_CAPACITY_SECTOR_BYTES;)
-            {
-                if (RESULT_OK == W25Q_ReadData(adr,dataRead, nSizeRead))
-                {
-                    nNumberReadBytes += nSizeRead;
-                    printf(" \r");
-                    printf("Read %d %% bytes\r",(nNumberReadBytes*100) / W25Q_CAPACITY_ALL_MEMORY_BYTES);
-                    for (int j=0; j<nSizeRead; j++)
-                    {
-                        if (0xff != dataRead[j])
-                        {
-                            nNumberOfNotEmpty++;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    printf("Error reading sector address %x\r\n",adr);
-                    break;
-                }
-                cntBytes += nSizeRead;
-                adr += nSizeRead;
-            }
-        }
-        printf("\n\r");
-        printf("Number of not empty sectors  %d\r\n",nNumberOfNotEmpty);
-
-        if (0 == step)
-        {
-            // Erase chip
-            printf("Chip erasing ...\r\n");
-            if (RESULT_OK == W25Q_EraseBlock(0,    W25Q_BLOCK_MEMORY_ALL))
-            {
-                printf("Chip erasing was successful\r\n");
-            }
-            else
-            {
-                printf("Chip erase error\r\n");
-            }
-        }
-    }
-    if ( 0 == nNumberOfNotEmpty )
-    {
-        printf("Finish Test 2: Tests passed \n\r");
-    }
-    else
-    {
-        printf("Finish Test 2: Tests failed; Number of not empty sectors %d\n\r",nNumberOfNotEmpty);
-    }
-
-    printf("\r\n");
-    // End Test 2
-
-
-    while(1)
-    {
-        vTaskDelay(1000/portTICK_RATE_MS);
-    }
-}// end of vTaskSensorsRead
+} // end of RECORD_MAN_Init()
 
 
 
 //**************************************************************************************************
-// @Function      vTaskTestFlashWithEE()
+// @Function      RECORD_MAN_Store()
 //--------------------------------------------------------------------------------------------------
 // @Description   None.
 //--------------------------------------------------------------------------------------------------
@@ -354,220 +213,141 @@ void vTaskTestFlash(void *pvParameters)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-_Noreturn void vTaskTestFlashWithEE(void *pvParameters)
+STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
+                            uint32_t nDataQty)
 {
+    STD_RESULT enResult = RESULT_NOT_OK;
     uint32_t nAdrNextRecord = 0U;
-    uint32_t nAdrLastRecordSendGSM = 0U;
-    uint32_t nNumberRecordStore = 0U;
+    uint32_t nSizeRecord = 0U;
+    uint32_t nRecordNumber = 0U;
 
-    uint64_t ID;
-    uint16_t ManufID;
 
-    // RTC Init
-//    stRTC.Instance = RTC;
-//    stRTC.Init.HourFormat = RTC_HOURFORMAT_24;
-//    stRTC.Init.AsynchPrediv = 0x7F;
-//    stRTC.Init.SynchPrediv = 0xFF;
-//
-//
-//
-//    if (HAL_OK == HAL_RTC_Init(RTC_HandleTypeDef *hrtc))
-//    {
-//        printf("RTC init OK\r\n");
-//    }
-//    else
-//    {
-//        printf("RTC init ERROR\r\n");
-//    }
-
-    // Init EEPROM
-    W25Q_Init();
-    W25Q_ReadUniqueID(&ID);
-    W25Q_ReadManufactureID(&ManufID);
-    W25Q_UnLockGlobal();
-    W25Q_EraseBlock(PAGE0_BASE_ADDRESS, W25Q_BLOCK_MEMORY_4KB);
-    W25Q_EraseBlock(PAGE1_BASE_ADDRESS, W25Q_BLOCK_MEMORY_4KB);
-    W25Q_EraseBlock(0, W25Q_BLOCK_MEMORY_64KB);
-
-    EE_Init();
-    VirtAddVarTab[0] = EE_VER_ADR_LSB_LAST_RECORD;
-    VirtAddVarTab[1] = EE_VER_ADR_MSB_LAST_RECORD;
-    VirtAddVarTab[2] = EE_VER_ADR_LSB_NEXT_RECORD;
-    VirtAddVarTab[3] = EE_VER_ADR_MSB_NEXT_RECORD;
-
-    EE_WriteVariable(EE_VER_ADR_LSB_NEXT_RECORD, (uint16_t)nAdrNextRecord);
-    EE_WriteVariable(EE_VER_ADR_MSB_NEXT_RECORD, (uint16_t)(nAdrNextRecord >> 16));
-    EE_WriteVariable(EE_VER_ADR_LSB_LAST_RECORD, (uint16_t)nAdrLastRecordSendGSM);
-    EE_WriteVariable(EE_VER_ADR_MSB_LAST_RECORD, (uint16_t)(nAdrLastRecordSendGSM >> 16));
-
-    while(1)
+    if (TRUE == RECORD_MAN_bInitialezed)
     {
-        // Prepare test data
-        TEST_EE_MeteoData.fTemperature = ((float)rand()/(float)(RAND_MAX)) * 5;
-        TEST_EE_MeteoData.fHumidity = ((float)rand()/(float)(RAND_MAX)) * 5;
-        TEST_EE_MeteoData.fPressure = ((float)rand()/(float)(RAND_MAX)) * 5;
-        TEST_EE_MeteoData.fWindSpeed = ((float)rand()/(float)(RAND_MAX)) * 5;
-        TEST_EE_MeteoData.dVoltageBattery = ((float)rand()/(float)(RAND_MAX)) * 5;
-        TEST_EE_MeteoData.nTimeUnixTime = rand();
-
-        // Clear buffer
-        for(int i = 0; i < TEST_FLASH_MAX_SIZE_RECORD; i++)
+        // Get next record address
+        if (RESULT_OK == EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
+                                           &nAdrNextRecord))
         {
-            aRecordDataPackage[i] = 0;
-        }
-
-        if (RESULT_OK == TEST_FLASH_CreateRecord(&TEST_EE_MeteoData,
-                                                 aRecordDataPackage,
-                                                 &nSizeDataRecord))
-        {
-            uint16_t nTemp = 0;
-            EE_ReadVariable(EE_VER_ADR_LSB_NEXT_RECORD,
-                            &nTemp);
-
-            nAdrNextRecord = nTemp;
-
-            EE_ReadVariable(EE_VER_ADR_MSB_NEXT_RECORD,
-                            &nTemp);
-
-            nAdrNextRecord |= (((uint32_t)nTemp) << 16) & 0xFFFF0000;
-
-            EE_ReadVariable(EE_VER_ADR_LSB_LAST_RECORD,
-                            &nTemp);
-
-            nAdrLastRecordSendGSM = nTemp;
-
-            EE_ReadVariable(EE_VER_ADR_MSB_LAST_RECORD,
-                            &nTemp);
-
-            nAdrLastRecordSendGSM |= (((uint32_t)nTemp) << 16) & 0xFFFF0000;
-
-            // Write record in flash
-            if (RESULT_OK == W25Q_WriteData(nAdrNextRecord,
-                                            aRecordDataPackage,
-                                            nSizeDataRecord))
+            // Get last record number
+            EE_ReadVariable32(RECORD_MAN_VIR_ADR32_QTY_RECORD,
+                              &nRecordNumber);
+            // Create record
+            if (RESULT_OK == RECORD_MAN_CreateRecord(pData,
+                                                     nDataQty,
+                                                     RECORD_MAN_aRecordDataPackage,
+                                                     &nSizeRecord,
+                                                     nRecordNumber))
             {
-                printf("Record was written in flash\r\n");
-                nNumberRecordStore++;
-                printf("Number of records saved %d\r\n",nNumberRecordStore);
-            }
-            else
-            {
-                printf("Record wasn't written in flash\r\n");
-            }
-
-            // Read record from flash
-            if (RESULT_OK == W25Q_ReadData(nAdrNextRecord,
-                                           aRecordReadBack,
-                                           TEST_FLASH_MAX_SIZE_RECORD))
-            {
-                printf("Flash read OK\r\n");
-
-                if (RESULT_OK == TEST_FLASH_ParsingRecord(NULL,
-                                                          aRecordReadBack,
-                                                          TEST_FLASH_MAX_SIZE_RECORD))
+                // Write record in flash
+                if (RESULT_OK == W25Q_WriteData(nAdrNextRecord,
+                                                RECORD_MAN_aRecordDataPackage,
+                                                nSizeRecord))
                 {
-                    printf("Record read OK\r\n");
+                    // Save new next rescord address
+                    nAdrNextRecord += nSizeRecord;
+
+                    // Write new next record adrress in eeprom
+                    if (RESULT_OK == EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
+                                        nAdrNextRecord))
+                    {
+                        enResult = RESULT_OK;
+                    }
+                    else
+                    {
+                        enResult = RESULT_NOT_OK;
+                    }
                 }
                 else
                 {
-                    printf("record read error\r\n");
+                    enResult = RESULT_NOT_OK;
                 }
             }
             else
             {
-                printf("Flash read error\r\n");
-
-            }
-
-
-            nAdrNextRecord += nSizeDataRecord;
-
-            // Check the number of records that were not sent to the server
-            if (TEST_FLASH_QTY_REC_SEND_SERVER <= ((nAdrNextRecord - nAdrLastRecordSendGSM) / TEST_FLASH_MAX_SIZE_RECORD))
-            {
-                printf("Send data to the server\r\n");
-                nAdrLastRecordSendGSM = nAdrNextRecord;
-            }
-            else
-            {
-                printf("Number of records that were not sent to the server %d\r\n",nAdrNextRecord - nAdrLastRecordSendGSM);
+                enResult = RESULT_NOT_OK;
             }
         }
         else
         {
-            printf("Record package didn't create\r\n");
+            enResult = RESULT_NOT_OK;
         }
-
-        EE_WriteVariable(EE_VER_ADR_LSB_NEXT_RECORD, (uint16_t)nAdrNextRecord);
-        EE_WriteVariable(EE_VER_ADR_MSB_NEXT_RECORD, (uint16_t)(nAdrNextRecord >> 16));
-        EE_WriteVariable(EE_VER_ADR_LSB_LAST_RECORD, (uint16_t)nAdrLastRecordSendGSM);
-        EE_WriteVariable(EE_VER_ADR_MSB_LAST_RECORD, (uint16_t)(nAdrLastRecordSendGSM >> 16));
-
-
-        // Read PAGE0 EE
-        printf("Page0\r\n");
-        uint32_t nAdr = PAGE0_BASE_ADDRESS;
-        while (nAdr < PAGE0_BASE_ADDRESS + PAGE_SIZE)
-        {
-            if (RESULT_OK == W25Q_ReadData(nAdr,dataRead, SIZE_BUF))
-            {
-                uint32_t nWord = 0;
-                for (int j = 0; j < SIZE_BUF; j++)
-                {
-                    nWord |= (uint32_t)dataRead[j] << ((j%4) * 8);
-                    if ((j%4 == 0x0) && (j != 0))
-                    {
-                        printf("|");
-                        printf("%08x",nWord);
-                        nWord = 0;
-                    }
-
-                }
-                printf("\r\n");
-            }
-            else
-            {
-                printf("Error read\r\n");
-            }
-            nAdr += SIZE_BUF;
-        }
-
-        printf("\r\n\r\nPage1\r\n");
-
-        // Read PAGE1 EE
-        nAdr = PAGE1_BASE_ADDRESS;
-        while (nAdr < PAGE1_BASE_ADDRESS + PAGE_SIZE)
-        {
-            if (RESULT_OK == W25Q_ReadData(nAdr,dataRead, SIZE_BUF))
-            {
-                uint32_t nWord = 0;
-                for (int j = 0; j < SIZE_BUF; j++)
-                {
-                    nWord |= (uint32_t)dataRead[j] << ((j%4) * 8);
-                    if ((j%4 == 0x0) && (j != 0))
-                    {
-                        printf("|");
-                        printf("%08x",nWord);
-                        nWord = 0;
-                    }
-
-                }
-                printf("\r\n");
-            }
-            else
-            {
-                printf("Error read\r\n");
-            }
-            nAdr += SIZE_BUF;
-        }
-
-
-
-        vTaskDelay(1000/portTICK_RATE_MS);
+    }
+    else
+    {
+        enResult = RESULT_NOT_OK;
     }
 
+    return enResult;
+} // end of RECORD_MAN_Store()
 
-} // end of vTaskTestFlashWithEE()
+
+
+//**************************************************************************************************
+// @Function      RECORD_MAN_Load()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+extern STD_RESULT RECORD_MAN_Load(uint32_t nAdrRecord,
+                                  uint8_t *pRecord,
+                                  uint32_t* nQtyBytes)
+{
+    STD_RESULT enResult = RESULT_NOT_OK;
+
+    if (TRUE == RECORD_MAN_bInitialezed)
+    {
+        // Read record
+        if (RESULT_OK == W25Q_ReadData(nAdrRecord,
+                                       RECORD_MAN_aRecordDataPackage,
+                                       (uint32_t)RECORD_MAN_MAX_SIZE_RECORD))
+        {
+            if (RESULT_OK == RECORD_MAN_ParsingRecord(RECORD_MAN_aRecordDataPackage,
+                                     (uint32_t)RECORD_MAN_MAX_SIZE_RECORD,
+                                     pRecord,
+                                     nQtyBytes))
+            {
+                enResult = RESULT_OK;
+            }
+            else
+            {
+                enResult = RESULT_NOT_OK;
+            }
+        }
+        else
+        {
+            enResult = RESULT_NOT_OK;
+        }
+    }
+    else
+    {
+        enResult = RESULT_NOT_OK;
+    }
+
+    return enResult;
+} // end of RECORD_MAN_Load()
+
+
+
+//**************************************************************************************************
+// @Function      RECORD_MAN_GetNumberOfRecords()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+STD_RESULT RECORD_MAN_GetNumberOfRecords(uint32_t* nNumberOfRecords)
+{
+
+} // end of RECORD_MAN_GetNumberOfRecords()
 
 
 
@@ -578,7 +358,7 @@ _Noreturn void vTaskTestFlashWithEE(void *pvParameters)
 //**************************************************************************************************
 
 //**************************************************************************************************
-// @Function      TEST_FLASH_CreateRecord()
+// @Function      RECORD_MAN_CreateRecord()
 //--------------------------------------------------------------------------------------------------
 // @Description   None.
 //--------------------------------------------------------------------------------------------------
@@ -588,25 +368,51 @@ _Noreturn void vTaskTestFlashWithEE(void *pvParameters)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
+static STD_RESULT RECORD_MAN_CreateRecord(const uint8_t *pDataSource,
+                                          const uint32_t nDataSourceQty,
                                           uint8_t *pDataRecord,
-                                          uint32_t *pSizeDataRecord)
+                                          uint32_t *pSizeDataRecord,
+                                          uint32_t nRecordNumber)
 {
     STD_RESULT enResult = RESULT_OK;
-    uint32_t nSizeRecord = 0;
-    uint8_t *pMeteoDataByte = (uint8_t*)pMeteoData;
+    uint32_t nSizeRecord = 0U;
+    const uint8_t *pItem = (uint8_t*)&nRecordNumber;
+    uint8_t nCRC8 = 0U;
+
+    // Clear buf
+    for (uint32_t nIndex = 0; nIndex < RECORD_MAN_MAX_SIZE_RECORD; nIndex++)
+    {
+        pDataRecord[nIndex] = 0U;
+    }
+
+    // Calculate crc8 of number package
+    nCRC8 = CH_SUM_CalculateCRC8(pItem,
+                                 4U);
+
+    // Calculate crc8 of number package and data
+    nCRC8 = CH_SUM_CalculateCRC8WithBegin(pDataSource,
+                                          nDataSourceQty,
+                                          nCRC8);
 
     // Write header
-    pDataRecord[nSizeRecord] = (uint8_t)TEST_FLASH_RECORD_HEADER_MARKER;
+    pDataRecord[nSizeRecord] = (uint8_t)RECORD_MAN_HEADER_MARKER;
     nSizeRecord++;
 
-    for (int i = 0; i < sizeof (TEST_EE_METEO_DATA) / sizeof (uint8_t); i++)
+    for (int i = 0; i < nDataSourceQty + RECORD_MAN_SIZE_RECORD_NUM_BYTES + RECORD_MAN_SIZE_CRC8; i++)
     {
-        if (TEST_FLASH_MAX_SIZE_RECORD > nSizeRecord)
+        if (RECORD_MAN_SIZE_RECORD_NUM_BYTES == i)
         {
-            pDataRecord[nSizeRecord] = *pMeteoDataByte;
-            nSizeRecord++;
+            pItem = pDataSource;
+        }
+        else if ((nDataSourceQty + RECORD_MAN_SIZE_RECORD_NUM_BYTES) == i)
+        {
+            pItem = &nCRC8;
+        }
 
+        if (RECORD_MAN_MAX_SIZE_RECORD > nSizeRecord)
+        {
+            pDataRecord[nSizeRecord] = *pItem;
+            nSizeRecord++;
         }
         else
         {
@@ -614,17 +420,17 @@ static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
             break;
         }
 
-        if (TEST_FLASH_MAX_SIZE_RECORD > nSizeRecord)
+        if (RECORD_MAN_MAX_SIZE_RECORD > nSizeRecord)
         {
             // Byte stuffing
-            if (TEST_FLASH_RECORD_HEADER_MARKER == *pMeteoDataByte)
+            if (RECORD_MAN_HEADER_MARKER == *pItem)
             {
-                pDataRecord[nSizeRecord] = (uint8_t)TEST_FLASH_RECORD_HEADER_MARKER;
+                pDataRecord[nSizeRecord] = (uint8_t)RECORD_MAN_HEADER_MARKER;
                 nSizeRecord++;
             }
-            else if  (TEST_FLASH_RECORD_END_MARKER == *pMeteoDataByte)
+            else if  (RECORD_MAN_END_MARKER == *pItem)
             {
-                pDataRecord[nSizeRecord] = (uint8_t)TEST_FLASH_RECORD_END_MARKER;
+                pDataRecord[nSizeRecord] = (uint8_t)RECORD_MAN_END_MARKER;
                 nSizeRecord++;
             }
         }
@@ -633,27 +439,27 @@ static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
             enResult = RESULT_NOT_OK;
             break;
         }
-        pMeteoDataByte++;
+        pItem++;
     }
 
-    if ((RESULT_OK == enResult) && (TEST_FLASH_MAX_SIZE_RECORD > (nSizeRecord + 2)))
+    if ((RESULT_OK == enResult) && (RECORD_MAN_MAX_SIZE_RECORD > (nSizeRecord + 1U)))
     {
-        pDataRecord[nSizeRecord] = CH_SUM_CalculateCRC8(pDataRecord,
-                                                        nSizeRecord-1);
-
-        nSizeRecord++;
-        pDataRecord[nSizeRecord] = TEST_FLASH_RECORD_END_MARKER;
+        pDataRecord[nSizeRecord] = RECORD_MAN_END_MARKER;
+    }
+    else
+    {
+        enResult = RESULT_NOT_OK;
     }
 
-    *pSizeDataRecord = nSizeRecord + 1;
+    *pSizeDataRecord = nSizeRecord + 1U;
 
     return enResult;
-} // end of TEST_FLASH_CreateRecord()
+} // end of RECORD_MAN_CreateRecord()
 
 
 
 //**************************************************************************************************
-// @Function      TEST_FLASH_ParsingRecord()
+// @Function      RECORD_MAN_ParsingRecord()
 //--------------------------------------------------------------------------------------------------
 // @Description   This function finds package and calculates crc8.
 //--------------------------------------------------------------------------------------------------
@@ -663,67 +469,104 @@ static STD_RESULT TEST_FLASH_CreateRecord(const TEST_EE_METEO_DATA *pMeteoData,
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static STD_RESULT TEST_FLASH_ParsingRecord(TEST_EE_METEO_DATA *pMeteoData,
-                                           const uint8_t *pDataRecord,
-                                           uint32_t pSizeDataRecord)
+static STD_RESULT RECORD_MAN_ParsingRecord(const uint8_t *pDataRecord,
+                                           uint32_t nSizeRecord,
+                                           uint8_t *pData,
+                                           uint32_t *pSizeData)
 {
     STD_RESULT enResult = RESULT_NOT_OK;
-    uint8_t nStateMachine = TEST_FLASH_STATE_PARSING_START_MARKER;
-    uint32_t nCntByte = pSizeDataRecord;
-    const uint8_t *pStartRecord;
+    uint8_t nStateMachine = RECORD_MAN_STATE_PARSING_START_MARKER;
+    uint32_t nSizeData = 0U;
+    uint32_t nIndexDataRecord = 0U;
 
-    while ((0U != nCntByte) && (RESULT_NOT_OK == enResult))
+    while ((0U != nSizeRecord) && (RESULT_NOT_OK == enResult))
     {
         switch (nStateMachine)
         {
-            case TEST_FLASH_STATE_PARSING_START_MARKER :
-                if (TEST_FLASH_RECORD_HEADER_MARKER == *pDataRecord)
+            case RECORD_MAN_STATE_PARSING_START_MARKER :
+                if (RECORD_MAN_HEADER_MARKER == pDataRecord[nIndexDataRecord])
                 {
-                    nStateMachine = TEST_FLASH_STATE_PARSING_PAYLOAD;
-                    pStartRecord = pDataRecord;
+                    nStateMachine = RECORD_MAN_STATE_PARSING_PAYLOAD;
                 }
-                pDataRecord++;
+                nIndexDataRecord++;
                 break;
-            case TEST_FLASH_STATE_PARSING_PAYLOAD :
-                if ((TEST_FLASH_RECORD_END_MARKER == *pDataRecord) ||
-                    (TEST_FLASH_RECORD_HEADER_MARKER == *pDataRecord))
+            case RECORD_MAN_STATE_PARSING_PAYLOAD :
+                if (RECORD_MAN_HEADER_MARKER == pDataRecord[nIndexDataRecord])
                 {
-                    nStateMachine = TEST_FLASH_STATE_PARSING_BYTE_STUFFING;
+                    nStateMachine = RECORD_MAN_STATE_PARSING_DOUBLE_HEADER_MARKER;
                 }
-                pDataRecord++;
-                break;
-            case TEST_FLASH_STATE_PARSING_BYTE_STUFFING :
-                if ((TEST_FLASH_RECORD_END_MARKER == *pDataRecord) ||
-                    (TEST_FLASH_RECORD_HEADER_MARKER == *pDataRecord))
+                else if (RECORD_MAN_END_MARKER == pDataRecord[nIndexDataRecord])
                 {
-                    nStateMachine = TEST_FLASH_STATE_PARSING_PAYLOAD;
-                    pDataRecord++;
+                    if (0U == (nSizeRecord - 1U))
+                    {
+                        if (pDataRecord[nIndexDataRecord - 1U] != CH_SUM_CalculateCRC8(pData,
+                                                                                       nSizeData))
+                        {
+                            enResult = RESULT_NOT_OK;
+                        }
+                        else
+                        {
+                            enResult = RESULT_OK;
+                            *pSizeData = nSizeData - 1U;
+                        }
+                    }
+                    else
+                    {
+                        nStateMachine = RECORD_MAN_STATE_PARSING_END_MARKER;
+                    }
                 }
                 else
                 {
-                    if (*(pDataRecord - 2U) != CH_SUM_CalculateCRC8(pStartRecord,
-                                                                    (uint32_t)(pDataRecord - 3U) - (uint32_t)pStartRecord))
+                    pData[nSizeData] = pDataRecord[nIndexDataRecord];
+                    nSizeData++;
+                }
+                nIndexDataRecord++;
+                break;
+            case RECORD_MAN_STATE_PARSING_DOUBLE_HEADER_MARKER :
+                if (RECORD_MAN_HEADER_MARKER == pDataRecord[nIndexDataRecord])
+                {
+                    nStateMachine = RECORD_MAN_STATE_PARSING_PAYLOAD;
+                    pData[nSizeData] = pDataRecord[nIndexDataRecord];
+                    nSizeData++;
+                    nIndexDataRecord++;
+                }
+                else
+                {
+                    nStateMachine = RECORD_MAN_STATE_PARSING_PAYLOAD;
+                    nSizeData = 0U;
+                    nIndexDataRecord++;
+                }
+                break;
+            case RECORD_MAN_STATE_PARSING_END_MARKER :
+                if (RECORD_MAN_END_MARKER == pDataRecord[nIndexDataRecord])
+                {
+                    nStateMachine = RECORD_MAN_STATE_PARSING_PAYLOAD;
+                    pData[nSizeData] = pDataRecord[nIndexDataRecord];
+                    nSizeData++;
+                    nIndexDataRecord++;
+                }
+                else
+                {
+                    if (pDataRecord[nIndexDataRecord - 2U] != CH_SUM_CalculateCRC8(pData,
+                                                                                   nSizeData - 1U))
                     {
                         enResult = RESULT_NOT_OK;
                     }
+                    else
                     {
                         enResult = RESULT_OK;
+                        *pSizeData = nSizeData;
                     }
                 }
                 break;
             default:break;
         }
-        nCntByte--;
+        nSizeRecord--;
     }
 
     return enResult;
-} // end of TEST_FLASH_ParsingRecord()
+} // end of RECORD_MAN_ParsingRecord()
+
+
+
 //****************************************** end of file *******************************************
-
-
-
-
-
-
-
-
