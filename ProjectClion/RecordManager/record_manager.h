@@ -70,7 +70,8 @@ extern void RECORD_MAN_Init(void);
 
 // Store data
 extern STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
-                                   uint32_t nQtyData);
+                            uint32_t nDataQty,
+                            uint32_t* pQtyRecord);
 
 // Load record
 extern STD_RESULT RECORD_MAN_Load(uint32_t nAdrRecord,

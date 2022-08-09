@@ -12,8 +12,8 @@
 // XX.XX.XXXX     1.0.0    KPS         First release.
 //**************************************************************************************************
 
-#ifndef RECORD_MAN_H
-#define RECORD_MAN_H
+#ifndef RECORD_MAN_CFG_H
+#define RECORD_MAN_CFG_H
 
 
 
@@ -33,6 +33,6 @@
 
 
 
-#endif // #ifndef RECORD_MAN_H
+#endif // #ifndef RECORD_MAN_CFG_H
 
 //****************************************** end of file *******************************************
