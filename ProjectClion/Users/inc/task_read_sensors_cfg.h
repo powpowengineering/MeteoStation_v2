@@ -1,5 +1,5 @@
 //**************************************************************************************************
-// @Module        TASK_READ_SENSORS
+// @Module        TASK_READ_SENSORS_CFG
 // @Filename      task_read_sensors_cfg.h
 //--------------------------------------------------------------------------------------------------
 // @Description   Configuration of the required functionality of the TASK_READ_SENSORS module.
@@ -12,8 +12,8 @@
 // XX.XX.XXXX     1.0.0    KPS         First release.
 //**************************************************************************************************
 
-#ifndef TASK_READ_SENSORS_H
-#define TASK_READ_SENSORS_H
+#ifndef TASK_READ_SENSORS_CFG_H
+#define TASK_READ_SENSORS_CFG_H
 
 
 
@@ -33,6 +33,6 @@
 
 
 
-#endif // #ifndef TASK_READ_SENSORS_H
+#endif // #ifndef TASK_READ_SENSORS_CFG_H
 
 //****************************************** end of file *******************************************

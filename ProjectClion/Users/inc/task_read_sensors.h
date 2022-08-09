@@ -1,5 +1,5 @@
 //**************************************************************************************************
-// @Module        TASK_SENSOR_READ
+// @Module        TASK_READ_SENSORS
 // @Filename      task_sensors_read.h
 //--------------------------------------------------------------------------------------------------
 // @Description   Interface of the TASK_SENSOR_READ interface.
@@ -13,8 +13,8 @@
 // XX.XX.XXXX     1.0.0    KPS         First release.
 //**************************************************************************************************
 
-#ifndef TASK_SENSOR_READ_H
-#define TASK_SENSOR_READ_H
+#ifndef TASK_READ_SENSORS_H
+#define TASK_READ_SENSORS_H
 
 
 
@@ -51,6 +51,7 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of global (public) variables
 //**************************************************************************************************
@@ -68,6 +69,6 @@ extern void vTaskReadSensors(void *pvParameters);
 
 
 
-#endif // #ifndef TASK_SENSOR_READ_H
+#endif // #ifndef TASK_READ_SENSORS_H
 
 //****************************************** end of file *******************************************

@@ -175,10 +175,19 @@ static STD_RESULT RECORD_MAN_ParsingRecord(const uint8_t *pDataRecord,
 //**************************************************************************************************
 void RECORD_MAN_Init(void)
 {
+    uint64_t ID;
+    uint16_t ManufID;
+
     if (FALSE == RECORD_MAN_bInitialezed)
     {
         // Init W25Q
         W25Q_Init();
+
+        // Read ID W25Q
+        W25Q_ReadUniqueID(&ID);
+
+        // Read manufacture ID
+        W25Q_ReadManufactureID(&ManufID);
 
         // Init eeprom emulation
         EE_Init();
@@ -321,6 +330,24 @@ extern STD_RESULT RECORD_MAN_Load(uint32_t nAdrRecord,
 
     return enResult;
 } // end of RECORD_MAN_Load()
+
+
+
+//**************************************************************************************************
+// @Function      RECORD_MAN_GetNumberOfRecords()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+STD_RESULT RECORD_MAN_GetNumberOfRecords(uint32_t* nNumberOfRecords)
+{
+
+} // end of RECORD_MAN_GetNumberOfRecords()
 
 
 

@@ -139,8 +139,6 @@ static void eventCallback(
         MQTTPacketInfo_t * pPacketInfo,
         MQTTDeserializedInfo_t * pDeserializedInfo);
 
-static TASK_SENSOR_READ_DATA ReceivedQueue;
-
 // printf buffer.
 static char bufferPrintf[TASK_SENS_RD_SIZE_BUFF_PRINT];
 

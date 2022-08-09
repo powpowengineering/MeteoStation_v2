@@ -37,18 +37,21 @@
 
 // Native header
 #include "task_read_sensors.h"
+
+// Get record manager interface
+#include "record_manager.h"
+
 // drivers
 //#include "ds18b20.h"
 //#include "am2305_drv.h"
 //#include "bmp2.h"
 //#include "tf02Pro_drv.h"
+#include "stdlib.h"
 #include "printf.h"
 #include "ftoa.h"
 #include "Init.h"
 
 
-// Queue handle for measure data
-extern xQueueHandle xQueueMeasureData;
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -71,12 +74,15 @@ extern xQueueHandle xQueueMeasureData;
 //**************************************************************************************************
 
 // Measure data type
-typedef struct TASK_SENSOR_READ_DATA_struct
+typedef struct TASK_READ_SENS_MEAS_DATA_struct
 {
-    float temperature;
-    float humidity;
-    float pressure;
-}TASK_SENSOR_READ_DATA;
+    uint32_t nTimeUnix;
+    float fTemperature;
+    float fHumidity;
+    float fPressure;
+    float fWindSpeed;
+    float fBatteryVoltage;
+}TASK_READ_SENS_MEAS_DATA;
 
 
 
@@ -89,6 +95,9 @@ typedef struct TASK_SENSOR_READ_DATA_struct
 
 // BME280 I2C
 #define BME280_I2C_CH                   (I2C1)
+
+// Mutex Acquisition Delay
+#define TASK_READ_SENS_MUTEX_DELAY      (1000U)
 
 
 
@@ -107,7 +116,7 @@ static char bufferPrintf[TASK_SENS_RD_SIZE_BUFF_PRINT];
 
 //static TF02_PRO_MEASURED_DATA TF02_PRO_Lidar;
 
-
+static TASK_READ_SENS_MEAS_DATA TASK_READ_SENS_stMeasData;
 
 
 
@@ -277,14 +286,33 @@ void vTaskReadSensors(void *pvParameters)
 //
 //        vTaskDelay((60000 * 5)/portTICK_RATE_MS);
 //    }
+    // Prepare test data
+    TASK_READ_SENS_stMeasData.fTemperature = ((float)rand()/(float)(RAND_MAX)) * 5;
+    TASK_READ_SENS_stMeasData.fHumidity = ((float)rand()/(float)(RAND_MAX)) * 5;
+    TASK_READ_SENS_stMeasData.fPressure = ((float)rand()/(float)(RAND_MAX)) * 5;
+    TASK_READ_SENS_stMeasData.fWindSpeed = ((float)rand()/(float)(RAND_MAX)) * 5;
+    TASK_READ_SENS_stMeasData.fBatteryVoltage = ((float)rand()/(float)(RAND_MAX)) * 5;
+    TASK_READ_SENS_stMeasData.nTimeUnix = rand();
 
+    // Attempt get mutex
+    if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_READ_SENS_MUTEX_DELAY))
+    {
+        // Store record
+        RECORD_MAN_Store((uint8_t*)&TASK_READ_SENS_stMeasData,
+                         sizeof (TASK_READ_SENS_stMeasData) / sizeof (uint8_t));
 
+        // Return mutex
+        xSemaphoreGive(RECORD_MAN_xMutex);
+    }
+    else
+    {
+        DoNothing();
+    }
+    for(;;)
+    {
 
-
-
-
-    vTaskDelay(1000/portTICK_RATE_MS);
-
+        vTaskDelay(10000/portTICK_RATE_MS);
+    }
 }// end of vTaskReadSensors
 
 

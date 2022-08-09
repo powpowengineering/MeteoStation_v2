@@ -41,8 +41,10 @@
 #include "Init.h"
 //#include "ds18b20.h"
 //#include "am2305_drv.h"
+#include "record_manager.h"
 #include "ftoa.h"
 #include "printf.h"
+#include "term-srv.h"
 // Freertos
 //#include "FreeRTOS.h"
 //#include "task.h"
@@ -56,6 +58,7 @@
 #include "task_test_flash.h"
 #include "task_mqtt.h"
 #include "task_test_EE.h"
+#include "task_master.h"
 
 
 
@@ -116,6 +119,11 @@ typedef enum
 #define TASK_EE_PARAMETERS           (NULL)
 #define TASK_EE_PRIORITY             (1U)
 
+// Prm vTaskMaster
+#define TASK_MASTER_STACK_DEPTH          (256U)
+#define TASK_MASTER_PARAMETERS           (NULL)
+#define TASK_MASTER_PRIORITY             (1U)
+
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
@@ -158,19 +166,19 @@ void main(void)
     SystemClock_Config();
 
     Init();
+    RECORD_MAN_Init();
     // Init OneWire
 //    ONE_WIRE_init();
 //    AM2305_Init();
 //    USART_init();
 
-    xQueue = xQueueCreate( 5, sizeof( TASK_SENSOR_READ_DATA ) );
-
+    RECORD_MAN_xMutex = xSemaphoreCreateMutex();
 
 //    osThreadDef(THREAD_TEST_FLASH, vTaskTestFlash, osPriorityNormal, 0, TASK_TEST_FLASH_STACK_DEPTH);
 //    osThreadDef(THREAD_TEST_EE, vTaskTestEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
 //    osThreadDef(THREAD_TEST_FLASH_WITH_EE, vTaskTestFlashWithEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
-    osThreadDef(THREAD_TEST_MQTT, vTaskMQTT, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
-    osThreadDef(THREAD_MASTER, vTaskMQTT, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
+//    osThreadDef(THREAD_TEST_MQTT, vTaskMQTT, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
+    osThreadDef(THREAD_MASTER, vTaskMaster, osPriorityNormal, 0, TASK_MASTER_STACK_DEPTH);
 
 //    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
 //                TASK_SEN_R_PARAMETERS,\
@@ -187,7 +195,8 @@ void main(void)
 //    osThreadCreate(osThread(THREAD_TEST_FLASH), NULL);
 //    osThreadCreate(osThread(THREAD_TEST_EE), NULL);
 //    osThreadCreate(osThread(THREAD_TEST_FLASH_WITH_EE), NULL);
-    osThreadCreate(osThread(THREAD_TEST_MQTT), NULL);
+//    osThreadCreate(osThread(THREAD_TEST_MQTT), NULL);
+    osThreadCreate(osThread(THREAD_MASTER), NULL);
 
 
     // Blocking MQTT task
