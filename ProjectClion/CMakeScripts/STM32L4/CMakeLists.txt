@@ -69,6 +69,8 @@ file(GLOB_RECURSE MAIN_SOURCES
         "${CMAKE_SOURCE_DIR}/../../Users/src/task_test_flash.c"
         "${CMAKE_SOURCE_DIR}/../../Users/src/task_test_EE.c"
         "${CMAKE_SOURCE_DIR}/../../Users/src/task_mqtt.c"
+        "${CMAKE_SOURCE_DIR}/../../Users/src/task_read_sensors.c"
+        "${CMAKE_SOURCE_DIR}/../../Users/src/task_master.c"
         )
 
 file(GLOB_RECURSE FREERTOS_SOURCES
