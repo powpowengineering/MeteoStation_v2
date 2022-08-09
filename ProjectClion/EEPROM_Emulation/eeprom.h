@@ -80,10 +80,25 @@
 #define PAGE_FULL             ((uint8_t)0x80)
 
 /* Variables' number */
-#define NB_OF_VAR             (4U)
+#define NB_OF_VAR             (6U)
 
 extern uint16_t VirtAddVarTab[NB_OF_VAR];
 
+// Virtual address
+#define RECORD_MAN_VIR_ADR_LSB_LAST_RECORD           (uint16_t)(0x01)
+#define RECORD_MAN_VIR_ADR_MSB_LAST_RECORD           (uint16_t)(0x02)
+#define RECORD_MAN_VIR_ADR32_LAST_RECORD             ((uint32_t)(RECORD_MAN_VIR_ADR_LSB_LAST_RECORD) | \
+                                                     ((uint32_t)(RECORD_MAN_VIR_ADR_MSB_LAST_RECORD) << 16U))
+
+#define RECORD_MAN_VIR_ADR_LSB_NEXT_RECORD           (uint16_t)(0x03)
+#define RECORD_MAN_VIR_ADR_MSB_NEXT_RECORD           (uint16_t)(0x04)
+#define RECORD_MAN_VIR_ADR32_NEXT_RECORD             ((uint32_t)(RECORD_MAN_VIR_ADR_LSB_NEXT_RECORD) | \
+                                                     ((uint32_t)(RECORD_MAN_VIR_ADR_MSB_NEXT_RECORD) << 16U))
+
+#define RECORD_MAN_VIR_ADR_LSB_QTY_RECORD            (uint16_t)(0x05)
+#define RECORD_MAN_VIR_ADR_MSB_QTY_RECORD            (uint16_t)(0x06)
+#define RECORD_MAN_VIR_ADR32_QTY_RECORD              ((uint32_t)(RECORD_MAN_VIR_ADR_LSB_QTY_RECORD) | \
+                                                     ((uint32_t)(RECORD_MAN_VIR_ADR_MSB_QTY_RECORD) << 16U))
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/

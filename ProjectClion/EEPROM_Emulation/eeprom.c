@@ -62,6 +62,15 @@ uint16_t EE_Init(void)
     uint32_t SectorError = 0;
     FLASH_EraseInitTypeDef pEraseInit;
 
+    // Init Virtual address table
+    VirtAddVarTab[0] = RECORD_MAN_VIR_ADR_LSB_LAST_RECORD;
+    VirtAddVarTab[1] = RECORD_MAN_VIR_ADR_MSB_LAST_RECORD;
+
+    VirtAddVarTab[2] = RECORD_MAN_VIR_ADR_LSB_NEXT_RECORD;
+    VirtAddVarTab[3] = RECORD_MAN_VIR_ADR_MSB_NEXT_RECORD;
+
+    VirtAddVarTab[4] = RECORD_MAN_VIR_ADR_LSB_QTY_RECORD;
+    VirtAddVarTab[5] = RECORD_MAN_VIR_ADR_MSB_QTY_RECORD;
 
     /* Get Page0 status */
 //    PageStatus0 = (*(__IO uint16_t*)PAGE0_BASE_ADDRESS);
@@ -452,7 +461,7 @@ STD_RESULT EE_WriteVariable32(const uint32_t nVirAdr,
                                (uint16_t)nData))
     {
         // Write MSB data in MSB address
-        if (0U != EE_WriteVariable((uint16_t)(nVirAdr >> 16U),
+        if (0U == EE_WriteVariable((uint16_t)(nVirAdr >> 16U),
                                    (uint16_t)(nData >> 16U)))
         {
             enResult = RESULT_OK;
