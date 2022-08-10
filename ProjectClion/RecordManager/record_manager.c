@@ -303,7 +303,6 @@ extern STD_RESULT RECORD_MAN_Load(uint32_t nNumberRecord,
     STD_RESULT enResult = RESULT_NOT_OK;
     uint32_t nAdrRecord = 0U;
 
-
     if (TRUE == RECORD_MAN_bInitialezed)
     {
 #if (RECORD_MAN_MODE_STORAGE_FIXED == RECORD_MAN_MODE_STORAGE)
@@ -313,12 +312,12 @@ extern STD_RESULT RECORD_MAN_Load(uint32_t nNumberRecord,
         // Read record
         if (RESULT_OK == W25Q_ReadData(nAdrRecord,
                                        RECORD_MAN_aRecordDataPackage,
-                                       (uint32_t)RECORD_MAN_MAX_SIZE_RECORD))
+                                       (uint32_t)RECORD_MAN_SIZE_OF_RECORD_BYTES))
         {
-            if (RESULT_OK == RECORD_MAN_ParsingRecord(RECORD_MAN_aRecordDataPackage,
-                                     (uint32_t)RECORD_MAN_MAX_SIZE_RECORD,
-                                     pRecord,
-                                     nQtyBytes))
+            // Calculate CRC8
+            if (RECORD_MAN_aRecordDataPackage[RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U] == \
+                CH_SUM_CalculateCRC8(RECORD_MAN_aRecordDataPackage,
+                                     RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U))
             {
                 enResult = RESULT_OK;
             }
