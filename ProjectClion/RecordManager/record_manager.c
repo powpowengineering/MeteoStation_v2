@@ -109,6 +109,10 @@ typedef struct TEST_EE_METEO_DATA_struct
 #define RECORD_MAN_STATE_PARSING_DOUBLE_HEADER_MARKER       (3U)
 #define RECORD_MAN_STATE_PARSING_END_MARKER                 (4U)
 
+// Mode storage of record
+#define RECORD_MAN_MODE_STORAGE_FIXED                       (0U)
+#define RECORD_MAN_MODE_STORAGE_VARIABLE                    (1U)
+
 
 
 //**************************************************************************************************
@@ -119,7 +123,13 @@ typedef struct TEST_EE_METEO_DATA_struct
 uint8_t RECORD_MAN_bInitialezed = FALSE;
 
 // Array max size data record
+#if (RECORD_MAN_MODE_STORAGE_FIXED == RECORD_MAN_MODE_STORAGE)
+static uint8_t RECORD_MAN_aRecordDataPackage[RECORD_MAN_SIZE_OF_RECORD_BYTES];
+#elif (RECORD_MAN_MODE_STORAGE_VARIABLE == RECORD_MAN_MODE_STORAGE)
 static uint8_t RECORD_MAN_aRecordDataPackage[RECORD_MAN_MAX_SIZE_RECORD];
+#endif
+
+
 
 //**************************************************************************************************
 // Declarations of local (private) functions
@@ -202,50 +212,44 @@ STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
                             uint32_t* pQtyRecord)
 {
     STD_RESULT enResult = RESULT_NOT_OK;
+    uint32_t nNumberNextRecord = 0U;
     uint32_t nAdrNextRecord = 0U;
-    uint32_t nSizeRecord = 0U;
-
 
     if (TRUE == RECORD_MAN_bInitialezed)
     {
-        // Get next record address
-        if (RESULT_OK == EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
-                                           &nAdrNextRecord))
+#if (RECORD_MAN_MODE_STORAGE_FIXED == RECORD_MAN_MODE_STORAGE)
+        if (RECORD_MAN_SIZE_OF_RECORD_BYTES == nDataQty)
         {
-            // Get last record number
-            EE_ReadVariable32(RECORD_MAN_VIR_ADR32_QTY_RECORD,
-                              pQtyRecord);
-
-            // Create record
-            if (RESULT_OK == RECORD_MAN_CreateRecord(pData,
-                                                     nDataQty,
-                                                     RECORD_MAN_aRecordDataPackage,
-                                                     &nSizeRecord,
-                                                     *pQtyRecord + 1U))
+            // Get next record number
+            if (RESULT_OK == EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
+                                               &nNumberNextRecord))
             {
+                // Create record
+                for (int nItem = 0U; nItem < nDataQty - 1U; nItem++)
+                {
+                    RECORD_MAN_aRecordDataPackage[nItem] = *pData;
+                    pData++;
+                }
+
+                // Calculate CRC8
+                RECORD_MAN_aRecordDataPackage[RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U] = \
+                        CH_SUM_CalculateCRC8(RECORD_MAN_aRecordDataPackage,
+                                             RECORD_MAN_SIZE_OF_RECORD_BYTES - 2U);
+
+                // Calculate the next record address
+                nAdrNextRecord = nNumberNextRecord * RECORD_MAN_SIZE_OF_RECORD_BYTES;
+
                 // Write record in flash
                 if (RESULT_OK == W25Q_WriteData(nAdrNextRecord,
                                                 RECORD_MAN_aRecordDataPackage,
-                                                nSizeRecord))
+                                                RECORD_MAN_SIZE_OF_RECORD_BYTES))
                 {
-                    // Save new next record address
-                    nAdrNextRecord += nSizeRecord;
-
-                    // Write new next record address in eeprom
+                    // Write next record number in eeprom
                     if (RESULT_OK == EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
-                                        nAdrNextRecord))
+                                                        nAdrNextRecord + 1U))
                     {
-                        // Write QTY record number
-                        if (RESULT_OK == EE_WriteVariable32(RECORD_MAN_VIR_ADR32_QTY_RECORD,
-                                                            *pQtyRecord + 1U))
-                        {
-                            *pQtyRecord++;
-                            enResult = RESULT_OK;
-                        }
-                        else
-                        {
-                            enResult = RESULT_NOT_OK;
-                        }
+                        *pQtyRecord = nAdrNextRecord + 1U;
+                        enResult = RESULT_OK;
                     }
                     else
                     {
@@ -266,6 +270,10 @@ STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
         {
             enResult = RESULT_NOT_OK;
         }
+
+#elif (RECORD_MAN_MODE_STORAGE_VARIABLE == RECORD_MAN_MODE_STORAGE)
+        DoNothing();
+#endif // #if (RECORD_MAN_MODE_STORAGE_FIXED == RECORD_MAN_MODE_STORAGE)
     }
     else
     {
@@ -288,14 +296,20 @@ STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-extern STD_RESULT RECORD_MAN_Load(uint32_t nAdrRecord,
+extern STD_RESULT RECORD_MAN_Load(uint32_t nNumberRecord,
                                   uint8_t *pRecord,
                                   uint32_t* nQtyBytes)
 {
     STD_RESULT enResult = RESULT_NOT_OK;
+    uint32_t nAdrRecord = 0U;
+
 
     if (TRUE == RECORD_MAN_bInitialezed)
     {
+#if (RECORD_MAN_MODE_STORAGE_FIXED == RECORD_MAN_MODE_STORAGE)
+        // Calculate record address
+        nAdrRecord = nNumberRecord * RECORD_MAN_SIZE_OF_RECORD_BYTES;
+
         // Read record
         if (RESULT_OK == W25Q_ReadData(nAdrRecord,
                                        RECORD_MAN_aRecordDataPackage,
@@ -317,11 +331,15 @@ extern STD_RESULT RECORD_MAN_Load(uint32_t nAdrRecord,
         {
             enResult = RESULT_NOT_OK;
         }
+#elif (RECORD_MAN_MODE_STORAGE_VARIABLE == RECORD_MAN_MODE_STORAGE)
+        DoNothing();
+#endif // #if (RECORD_MAN_MODE_STORAGE_FIXED == RECORD_MAN_MODE_STORAGE)
     }
     else
     {
         enResult = RESULT_NOT_OK;
     }
+
 
     return enResult;
 } // end of RECORD_MAN_Load()

@@ -68,19 +68,18 @@ extern xSemaphoreHandle RECORD_MAN_xMutex;
 // Init record manager
 extern void RECORD_MAN_Init(void);
 
-// Store data
+// Store record
 extern STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
-                            uint32_t nDataQty,
-                            uint32_t* pQtyRecord);
+                                   uint32_t nDataQty,
+                                    uint32_t* pQtyRecord);
 
 // Load record
-extern STD_RESULT RECORD_MAN_Load(uint32_t nAdrRecord,
+extern STD_RESULT RECORD_MAN_Load(uint32_t nNumberRecord,
                                   uint8_t *pRecord,
                                   uint32_t* nQtyBytes);
 
 // Get number of records in flash
 extern STD_RESULT RECORD_MAN_GetNumberOfRecords(uint32_t* nNumberOfRecords);
-
 
 // Get available memory
 extern STD_RESULT RECORD_MAN_GetAvailableMem(uint32_t *pQtyByte);
