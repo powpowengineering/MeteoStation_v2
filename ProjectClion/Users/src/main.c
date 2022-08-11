@@ -60,6 +60,7 @@
 #include "task_mqtt.h"
 #include "task_test_EE.h"
 #include "task_master.h"
+#include "task_GSM.h"
 
 
 
@@ -89,7 +90,8 @@ typedef enum
     THREAD_TEST_EE,
     THREAD_TEST_MQTT,
     THREAD_MASTER,
-    THREAD_READ_SENSORS
+    THREAD_READ_SENSORS,
+    TREAD_GSM
 } Thread_TypeDef;
 
 
@@ -125,6 +127,8 @@ typedef enum
 #define TASK_MASTER_STACK_DEPTH          (256U)
 #define TASK_MASTER_PARAMETERS           (NULL)
 #define TASK_MASTER_PRIORITY             (1U)
+
+
 
 //**************************************************************************************************
 // Definitions of static global (private) variables
@@ -191,6 +195,10 @@ void main(void)
     xTaskCreate(vTaskMaster,"vTaskMaster",TASK_MASTER_STACK_DEPTH,\
                 TASK_MASTER_PARAMETERS,\
                 TASK_MASTER_PRIORITY,NULL);
+
+    xTaskCreate(vTaskGSM,"vTaskGSM",TASK_GSM_STACK_DEPTH,\
+                TASK_GSM_PARAMETERS,\
+                TASK_GSM_PRIORITY,&TASK_GSM_hHandlerTask);
 
 //    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
 //                TASK_MQTT_PARAMETERS,\

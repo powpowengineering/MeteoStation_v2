@@ -73,6 +73,7 @@ file(GLOB_RECURSE MAIN_SOURCES
 #        "${CMAKE_SOURCE_DIR}/../../Users/src/task_mqtt.c"
         "${CMAKE_SOURCE_DIR}/../../Users/src/task_read_sensors.c"
         "${CMAKE_SOURCE_DIR}/../../Users/src/task_master.c"
+        "${CMAKE_SOURCE_DIR}/../../Users/src/task_GSM.c"
         )
 
 file(GLOB_RECURSE FREERTOS_SOURCES
@@ -129,6 +130,7 @@ include_directories(${CMAKE_SOURCE_DIR}/../../coreMQTT/source/include)
 include_directories(${CMAKE_SOURCE_DIR}/../../coreMQTT/source/interface)
 #include_directories(${CMAKE_SOURCE_DIR}/TF02_PRO)
 include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation)
+
 
 #include_directories(${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/include)
 #include_directories(${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/include/system)
