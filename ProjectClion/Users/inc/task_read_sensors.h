@@ -56,7 +56,7 @@
 // Declarations of global (public) variables
 //**************************************************************************************************
 
-// None.
+extern TaskHandle_t    TASK_READ_SEN_hHandlerTask;
 
 
 

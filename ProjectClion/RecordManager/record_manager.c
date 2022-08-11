@@ -234,7 +234,7 @@ STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
                 // Calculate CRC8
                 RECORD_MAN_aRecordDataPackage[RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U] = \
                         CH_SUM_CalculateCRC8(RECORD_MAN_aRecordDataPackage,
-                                             RECORD_MAN_SIZE_OF_RECORD_BYTES - 2U);
+                                             RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U);
 
                 // Calculate the next record address
                 nAdrNextRecord = nNumberNextRecord * RECORD_MAN_SIZE_OF_RECORD_BYTES;
@@ -246,9 +246,9 @@ STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
                 {
                     // Write next record number in eeprom
                     if (RESULT_OK == EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
-                                                        nAdrNextRecord + 1U))
+                                                        nNumberNextRecord + 1U))
                     {
-                        *pQtyRecord = nAdrNextRecord + 1U;
+                        *pQtyRecord = nNumberNextRecord + 1U;
                         enResult = RESULT_OK;
                     }
                     else
@@ -311,12 +311,12 @@ extern STD_RESULT RECORD_MAN_Load(uint32_t nNumberRecord,
 
         // Read record
         if (RESULT_OK == W25Q_ReadData(nAdrRecord,
-                                       RECORD_MAN_aRecordDataPackage,
+                                       pRecord,
                                        (uint32_t)RECORD_MAN_SIZE_OF_RECORD_BYTES))
         {
             // Calculate CRC8
-            if (RECORD_MAN_aRecordDataPackage[RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U] == \
-                CH_SUM_CalculateCRC8(RECORD_MAN_aRecordDataPackage,
+            if (pRecord[RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U] == \
+                CH_SUM_CalculateCRC8(pRecord,
                                      RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U))
             {
                 enResult = RESULT_OK;

@@ -49,6 +49,9 @@
 // Get record manager interface
 #include "record_manager.h"
 
+// Get task read sensors
+#include "task_read_sensors.h"
+
 #include "W25Q_drv.h"
 
 #include "stdlib.h"
@@ -142,13 +145,12 @@ void vTaskMaster(void *pvParameters)
     EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
                        0);
 
-    EE_WriteVariable32(RECORD_MAN_VIR_ADR32_QTY_RECORD,
-                       0);
-
     // Init Terminal
     term_srv_init(INIT_TerminalSend,
                   cmd_list,
                   4);
+
+    vTaskResume(TASK_READ_SEN_hHandlerTask);
 
     for(;;)
     {
@@ -158,7 +160,7 @@ void vTaskMaster(void *pvParameters)
             term_srv_process(data);
         }
 
-//        vTaskDelay(1000/portTICK_RATE_MS);
+        vTaskDelay(1000/portTICK_RATE_MS);
     }
 } // end of vTaskMaster()
 
@@ -242,17 +244,17 @@ static void TASK_MASTER_ReadRecordCMD(const char* data)
 static void TASK_MASTER_WriteRecordCMD(const char* data)
 {
 
-    uint8_t aDataSource[RECORD_MAN_MAX_SIZE_RECORD / 2];
+    uint8_t aDataSource[RECORD_MAN_SIZE_OF_RECORD_BYTES];
     uint32_t nQtyRecord = 0U;
 
     // Clear buf
-    for (int i = 0; i < RECORD_MAN_MAX_SIZE_RECORD / 2; ++i)
+    for (int i = 0; i < RECORD_MAN_SIZE_OF_RECORD_BYTES; ++i)
     {
         aDataSource[i] = 0U;
     }
 
     // Prepare data
-    for (int i = 0; i < RECORD_MAN_MAX_SIZE_RECORD / 2; ++i)
+    for (int i = 0; i < RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U; ++i)
     {
         aDataSource[i] = rand()%255;
     }
@@ -261,7 +263,7 @@ static void TASK_MASTER_WriteRecordCMD(const char* data)
     if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_MASTER_MUTEX_DELAY))
     {
         if (RESULT_OK == RECORD_MAN_Store(aDataSource,
-                                          RECORD_MAN_MAX_SIZE_RECORD / 2,
+                                          RECORD_MAN_SIZE_OF_RECORD_BYTES,
                                           &nQtyRecord))
         {
             printf("Record store OK; Quantity records %d",nQtyRecord);

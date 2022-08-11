@@ -32,7 +32,7 @@
 #define MODULE_INTERNAL_DIAGNOSTICS             (OFF)
 
 // Specify size of record in bytes
-#define RECORD_MAN_SIZE_OF_RECORD_BYTES         (4U * 10U)
+#define RECORD_MAN_SIZE_OF_RECORD_BYTES         (4U * 7U)
 
 // Specify storage mode of record
 // valid value: RECORD_MAN_MODE_STORAGE_FIXED, RECORD_MAN_MODE_STORAGE_VARIABLE

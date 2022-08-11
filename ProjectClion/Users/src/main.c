@@ -49,6 +49,7 @@
 //#include "FreeRTOS.h"
 //#include "task.h"
 //#include "queue.h"
+#include "FreeRTOSConfig.h"
 #include "cmsis_os.h"
 
 
@@ -87,7 +88,8 @@ typedef enum
     THREAD_TEST_FLASH_WITH_EE,
     THREAD_TEST_EE,
     THREAD_TEST_MQTT,
-    THREAD_MASTER
+    THREAD_MASTER,
+    THREAD_READ_SENSORS
 } Thread_TypeDef;
 
 
@@ -140,6 +142,7 @@ typedef enum
 static void SystemClock_Config(void);
 
 
+
 //**************************************************************************************************
 //==================================================================================================
 // Definitions of global (public) functions
@@ -178,11 +181,16 @@ void main(void)
 //    osThreadDef(THREAD_TEST_EE, vTaskTestEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
 //    osThreadDef(THREAD_TEST_FLASH_WITH_EE, vTaskTestFlashWithEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
 //    osThreadDef(THREAD_TEST_MQTT, vTaskMQTT, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
-    osThreadDef(THREAD_MASTER, vTaskMaster, osPriorityNormal, 0, TASK_MASTER_STACK_DEPTH);
+//    osThreadDef(THREAD_MASTER, vTaskMaster, osPriorityNormal, 0, TASK_MASTER_STACK_DEPTH);
+//    osThreadDef(THREAD_READ_SENSORS, vTaskReadSensors, osPriorityNormal, 0, TASK_SEN_R_STACK_DEPTH);
 
-//    xTaskCreate(vTaskSensorsRead,"TaskSensorsRead",TASK_SEN_R_STACK_DEPTH,\
-//                TASK_SEN_R_PARAMETERS,\
-//                TASK_SEN_R_PRIORITY,NULL);
+    xTaskCreate(vTaskReadSensors,"vTaskReadSensors",TASK_SEN_R_STACK_DEPTH,\
+                TASK_SEN_R_PARAMETERS,\
+                TASK_SEN_R_PRIORITY,&TASK_READ_SEN_hHandlerTask);
+
+    xTaskCreate(vTaskMaster,"vTaskMaster",TASK_MASTER_STACK_DEPTH,\
+                TASK_MASTER_PARAMETERS,\
+                TASK_MASTER_PRIORITY,NULL);
 
 //    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
 //                TASK_MQTT_PARAMETERS,\
@@ -196,11 +204,12 @@ void main(void)
 //    osThreadCreate(osThread(THREAD_TEST_EE), NULL);
 //    osThreadCreate(osThread(THREAD_TEST_FLASH_WITH_EE), NULL);
 //    osThreadCreate(osThread(THREAD_TEST_MQTT), NULL);
-    osThreadCreate(osThread(THREAD_MASTER), NULL);
+//    osThreadCreate(osThread(THREAD_MASTER), NULL);
+//    osThreadCreate(osThread(THREAD_READ_SENSORS), NULL);
 
 
-    // Blocking MQTT task
-//    vTaskSuspend( HandleTask_MQTT );
+    // Blocking task
+    vTaskSuspend( TASK_READ_SEN_hHandlerTask );
 
     /* Start scheduler */
     printf("Start scheduler\r\n");

@@ -50,7 +50,7 @@
 #include "printf.h"
 #include "ftoa.h"
 #include "Init.h"
-
+#include "string.h"
 
 
 //**************************************************************************************************
@@ -65,7 +65,7 @@
 // Definitions of global (public) variables
 //**************************************************************************************************
 
-// None.
+TaskHandle_t    TASK_READ_SEN_hHandlerTask;
 
 
 
@@ -154,6 +154,8 @@ static void user_delay_us(uint32_t period, void *intf_ptr);
 //**************************************************************************************************
 void vTaskReadSensors(void *pvParameters)
 {
+    uint32_t nQtyRecords = 0U;
+
 //    STD_RESULT result = RESULT_NOT_OK;
 //    float tDS = 0.0f;
 //    float tAM = 0.0f;
@@ -286,32 +288,42 @@ void vTaskReadSensors(void *pvParameters)
 //
 //        vTaskDelay((60000 * 5)/portTICK_RATE_MS);
 //    }
-    // Prepare test data
-    TASK_READ_SENS_stMeasData.fTemperature = ((float)rand()/(float)(RAND_MAX)) * 5;
-    TASK_READ_SENS_stMeasData.fHumidity = ((float)rand()/(float)(RAND_MAX)) * 5;
-    TASK_READ_SENS_stMeasData.fPressure = ((float)rand()/(float)(RAND_MAX)) * 5;
-    TASK_READ_SENS_stMeasData.fWindSpeed = ((float)rand()/(float)(RAND_MAX)) * 5;
-    TASK_READ_SENS_stMeasData.fBatteryVoltage = ((float)rand()/(float)(RAND_MAX)) * 5;
-    TASK_READ_SENS_stMeasData.nTimeUnix = rand();
 
-    // Attempt get mutex
-    if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_READ_SENS_MUTEX_DELAY))
-    {
-        // Store record
-//        RECORD_MAN_Store((uint8_t*)&TASK_READ_SENS_stMeasData,
-//                         sizeof (TASK_READ_SENS_stMeasData) / sizeof (uint8_t));
-
-        // Return mutex
-        xSemaphoreGive(RECORD_MAN_xMutex);
-    }
-    else
-    {
-        DoNothing();
-    }
     for(;;)
     {
 
-        vTaskDelay(10000/portTICK_RATE_MS);
+        // Prepare test data
+        TASK_READ_SENS_stMeasData.fTemperature = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TASK_READ_SENS_stMeasData.fHumidity = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TASK_READ_SENS_stMeasData.fPressure = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TASK_READ_SENS_stMeasData.fWindSpeed = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TASK_READ_SENS_stMeasData.fBatteryVoltage = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TASK_READ_SENS_stMeasData.nTimeUnix = rand();
+
+        // Attempt get mutex
+        if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_READ_SENS_MUTEX_DELAY))
+        {
+            // Store record
+            if (RESULT_OK == RECORD_MAN_Store((uint8_t*)&TASK_READ_SENS_stMeasData,
+                                              RECORD_MAN_SIZE_OF_RECORD_BYTES,
+                                              &nQtyRecords))
+            {
+                printf("Record store OK; Quantity records %d\r\n",nQtyRecords);
+            }
+            else
+            {
+                printf("Record store error\r\n");
+            }
+
+            // Return mutex
+            xSemaphoreGive(RECORD_MAN_xMutex);
+        }
+        else
+        {
+            printf("Mutex of record manager is busy\r\n");
+        }
+
+        vTaskDelay(1000/portTICK_RATE_MS);
     }
 }// end of vTaskReadSensors
 
