@@ -15,24 +15,34 @@
 #ifndef RECORD_MAN_CFG_H
 #define RECORD_MAN_CFG_H
 
+//**************************************************************************************************
+// Declarations of global (public) data types
+//**************************************************************************************************
+
+typedef struct RECORD_MAN_TYPE_RECORD_struct
+{
+    uint32_t nUnixTime;
+    float fTemperature;
+    float fHumidity;
+    float fPressure;
+    float fWindSpeed;
+    float fBatteryVoltage;
+}RECORD_MAN_TYPE_RECORD;
+
 
 
 //**************************************************************************************************
 // Definitions of global (public) constants
 //**************************************************************************************************
 
-// Enable/disable the development error detection feature of the program module.
-// Used only for debug purposes and should be disabled in the final release.
-// Valid values: ON / OFF
-#define MODULE_DEVELOPMENT_ERROR_DETECTION      (OFF)
+// Specify sizeof item
+#define RECORD_MAN_SIZEOF_ITEM                  (4U)
 
-// User can enable/disable the internal diagnostic of the program module.
-// Used only for debug purposes and should be disabled in the final release.
-// Valid values: ON / OFF
-#define MODULE_INTERNAL_DIAGNOSTICS             (OFF)
+// Specify number of record's items
+#define RECORD_MAN_NUM_ITEMS                    (6U)
 
-// Specify size of record in bytes
-#define RECORD_MAN_SIZE_OF_RECORD_BYTES         (4U * 7U)
+// Specify size of record in bytes + checksum
+#define RECORD_MAN_SIZE_OF_RECORD_BYTES         (RECORD_MAN_SIZEOF_ITEM * (RECORD_MAN_NUM_ITEMS + 1U))
 
 // Specify storage mode of record
 // valid value: RECORD_MAN_MODE_STORAGE_FIXED, RECORD_MAN_MODE_STORAGE_VARIABLE

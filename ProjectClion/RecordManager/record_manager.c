@@ -319,6 +319,7 @@ extern STD_RESULT RECORD_MAN_Load(uint32_t nNumberRecord,
                 CH_SUM_CalculateCRC8(pRecord,
                                      RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U))
             {
+                *nQtyBytes = RECORD_MAN_SIZE_OF_RECORD_BYTES;
                 enResult = RESULT_OK;
             }
             else

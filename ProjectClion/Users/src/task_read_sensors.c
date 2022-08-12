@@ -73,16 +73,7 @@ TaskHandle_t    TASK_READ_SEN_hHandlerTask;
 // Declarations of local (private) data types
 //**************************************************************************************************
 
-// Measure data type
-typedef struct TASK_READ_SENS_MEAS_DATA_struct
-{
-    uint32_t nTimeUnix;
-    float fTemperature;
-    float fHumidity;
-    float fPressure;
-    float fWindSpeed;
-    float fBatteryVoltage;
-}TASK_READ_SENS_MEAS_DATA;
+// None.
 
 
 
@@ -116,7 +107,7 @@ static char bufferPrintf[TASK_SENS_RD_SIZE_BUFF_PRINT];
 
 //static TF02_PRO_MEASURED_DATA TF02_PRO_Lidar;
 
-static TASK_READ_SENS_MEAS_DATA TASK_READ_SENS_stMeasData;
+static RECORD_MAN_TYPE_RECORD TASK_READ_SENS_stMeasData;
 
 
 
@@ -291,14 +282,13 @@ void vTaskReadSensors(void *pvParameters)
 
     for(;;)
     {
-
         // Prepare test data
         TASK_READ_SENS_stMeasData.fTemperature = ((float)rand()/(float)(RAND_MAX)) * 5;
         TASK_READ_SENS_stMeasData.fHumidity = ((float)rand()/(float)(RAND_MAX)) * 5;
         TASK_READ_SENS_stMeasData.fPressure = ((float)rand()/(float)(RAND_MAX)) * 5;
         TASK_READ_SENS_stMeasData.fWindSpeed = ((float)rand()/(float)(RAND_MAX)) * 5;
         TASK_READ_SENS_stMeasData.fBatteryVoltage = ((float)rand()/(float)(RAND_MAX)) * 5;
-        TASK_READ_SENS_stMeasData.nTimeUnix = rand();
+        TASK_READ_SENS_stMeasData.nUnixTime = rand();
 
         // Attempt get mutex
         if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_READ_SENS_MUTEX_DELAY))
@@ -320,7 +310,7 @@ void vTaskReadSensors(void *pvParameters)
         }
         else
         {
-            printf("Mutex of record manager is busy\r\n");
+            printf("TASK_READ_SENS: Mutex of record manager is busy\r\n");
         }
 
         vTaskDelay(1000/portTICK_RATE_MS);
