@@ -52,13 +52,16 @@
 // Definitions of global (public) variables
 //**************************************************************************************************
 
-// TLM handel
+// TLM handler
 USART_HandleTypeDef UsartTLMHandle;
 
-// TERMINAL UART handel
+// TERMINAL UART handler
 UART_HandleTypeDef UartTERMINALHandle;
 
-// Tme delay handel
+// GSM UART handler
+UART_HandleTypeDef UartGSMHandler;
+
+// Tme delay handler
 TIM_HandleTypeDef    TimDelayHandle;
 
 
@@ -121,6 +124,7 @@ void Init(void)
     __HAL_RCC_SPI1_CLK_ENABLE();
     __HAL_RCC_USART1_CLK_ENABLE();
     __HAL_RCC_USART2_CLK_ENABLE();
+    __HAL_RCC_USART3_CLK_ENABLE();
     __HAL_RCC_TIM6_CLK_ENABLE();
 
     // Configure the GPIO_LED pin
@@ -168,6 +172,22 @@ void Init(void)
     GPIO_InitStruct.Pull       = GPIO_PULLUP;
     GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
     HAL_GPIO_Init(INIT_TERMINAL_DTR_PORT, &GPIO_InitStruct);
+
+    // Configure the TX pin UART for GSM
+    GPIO_InitStruct.Pin        = INIT_GSM_USART_TX_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = INIT_GSM_USART_TX_AF;
+    HAL_GPIO_Init(INIT_GSM_USART_TX_PORT, &GPIO_InitStruct);
+
+    // Configure the RX pin UART for GSM
+    GPIO_InitStruct.Pin        = INIT_GSM_USART_RX_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate  = INIT_GSM_USART_RX_AF;
+    HAL_GPIO_Init(INIT_GSM_USART_RX_PORT, &GPIO_InitStruct);
 
 //    //initialize pin A2 for anemometer
 //    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_2;
@@ -237,6 +257,20 @@ void Init(void)
     // Init UART TERMINAL
 //    HAL_USART_Init(&UsartTERMINALHandle);
     HAL_UART_Init(&UartTERMINALHandle);
+
+    // Configure UART for GSM
+    UartTERMINALHandle.Instance            = INIT_GSM_USART_NUM;
+    UartTERMINALHandle.Init.BaudRate       = 9600;
+    UartTERMINALHandle.Init.WordLength     = USART_WORDLENGTH_8B;
+    UartTERMINALHandle.Init.StopBits       = USART_STOPBITS_1;
+    UartTERMINALHandle.Init.Parity         = USART_PARITY_NONE;
+    UartTERMINALHandle.Init.Mode           = USART_MODE_TX_RX;
+
+    HAL_UART_DeInit(&UartTERMINALHandle);
+    // Init UART TERMINAL
+//    HAL_USART_Init(&UsartTERMINALHandle);
+    HAL_UART_Init(&UartTERMINALHandle);
+
 
     TimDelayHandle.Instance = INIT_TIMER_DELAY;
 

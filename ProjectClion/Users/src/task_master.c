@@ -52,6 +52,9 @@
 // Get task read sensors
 #include "task_read_sensors.h"
 
+// Get task GSM interface
+#include "task_GSM.h"
+
 #include "W25Q_drv.h"
 
 #include "stdlib.h"
@@ -91,6 +94,8 @@
 // Mutex Acquisition Delay
 #define TASK_MASTER_MUTEX_DELAY      (1000U)
 
+// Number of entries to send to the server
+#define TASK_GSM_QTY_REC_TO_SEND            (10U)
 
 
 //**************************************************************************************************
@@ -145,6 +150,9 @@ void vTaskMaster(void *pvParameters)
     EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
                        0);
 
+    EE_WriteVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,
+                       0);
+
     // Init Terminal
     term_srv_init(INIT_TerminalSend,
                   cmd_list,
@@ -160,7 +168,36 @@ void vTaskMaster(void *pvParameters)
             term_srv_process(data);
         }
 
-        vTaskDelay(1000/portTICK_RATE_MS);
+        // Send data to server every TASK_GSM_QTY_REC_TO_SEND records
+        // Attempt get mutex
+        if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_MASTER_MUTEX_DELAY))
+        {
+            uint32_t nLastRecord = 0U;
+            uint32_t nNextRecord = 0U;
+            uint32_t nQtyBytes = 0U;
+
+            // Get the last entry sent to the server
+            EE_ReadVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,
+                              &nLastRecord);
+
+            // Get the current record
+            EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
+                              &nNextRecord);
+
+            // Return mutex
+            xSemaphoreGive(RECORD_MAN_xMutex);
+
+            if ((nNextRecord > nLastRecord) && ((nNextRecord - nLastRecord) >= TASK_GSM_QTY_REC_TO_SEND))
+            {
+                vTaskResume(TASK_GSM_hHandlerTask);
+            }
+        }
+        else
+        {
+            DoNothing();
+        }
+
+        vTaskDelay(2000/portTICK_RATE_MS);
     }
 } // end of vTaskMaster()
 

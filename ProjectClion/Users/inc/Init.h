@@ -49,6 +49,7 @@ extern USART_HandleTypeDef UsartTLMHandle;
 
 extern TIM_HandleTypeDef    TimDelayHandle;
 
+extern UART_HandleTypeDef UartGSMHandler;
 
 //**************************************************************************************************
 // Declarations of global (public) functions

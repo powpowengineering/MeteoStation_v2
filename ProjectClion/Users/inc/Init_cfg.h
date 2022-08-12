@@ -52,6 +52,16 @@
 #define INIT_TERMINAL_DTR_PORT                  GPIOA
 #define INIT_TERMINAL_DTR_PIN                   GPIO_PIN_4
 
+// Confugure UART for GSM
+#define INIT_GSM_USART_NUM                      USART3
+#define INIT_GSM_USART_TX_PIN                   GPIO_PIN_10
+#define INIT_GSM_USART_TX_PORT                  GPIOB
+#define INIT_GSM_USART_RX_PIN                   GPIO_PIN_11
+#define INIT_GSM_USART_RX_PORT                  GPIOB
+#define INIT_GSM_USART_TX_AF                    GPIO_AF7_USART3
+#define INIT_GSM_USART_RX_AF                    GPIO_AF7_USART3
+
+
 //  Confugure for one wire delay
 #define INIT_TIMER_DELAY                          TIM6
 // User specify prescaler for one wire delay timer

@@ -44,6 +44,7 @@
 #include "printf.h"
 #include "string.h"
 #include "ftoa.h"
+#include "Init.h"
 
 
 
@@ -77,7 +78,7 @@ TaskHandle_t TASK_GSM_hHandlerTask;
 //**************************************************************************************************
 
 // Mutex delay
-#define TASK_GSM_MUTEX_DELAY                (1000U)
+#define TASK_GSM_MUTEX_DELAY                (0U)
 
 // Size of send buffer
 #define TASK_GSM_SIZE_OF_SEND_BUF           (0x800U)
@@ -150,6 +151,9 @@ static int32_t TASK_GSM_SendMessage(NetworkContext_t * pNetworkContext,
                                     const void * pBuffer,
                                     size_t bytesToSend);
 
+// Put char function
+static void TASK_GSM_PutChar(const char character);
+
 // Receive message from GSM module
 static int32_t TASK_GSM_ReceiveMessage(NetworkContext_t * pContext,
                                        void * pBuffer,
@@ -170,7 +174,7 @@ static void TASK_GSM_PutString(const char* s);
 static void TASK_GSM_Delay(TickType_t ms);
 
 // Send MQTT message to server
-static void TASK_GSM_SendMQTTMessage(void);
+static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord);
 
 
 
@@ -196,8 +200,6 @@ static void TASK_GSM_SendMQTTMessage(void);
 void vTaskGSM(void *pvParameters)
 {
     uint32_t nQtyBytes = 0U;
-    uint16_t packetId;
-    MQTTContext_t* pContext;
 
     // Set transport interface members.
     transport.send = TASK_GSM_SendMessage;
@@ -206,6 +208,64 @@ void vTaskGSM(void *pvParameters)
     // Set buffer members.
     fixedBuffer.pBuffer = TASK_GSM_SendBuffer;
     fixedBuffer.size = TASK_GSM_SIZE_OF_SEND_BUF;
+
+    for(;;)
+    {
+        // Attempt get mutex
+        if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_GSM_MUTEX_DELAY))
+        {
+            // Load record
+            if (RESULT_OK == RECORD_MAN_Load(0,
+                                             TASK_GSM_aDataRecord,
+                                              &nQtyBytes))
+            {
+                printf("Record Load OK\r\n");
+                printf("Sending data to the server...\r\n");
+                TASK_GSM_SendMQTTMessage(*(RECORD_MAN_TYPE_RECORD*)TASK_GSM_aDataRecord);
+            }
+            else
+            {
+                printf("Record Load error\r\n");
+            }
+
+            // Return mutex
+            xSemaphoreGive(RECORD_MAN_xMutex);
+        }
+        else
+        {
+            printf("TASK_GSM: Mutex of record manager is busy\r\n");
+        }
+
+        // Blocking task GSM
+        vTaskSuspend(TASK_GSM_hHandlerTask);
+//        vTaskDelay(1000/portTICK_RATE_MS);
+    }
+} // end of vTaskGSM()
+
+
+
+//**************************************************************************************************
+//==================================================================================================
+// Definitions of local (private) functions
+//==================================================================================================
+//**************************************************************************************************
+
+
+
+//**************************************************************************************************
+// @Function      TASK_GSM_SendMQTTMessage()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
+{
+    uint16_t packetId;
 
     // Init MQTT
     MQTT_Init( &MQTT_Context,
@@ -267,10 +327,10 @@ void vTaskGSM(void *pvParameters)
                      100,
                      &sessionPresent);
 
-        USART_PutChar( 0x1a);
+        TASK_GSM_PutChar( 0x1a);
         TASK_GSM_Delay(2000);
 
-        ftoa(ReceivedQueue.temperature, TASK_GSM_aBufferPrintf, 3);
+        ftoa(stRecord.fTemperature, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
         publishInfo.pTopicName = "base/state/temperature";
@@ -280,10 +340,10 @@ void vTaskGSM(void *pvParameters)
         TASK_GSM_PutString( MQTT_AT_CIPSEND);
         TASK_GSM_Delay(4000);
         MQTT_Publish(&MQTT_Context, &publishInfo, packetId);
-        USART_PutChar( 0x1a);
+        TASK_GSM_PutChar( 0x1a);
         TASK_GSM_Delay(4000);
 
-        ftoa(ReceivedQueue.humidity, TASK_GSM_aBufferPrintf, 3);
+        ftoa(stRecord.fHumidity, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
         publishInfo.pTopicName = "base/state/humidityyyy";
@@ -293,10 +353,10 @@ void vTaskGSM(void *pvParameters)
         TASK_GSM_PutString( MQTT_AT_CIPSEND);
         TASK_GSM_Delay(4000);
         MQTT_Publish(&MQTT_Context, &publishInfo, packetId);
-        USART_PutChar( 0x1a);
+        TASK_GSM_PutChar( 0x1a);
         TASK_GSM_Delay(4000);
 
-        ftoa(ReceivedQueue.pressure, TASK_GSM_aBufferPrintf, 3);
+        ftoa(stRecord.fPressure, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
         publishInfo.pTopicName = "base/state/pressureeee";
@@ -306,80 +366,18 @@ void vTaskGSM(void *pvParameters)
         TASK_GSM_PutString( MQTT_AT_CIPSEND);
         TASK_GSM_Delay(4000);
         MQTT_Publish(&MQTT_Context, &publishInfo, packetId);
-        USART_PutChar( 0x1a);
+        TASK_GSM_PutChar( 0x1a);
         TASK_GSM_Delay(4000);
 
         TASK_GSM_PutString( MQTT_AT_CIPSEND);
         TASK_GSM_Delay(4000);
         MQTT_Disconnect(&MQTT_Context);
-        USART_PutChar( 0x1a);
+        TASK_GSM_PutChar( 0x1a);
         TASK_GSM_Delay(2000);
-
 
         TASK_GSM_PutString( MQTT_AT_CIPSTATUS);
         TASK_GSM_Delay(2000);
     }
-
-    // Blocking MQTT task
-    //TASK_GSM_Delay(1000);
-    vTaskSuspend( HandleTask_MQTT );
-
-
-    for(;;)
-    {
-        // Attempt get mutex
-        if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_GSM_MUTEX_DELAY))
-        {
-            vTaskDelay(5000/portTICK_RATE_MS);
-            // Store record
-            if (RESULT_OK == RECORD_MAN_Load(0,
-                                             TASK_GSM_aDataRecord,
-                                              &nQtyBytes))
-            {
-                printf("Record Load OK\r\n");
-                TASK_GSM_SendMQTTMessage();
-            }
-            else
-            {
-                printf("Record Load error\r\n");
-            }
-
-            // Return mutex
-            xSemaphoreGive(RECORD_MAN_xMutex);
-        }
-        else
-        {
-            printf("TASK_GSM: Mutex of record manager is busy\r\n");
-        }
-
-
-        vTaskDelay(1000/portTICK_RATE_MS);
-    }
-} // end of vTaskGSM()
-
-
-
-//**************************************************************************************************
-//==================================================================================================
-// Definitions of local (private) functions
-//==================================================================================================
-//**************************************************************************************************
-
-
-
-//**************************************************************************************************
-// @Function      TASK_GSM_SendMQTTMessage()
-//--------------------------------------------------------------------------------------------------
-// @Description   None.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static void TASK_GSM_SendMQTTMessage(void)
-{
 
 } // end of TASK_GSM_SendMQTTMessage()
 
@@ -404,7 +402,7 @@ static int32_t TASK_GSM_SendMessage(NetworkContext_t * pNetworkContext,
                                     const void * pBuffer,
                                     size_t bytesToSend)
 {
-    HAL_USART_Transmit(&stUartGSMHandler,
+    HAL_USART_Transmit(&UartGSMHandler,
                        pBuffer,
                        bytesToSend,
                        10000);
@@ -489,7 +487,7 @@ static void TASK_GSM_PutString(const char* s)
 
     if (0 < len)
     {
-        HAL_USART_Transmit(&stUartGSMHandler,
+        HAL_USART_Transmit(&UartGSMHandler,
                            s,
                            len,
                            10000);
@@ -497,6 +495,28 @@ static void TASK_GSM_PutString(const char* s)
     }
 
 }// end of TASK_GSM_PutString()
+
+
+
+//**************************************************************************************************
+// @Function      TASK_GSM_PutChar()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void TASK_GSM_PutChar(const char character)
+{
+    HAL_USART_Transmit(&UartGSMHandler,
+                       &character,
+                       1,
+                       10000);
+} // end of TASK_GSM_PutChar()
+
 
 
 
