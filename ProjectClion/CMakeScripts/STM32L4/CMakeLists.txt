@@ -52,7 +52,7 @@ file(GLOB_RECURSE PRINTF_SOURCES "${CMAKE_SOURCE_DIR}/../../printf-master/printf
 file(GLOB_RECURSE TERMINAL "${CMAKE_SOURCE_DIR}/../../TERMINAL/term-srv.c")
 #file(GLOB_RECURSE USART_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/USART_Driver/usart_drv.c")
 file(GLOB_RECURSE W25Q_FLASH_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/../../W25Q_FLASH/W25Q_drv.c")
-#file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/BMP2-Sensor-API-master/bmp2.c")
+file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/../../BMP2-Sensor-API-master/bmp2.c")
 #file(GLOB_RECURSE TF02_PRO "${CMAKE_SOURCE_DIR}/TF02_PRO/tf02Pro_drv.c")
 file(GLOB_RECURSE CORE_MQTT "${CMAKE_SOURCE_DIR}/../../coreMQTT/source/*.c")
 file(GLOB_RECURSE EEPROM_EMULATION "${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation/*.c")
@@ -112,6 +112,9 @@ file(
         "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c"
         "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.c"
         "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.c"
+        "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.c"
+        "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.c"
+        "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_i2c.c"
         "${HAL}/Drivers/BSP/STM32L4xx_Nucleo/*.c"
 )
 
@@ -125,7 +128,7 @@ include_directories(${CMAKE_SOURCE_DIR}/../../printf-master)
 include_directories(${CMAKE_SOURCE_DIR}/../../TERMINAL)
 include_directories(${CMAKE_SOURCE_DIR}/../../CheckSum)
 include_directories(${CMAKE_SOURCE_DIR}/../../RecordManager)
-#include_directories(${CMAKE_SOURCE_DIR}/BMP2-Sensor-API-master)
+include_directories(${CMAKE_SOURCE_DIR}/../../BMP2-Sensor-API-master)
 include_directories(${CMAKE_SOURCE_DIR}/../../coreMQTT/source/include)
 include_directories(${CMAKE_SOURCE_DIR}/../../coreMQTT/source/interface)
 #include_directories(${CMAKE_SOURCE_DIR}/TF02_PRO)
@@ -167,7 +170,7 @@ add_executable( ${PROJECT_NAME}
 #        ${USER_SOURCES}
 #        ${DS18B20_SOURCES}
 #        ${AM2305_SOURCES}
-#        ${BMP280}
+        ${BMP280}
         ${CORE_MQTT}
 #        ${TF02_PRO}
 #        ${USART_DRIVER_SOURCES}
