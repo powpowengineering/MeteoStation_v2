@@ -61,6 +61,18 @@
 #define INIT_GSM_USART_TX_AF                    GPIO_AF7_USART3
 #define INIT_GSM_USART_RX_AF                    GPIO_AF7_USART3
 
+// Confugure I2C1 for BMP280
+#define INIT_BMP280_I2C_NUM                      I2C1
+#define INIT_BMP280_I2C_SCL_PIN                  GPIO_PIN_8
+#define INIT_BMP280_I2C_SCL_PORT                 GPIOB
+#define INIT_BMP280_I2C_SDA_PIN                  GPIO_PIN_9
+#define INIT_BMP280_I2C_SDA_PORT                 GPIOB
+#define INIT_BMP280_I2C_SCL_AF                   GPIO_AF4_I2C1
+#define INIT_BMP280_I2C_SDA_AF                   GPIO_AF4_I2C1
+#define INIT_BMP280_I2C_OWNADDRESS1              (0U)
+#define INIT_BMP280_I2C_OWNADDRESS2              (0U)
+#define INIT_BMP280_I2C_DEV_ADR                  (0x76U)
+#define INIT_BMP280_I2C_TIMING                   (0xF0001818U)
 
 //  Confugure for one wire delay
 #define INIT_TIMER_DELAY                          TIM6

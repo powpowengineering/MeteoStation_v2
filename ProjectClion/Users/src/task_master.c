@@ -145,7 +145,7 @@ static term_srv_cmd_t cmd_list[] = {
 //**************************************************************************************************
 void vTaskMaster(void *pvParameters)
 {
-    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_4KB);
+    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_64KB);
 
     EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
                        0);
@@ -187,7 +187,7 @@ void vTaskMaster(void *pvParameters)
             // Return mutex
             xSemaphoreGive(RECORD_MAN_xMutex);
 
-            if ((nNextRecord > nLastRecord) && ((nNextRecord - nLastRecord) >= TASK_GSM_QTY_REC_TO_SEND))
+            if ((nNextRecord > nLastRecord) && (((nNextRecord - 1U) - nLastRecord) >= TASK_GSM_QTY_REC_TO_SEND))
             {
                 vTaskResume(TASK_GSM_hHandlerTask);
             }

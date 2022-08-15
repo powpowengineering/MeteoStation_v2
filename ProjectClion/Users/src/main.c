@@ -219,6 +219,9 @@ void main(void)
     // Blocking task
     vTaskSuspend( TASK_READ_SEN_hHandlerTask );
 
+    // Blocking task
+    vTaskSuspend( TASK_GSM_hHandlerTask );
+
     /* Start scheduler */
     printf("Start scheduler\r\n");
     osKernelStart();
@@ -260,7 +263,7 @@ void _putchar(char character)
 //**************************************************************************************************
 // @Function      SystemClock_Config()
 //--------------------------------------------------------------------------------------------------
-// @Description   Put char function used by printf.
+// @Description   None.
 //--------------------------------------------------------------------------------------------------
 // @Notes         None.
 //--------------------------------------------------------------------------------------------------

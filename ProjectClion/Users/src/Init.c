@@ -61,6 +61,9 @@ UART_HandleTypeDef UartTERMINALHandle;
 // GSM UART handler
 UART_HandleTypeDef UartGSMHandler;
 
+// BMP280 I2C handler
+I2C_HandleTypeDef I2CBMP280Handler;
+
 // Tme delay handler
 TIM_HandleTypeDef    TimDelayHandle;
 
@@ -126,6 +129,7 @@ void Init(void)
     __HAL_RCC_USART2_CLK_ENABLE();
     __HAL_RCC_USART3_CLK_ENABLE();
     __HAL_RCC_TIM6_CLK_ENABLE();
+    __HAL_RCC_I2C1_CLK_ENABLE();
 
     // Configure the GPIO_LED pin
     GPIO_InitStruct.Pin   = GPIO_PIN_5;
@@ -197,41 +201,21 @@ void Init(void)
 //    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
 //    GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-//    /*USART3 TX*/
-//    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_10;
-//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-//    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-//    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-//    GPIO_Init(GPIOB, &GPIO_InitStruct);
-//    GPIO_PinAFConfig(GPIOB, GPIO_PinSource10, GPIO_AF_USART3);
-//
-//    /*USART3 RX*/
-//    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_11;
-//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-//    GPIO_INnitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-//    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-//    GPIO_Init(GPIOB, &GPIO_InitStruct);
-//    GPIO_PinAFConfig(GPIOB, GPIO_PinSource11, GPIO_AF_USART3);
-//
-//    // I2C1 SCL
-//    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_8;
-//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-//    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-//    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
-//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-//    GPIO_Init(GPIOB, &GPIO_InitStruct);
-//    GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_I2C1);
-//
-//    // I2C1 SDA
-//    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_9;
-//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-//    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz;
-//    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
-//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-//    GPIO_Init(GPIOB, &GPIO_InitStruct);
-//    GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_I2C1);
+    // Configure the SCL pin I2C1 for BMP280
+    GPIO_InitStruct.Pin  = INIT_BMP280_I2C_SCL_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = INIT_BMP280_I2C_SCL_AF;
+    HAL_GPIO_Init(INIT_BMP280_I2C_SCL_PORT, &GPIO_InitStruct);
+
+    // Configure the SDA pin I2C1 for BMP280
+    GPIO_InitStruct.Pin  = INIT_BMP280_I2C_SDA_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = INIT_BMP280_I2C_SDA_AF;
+    HAL_GPIO_Init(INIT_BMP280_I2C_SDA_PORT, &GPIO_InitStruct);
 
     // Configure UART for TLM
     UsartTLMHandle.Instance            = INIT_TLM_USART_NUM;
@@ -259,17 +243,17 @@ void Init(void)
     HAL_UART_Init(&UartTERMINALHandle);
 
     // Configure UART for GSM
-    UartTERMINALHandle.Instance            = INIT_GSM_USART_NUM;
-    UartTERMINALHandle.Init.BaudRate       = 9600;
-    UartTERMINALHandle.Init.WordLength     = USART_WORDLENGTH_8B;
-    UartTERMINALHandle.Init.StopBits       = USART_STOPBITS_1;
-    UartTERMINALHandle.Init.Parity         = USART_PARITY_NONE;
-    UartTERMINALHandle.Init.Mode           = USART_MODE_TX_RX;
+    UartGSMHandler.Instance            = INIT_GSM_USART_NUM;
+    UartGSMHandler.Init.BaudRate       = 9600;
+    UartGSMHandler.Init.WordLength     = USART_WORDLENGTH_8B;
+    UartGSMHandler.Init.StopBits       = USART_STOPBITS_1;
+    UartGSMHandler.Init.Parity         = USART_PARITY_NONE;
+    UartGSMHandler.Init.Mode           = USART_MODE_TX_RX;
 
-    HAL_UART_DeInit(&UartTERMINALHandle);
+    HAL_UART_DeInit(&UartGSMHandler);
     // Init UART TERMINAL
 //    HAL_USART_Init(&UsartTERMINALHandle);
-    HAL_UART_Init(&UartTERMINALHandle);
+    HAL_UART_Init(&UartGSMHandler);
 
 
     TimDelayHandle.Instance = INIT_TIMER_DELAY;
@@ -312,18 +296,22 @@ void Init(void)
 //
 //    ADC_Cmd(ADC1, ENABLE);
 //
-//    // Init I2C1
-//    I2C_InitTypeDef I2C_InitStruct;
-//    I2C_InitStruct.I2C_ClockSpeed = 100000;
-//    I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
-//    I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;
-//    I2C_InitStruct.I2C_OwnAddress1 = 0;
-//    I2C_InitStruct.I2C_Ack = I2C_Ack_Disable;
-//    I2C_InitStruct.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
-//    I2C_Init(I2C1, &I2C_InitStruct);
-//    I2C_Cmd(I2C1, ENABLE);
+    // Init I2C1 for BMP280
+    I2CBMP280Handler.Instance = INIT_BMP280_I2C_NUM;
+    I2CBMP280Handler.Init.Timing = INIT_BMP280_I2C_TIMING;
+    I2CBMP280Handler.Init.OwnAddress1 = INIT_BMP280_I2C_OWNADDRESS1;
+    I2CBMP280Handler.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    I2CBMP280Handler.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    I2CBMP280Handler.Init.OwnAddress2 = INIT_BMP280_I2C_OWNADDRESS2;
+    I2CBMP280Handler.Init.OwnAddress2 = INIT_BMP280_I2C_OWNADDRESS2;
+    I2CBMP280Handler.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+    I2CBMP280Handler.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    I2CBMP280Handler.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+    I2CBMP280Handler.Mode = HAL_I2C_MODE_MASTER;
+    I2CBMP280Handler.Devaddress = INIT_BMP280_I2C_DEV_ADR;
 
-
+    HAL_I2C_DeInit(&I2CBMP280Handler);
+    HAL_I2C_Init(&I2CBMP280Handler);
 }
 // end of Init()
 

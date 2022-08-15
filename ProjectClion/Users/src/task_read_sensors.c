@@ -41,10 +41,13 @@
 // Get record manager interface
 #include "record_manager.h"
 
+// Get LL HAL
+#include "stm32l4xx_ll_i2c.h"
+
 // drivers
 //#include "ds18b20.h"
 //#include "am2305_drv.h"
-//#include "bmp2.h"
+#include "bmp2.h"
 //#include "tf02Pro_drv.h"
 #include "stdlib.h"
 #include "printf.h"
@@ -65,6 +68,7 @@
 // Definitions of global (public) variables
 //**************************************************************************************************
 
+// FreeRtos handler for TASK_READ_SEN
 TaskHandle_t    TASK_READ_SEN_hHandlerTask;
 
 
@@ -340,219 +344,249 @@ void vTaskReadSensors(void *pvParameters)
 //                len - length data to read
 //                intf_ptr can be used as a variable to store the I2C address of the device
 //**************************************************************************************************
-//static int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
-//{
-//    int8_t rslt = 0; /* Return 0 for Success, non-zero for failure */
-//
-//    /*
-//     * The parameter intf_ptr can be used as a variable to store the I2C address of the device
-//     */
-//
-//    /*
-//     * Data on the bus should be like
-//     * |------------+---------------------|
-//     * | I2C action | Data                |
-//     * |------------+---------------------|
-//     * | Start      | -                   |
-//     * | Write      | (reg_addr)          |
-//     * | Stop       | -                   |
-//     * | Start      | -                   |
-//     * | Read       | (reg_data[0])       |
-//     * | Read       | (....)              |
-//     * | Read       | (reg_data[len - 1]) |
-//     * | Stop       | -                   |
-//     * |------------+---------------------|
-//     */
-//
-//    // Write the register address
-//    // Generate start condition
-//    I2C_GenerateSTART(BME280_I2C_CH, ENABLE);
-//
-//    // Wait EV5
-//    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_MODE_SELECT));
-//
-//    // Sent address slave with transmit mode
-//    I2C_Send7bitAddress(BME280_I2C_CH, (*(uint8_t*)intf_ptr)<<1,I2C_Direction_Transmitter);
-//
-//    // Wait EV6
-//    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
-//
-//    // Wait EV8
-//    //while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTING));
-//
-//    // Write register address
-//    I2C_SendData(BME280_I2C_CH, reg_addr);
-//
-//    // Wait EV8_2
-//    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-//
-//    // Generate STOP condition
-//    I2C_GenerateSTOP(BME280_I2C_CH, ENABLE);
-//
-//    // Wait EV8_2
-//    //while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-//
-//    // Read data
-//    // Generate start condition
-//    I2C_GenerateSTART(BME280_I2C_CH, ENABLE);
-//
-//    // Wait EV5
-//    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_MODE_SELECT));
-//
-//    // Sent address slave with receive mode
-//    I2C_Send7bitAddress(BME280_I2C_CH, (*(uint8_t*)intf_ptr)<<1,I2C_Direction_Receiver);
-//
-//    // if will receive one byte the Acknowledge disable
-//    if (1U == len)
-//    {
-//        // Acknowledge disable
-//        I2C_AcknowledgeConfig(BME280_I2C_CH,DISABLE);
-//
-//        // Wait EV6
-//        while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
-//
-//        // Wait EV7
-//        while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_RECEIVED));
-//
-//        // Read data
-//        *reg_data = I2C_ReceiveData(BME280_I2C_CH);
-//
-//        // Generate STOP condition
-//        I2C_GenerateSTOP(BME280_I2C_CH, ENABLE);
-//    }
-//    else
-//    {
-//        // Wait EV6
-//        while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
-//
-//        // Acknowledge enable
-//        I2C_AcknowledgeConfig(BME280_I2C_CH,ENABLE);
-//
-//        while(len != 0)
-//        {
-//            if (0 == (len-1))
-//            {
-//                // Acknowledge disable
-//                I2C_AcknowledgeConfig(BME280_I2C_CH,DISABLE);
-//            }
-//
-//            // Wait EV7
-//            while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_RECEIVED));
-//
-//            // Read data
-//            *reg_data = I2C_ReceiveData(BME280_I2C_CH);
-//            reg_data++;
-//            len--;
-//        }
-//
-//        // Generate STOP condition
-//        I2C_GenerateSTOP(BME280_I2C_CH, ENABLE);
-//    }
-//
-//    // Wait EV8_2
-//    //while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-//
-//    return rslt;
-//}// end of user_i2c_read()
-//
-//
-//
-////**************************************************************************************************
-//// @Function      user_i2c_write()
-////--------------------------------------------------------------------------------------------------
-//// @Description   Write data to I2C
-////--------------------------------------------------------------------------------------------------
-//// @Notes         None.
-////--------------------------------------------------------------------------------------------------
-//// @ReturnValue   0 - success,
-////                non-zero - fail
-////--------------------------------------------------------------------------------------------------
-//// @Parameters    reg_addr - address register to write
-////                reg_data - pointer data to write
-////                len - length data to write
-////                intf_ptr can be used as a variable to store the I2C address of the device
-////**************************************************************************************************
-//static int8_t user_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr)
-//{
-//    int8_t rslt = 0; /* Return 0 for Success, non-zero for failure */
-//
-//    /*
-//     * The parameter intf_ptr can be used as a variable to store the I2C address of the device
-//     */
-//
-//    /*
-//     * Data on the bus should be like
-//     * |------------+---------------------|
-//     * | I2C action | Data                |
-//     * |------------+---------------------|
-//     * | Start      | -                   |
-//     * | Write      | (reg_addr)          |
-//     * | Write      | (reg_data[0])       |
-//     * | Write      | (....)              |
-//     * | Write      | (reg_data[len - 1]) |
-//     * | Stop       | -                   |
-//     * |------------+---------------------|
-//     */
-//
-//    // Write the register address
-//    // Generate start condition
-//    I2C_GenerateSTART(BME280_I2C_CH, ENABLE);
-//
-//    // Wait EV5
-//    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_MODE_SELECT));
-//
-//    // Sent address slave with transmit mode
-//    I2C_Send7bitAddress(BME280_I2C_CH, (*(uint8_t*)intf_ptr)<<1,I2C_Direction_Transmitter);
-//
-//    // Wait EV6
-//    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
-//
-//    // Wait EV8
-//    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTING));
-//
-//    // Write register address
-//    I2C_SendData(BME280_I2C_CH, reg_addr);
-//
-//    while(0 != len)
-//    {
-//        // Wait EV8
-//        while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTING));
-//
-//        // Write register address
-//        I2C_SendData(BME280_I2C_CH, *reg_data);
-//
-//        reg_data++;
-//        len--;
-//    }
-//
-//    // Wait EV8_2
-//    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-//
-//    // Generate STOP condition
-//    I2C_GenerateSTOP(BME280_I2C_CH, ENABLE);
-//
-//    return rslt;
-//}// end of user_i2c_write()
-//
-//
-//
-////**************************************************************************************************
-//// @Function      user_delay_ms()
-////--------------------------------------------------------------------------------------------------
-//// @Description   Delay in microseconds
-////--------------------------------------------------------------------------------------------------
-//// @Notes         None.
-////--------------------------------------------------------------------------------------------------
-//// @ReturnValue   None.
-////--------------------------------------------------------------------------------------------------
-//// @Parameters    period - Delay in microseconds.
-////               intf_ptr - oid pointer that can enable the linking of descriptors for interface
-////               related call backs
-////**************************************************************************************************
-//static void user_delay_us(uint32_t period, void *intf_ptr)
-//{
-//    INIT_Delay(period);
-//}// end of user_delay_ms
+static int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
+{
+    int8_t rslt = 0; /* Return 0 for Success, non-zero for failure */
+
+    /*
+     * The parameter intf_ptr can be used as a variable to store the I2C address of the device
+     */
+
+    /*
+     * Data on the bus should be like
+     * |------------+---------------------|
+     * | I2C action | Data                |
+     * |------------+---------------------|
+     * | Start      | -                   |
+     * | Write      | (reg_addr)          |
+     * | Stop       | -                   |
+     * | Start      | -                   |
+     * | Read       | (reg_data[0])       |
+     * | Read       | (....)              |
+     * | Read       | (reg_data[len - 1]) |
+     * | Stop       | -                   |
+     * |------------+---------------------|
+     */
+
+    // Write the register address
+    // Generate start condition
+    LL_I2C_GenerateStartCondition(I2CBMP280Handler.Instance);
+
+    while ((FALSE == LL_I2C_IsActiveFlag_TXIS(I2CBMP280Handler.Instance)) && \
+           (FALSE == LL_I2C_IsActiveFlag_NACK(I2CBMP280Handler.Instance)) && \
+           (TRUE == LL_I2C_IsActiveFlag_BUSY(I2CBMP280Handler.Instance)))
+    {
+        DoNothing();
+    }
+
+    // Sent address slave with transmit mode
+    if (TRUE == LL_I2C_IsActiveFlag_TXIS(I2CBMP280Handler.Instance))
+    {
+        LL_I2C_TransmitData8(I2CBMP280Handler.Instance, reg_addr);
+    }
+
+    // Sent address slave with transmit mode
+    I2C_Send7bitAddress(BME280_I2C_CH, (*(uint8_t*)intf_ptr)<<1,I2C_Direction_Transmitter);
+
+    // Wait EV6
+    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
+
+    // Wait EV8
+    //while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTING));
+
+    // Write register address
+    I2C_SendData(BME280_I2C_CH, reg_addr);
+
+    // Wait EV8_2
+    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+
+    // Generate STOP condition
+    I2C_GenerateSTOP(BME280_I2C_CH, ENABLE);
+
+    // Wait EV8_2
+    //while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+
+    // Read data
+    // Generate start condition
+    I2C_GenerateSTART(BME280_I2C_CH, ENABLE);
+
+    // Wait EV5
+    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_MODE_SELECT));
+
+    // Sent address slave with receive mode
+    I2C_Send7bitAddress(BME280_I2C_CH, (*(uint8_t*)intf_ptr)<<1,I2C_Direction_Receiver);
+
+    // if will receive one byte the Acknowledge disable
+    if (1U == len)
+    {
+        // Acknowledge disable
+        I2C_AcknowledgeConfig(BME280_I2C_CH,DISABLE);
+
+        // Wait EV6
+        while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+
+        // Wait EV7
+        while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_RECEIVED));
+
+        // Read data
+        *reg_data = I2C_ReceiveData(BME280_I2C_CH);
+
+        // Generate STOP condition
+        I2C_GenerateSTOP(BME280_I2C_CH, ENABLE);
+    }
+    else
+    {
+        // Wait EV6
+        while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+
+        // Acknowledge enable
+        I2C_AcknowledgeConfig(BME280_I2C_CH,ENABLE);
+
+        while(len != 0)
+        {
+            if (0 == (len-1))
+            {
+                // Acknowledge disable
+                I2C_AcknowledgeConfig(BME280_I2C_CH,DISABLE);
+            }
+
+            // Wait EV7
+            while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_RECEIVED));
+
+            // Read data
+            *reg_data = I2C_ReceiveData(BME280_I2C_CH);
+            reg_data++;
+            len--;
+        }
+
+        // Generate STOP condition
+        I2C_GenerateSTOP(BME280_I2C_CH, ENABLE);
+    }
+
+    // Wait EV8_2
+    //while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+
+    return rslt;
+}// end of user_i2c_read()
+
+
+
+//**************************************************************************************************
+// @Function      user_i2c_write()
+//--------------------------------------------------------------------------------------------------
+// @Description   Write data to I2C
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   0 - success,
+//                non-zero - fail
+//--------------------------------------------------------------------------------------------------
+// @Parameters    reg_addr - address register to write
+//                reg_data - pointer data to write
+//                len - length data to write
+//                intf_ptr can be used as a variable to store the I2C address of the device
+//**************************************************************************************************
+static int8_t user_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr)
+{
+    int8_t rslt = 0; /* Return 0 for Success, non-zero for failure */
+
+    uint32_t nCntBytes = 0U;
+
+    /*
+     * The parameter intf_ptr can be used as a variable to store the I2C address of the device
+     */
+
+    /*
+     * Data on the bus should be like
+     * |------------+---------------------|
+     * | I2C action | Data                |
+     * |------------+---------------------|
+     * | Start      | -                   |
+     * | Write      | (reg_addr)          |
+     * | Write      | (reg_data[0])       |
+     * | Write      | (....)              |
+     * | Write      | (reg_data[len - 1]) |
+     * | Stop       | -                   |
+     * |------------+---------------------|
+     */
+
+    // Transfer request
+    LL_I2C_SetTransferRequest(I2CBMP280Handler.Instance,LL_I2C_REQUEST_WRITE);
+
+    // Set transfer size
+    LL_I2C_SetTransferSize(I2CBMP280Handler.Instance,len);
+
+    // Set slave address
+    LL_I2C_SetSlaveAddr(I2CBMP280Handler.Instance, (*(uint8_t*)intf_ptr));
+
+    // Generate start condition
+    LL_I2C_GenerateStartCondition(I2CBMP280Handler.Instance);
+
+    // Wait transmit start bit
+    while (FALSE == LL_I2C_IsActiveFlag_BUSY(I2CBMP280Handler.Instance))
+    {
+        DoNothing();
+    }
+
+    while ((FALSE == LL_I2C_IsActiveFlag_TXIS(I2CBMP280Handler.Instance)) && \
+           (FALSE == LL_I2C_IsActiveFlag_NACK(I2CBMP280Handler.Instance)) && \
+           (TRUE == LL_I2C_IsActiveFlag_BUSY(I2CBMP280Handler.Instance)))
+    {
+        DoNothing();
+    }
+
+    // Write register address
+    LL_I2C_TransmitData8(I2CBMP280Handler.Instance, reg_addr);
+
+    while ((FALSE == LL_I2C_IsActiveFlag_TC(I2CBMP280Handler.Instance)) && \
+           (FALSE == LL_I2C_IsActiveFlag_NACK(I2CBMP280Handler.Instance)) && \
+           (TRUE == LL_I2C_IsActiveFlag_BUSY(I2CBMP280Handler.Instance)))
+    {
+        if (TRUE == LL_I2C_IsActiveFlag_TXIS(I2CBMP280Handler.Instance))
+        {
+            LL_I2C_TransmitData8(I2CBMP280Handler.Instance,reg_data[nCntBytes]);
+            nCntBytes++;
+        }
+        else
+        {
+            DoNothing();
+        }
+    }
+
+    // Generate stop
+    LL_I2C_GenerateStopCondition(I2CBMP280Handler.Instance);
+
+    if (len == nCntBytes)
+    {
+        rslt = 0U;
+    }
+    else
+    {
+        rslt = 1U;
+    }
+
+    return rslt;
+}// end of user_i2c_write()
+
+
+
+//**************************************************************************************************
+// @Function      user_delay_ms()
+//--------------------------------------------------------------------------------------------------
+// @Description   Delay in microseconds
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    period - Delay in microseconds.
+//               intf_ptr - oid pointer that can enable the linking of descriptors for interface
+//               related call backs
+//**************************************************************************************************
+static void user_delay_us(uint32_t period, void *intf_ptr)
+{
+    INIT_Delay(period);
+}// end of user_delay_ms
 //****************************************** end of file *******************************************
 
 

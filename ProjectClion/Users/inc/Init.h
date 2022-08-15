@@ -51,6 +51,11 @@ extern TIM_HandleTypeDef    TimDelayHandle;
 
 extern UART_HandleTypeDef UartGSMHandler;
 
+// BMP280 I2C handler
+extern I2C_HandleTypeDef I2CBMP280Handler;
+
+
+
 //**************************************************************************************************
 // Declarations of global (public) functions
 //**************************************************************************************************

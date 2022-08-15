@@ -41,6 +41,9 @@
 // Get record manager interface
 #include "record_manager.h"
 
+// Get eeprom interface
+#include "eeprom.h"
+
 #include "printf.h"
 #include "string.h"
 #include "ftoa.h"
@@ -200,6 +203,7 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord);
 void vTaskGSM(void *pvParameters)
 {
     uint32_t nQtyBytes = 0U;
+    uint32_t nNextRecord = 0U;
 
     // Set transport interface members.
     transport.send = TASK_GSM_SendMessage;
@@ -214,8 +218,22 @@ void vTaskGSM(void *pvParameters)
         // Attempt get mutex
         if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_GSM_MUTEX_DELAY))
         {
+
+            // Get the next - 1 record
+            EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
+                              &nNextRecord);
+
+            if (0 != nNextRecord)
+            {
+                nNextRecord -= 1U;
+            }
+            else
+            {
+                DoNothing();
+            }
+
             // Load record
-            if (RESULT_OK == RECORD_MAN_Load(0,
+            if (RESULT_OK == RECORD_MAN_Load(nNextRecord,
                                              TASK_GSM_aDataRecord,
                                               &nQtyBytes))
             {
@@ -227,6 +245,10 @@ void vTaskGSM(void *pvParameters)
             {
                 printf("Record Load error\r\n");
             }
+
+            // Update last record number
+            EE_WriteVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,
+                               nNextRecord);
 
             // Return mutex
             xSemaphoreGive(RECORD_MAN_xMutex);
@@ -402,7 +424,7 @@ static int32_t TASK_GSM_SendMessage(NetworkContext_t * pNetworkContext,
                                     const void * pBuffer,
                                     size_t bytesToSend)
 {
-    HAL_USART_Transmit(&UartGSMHandler,
+    HAL_UART_Transmit(&UartGSMHandler,
                        pBuffer,
                        bytesToSend,
                        10000);
@@ -487,7 +509,7 @@ static void TASK_GSM_PutString(const char* s)
 
     if (0 < len)
     {
-        HAL_USART_Transmit(&UartGSMHandler,
+        HAL_UART_Transmit(&UartGSMHandler,
                            s,
                            len,
                            10000);
@@ -511,7 +533,7 @@ static void TASK_GSM_PutString(const char* s)
 //**************************************************************************************************
 static void TASK_GSM_PutChar(const char character)
 {
-    HAL_USART_Transmit(&UartGSMHandler,
+    HAL_UART_Transmit(&UartGSMHandler,
                        &character,
                        1,
                        10000);
