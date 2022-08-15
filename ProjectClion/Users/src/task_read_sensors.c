@@ -347,6 +347,7 @@ void vTaskReadSensors(void *pvParameters)
 static int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
 {
     int8_t rslt = 0; /* Return 0 for Success, non-zero for failure */
+    uint32_t nCntBytes = 0U;
 
     /*
      * The parameter intf_ptr can be used as a variable to store the I2C address of the device
@@ -368,103 +369,80 @@ static int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, v
      * |------------+---------------------|
      */
 
-    // Write the register address
+    // Transfer request
+    LL_I2C_SetTransferRequest(I2CBMP280Handler.Instance,LL_I2C_REQUEST_WRITE);
+
+    // Set transfer size
+    LL_I2C_SetTransferSize(I2CBMP280Handler.Instance,1U);
+
+    // Set slave address
+    LL_I2C_SetSlaveAddr(I2CBMP280Handler.Instance, (*(uint8_t*)intf_ptr));
+
     // Generate start condition
     LL_I2C_GenerateStartCondition(I2CBMP280Handler.Instance);
 
-    while ((FALSE == LL_I2C_IsActiveFlag_TXIS(I2CBMP280Handler.Instance)) && \
+    // Wait transmit start bit
+    while (FALSE == LL_I2C_IsActiveFlag_BUSY(I2CBMP280Handler.Instance))
+    {
+        DoNothing();
+    }
+
+    while ((FALSE == LL_I2C_IsActiveFlag_TC(I2CBMP280Handler.Instance)) && \
            (FALSE == LL_I2C_IsActiveFlag_NACK(I2CBMP280Handler.Instance)) && \
            (TRUE == LL_I2C_IsActiveFlag_BUSY(I2CBMP280Handler.Instance)))
     {
         DoNothing();
     }
 
-    // Sent address slave with transmit mode
+    // Write register address
     if (TRUE == LL_I2C_IsActiveFlag_TXIS(I2CBMP280Handler.Instance))
     {
         LL_I2C_TransmitData8(I2CBMP280Handler.Instance, reg_addr);
     }
-
-    // Sent address slave with transmit mode
-    I2C_Send7bitAddress(BME280_I2C_CH, (*(uint8_t*)intf_ptr)<<1,I2C_Direction_Transmitter);
-
-    // Wait EV6
-    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
-
-    // Wait EV8
-    //while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTING));
-
-    // Write register address
-    I2C_SendData(BME280_I2C_CH, reg_addr);
-
-    // Wait EV8_2
-    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-
-    // Generate STOP condition
-    I2C_GenerateSTOP(BME280_I2C_CH, ENABLE);
-
-    // Wait EV8_2
-    //while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-
-    // Read data
-    // Generate start condition
-    I2C_GenerateSTART(BME280_I2C_CH, ENABLE);
-
-    // Wait EV5
-    while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_MODE_SELECT));
-
-    // Sent address slave with receive mode
-    I2C_Send7bitAddress(BME280_I2C_CH, (*(uint8_t*)intf_ptr)<<1,I2C_Direction_Receiver);
-
-    // if will receive one byte the Acknowledge disable
-    if (1U == len)
+    else
     {
-        // Acknowledge disable
-        I2C_AcknowledgeConfig(BME280_I2C_CH,DISABLE);
+        DoNothing();
+    }
 
-        // Wait EV6
-        while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+    // Transfer request
+    LL_I2C_SetTransferRequest(I2CBMP280Handler.Instance,LL_I2C_REQUEST_READ);
 
-        // Wait EV7
-        while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_RECEIVED));
+    // Set transfer size
+    LL_I2C_SetTransferSize(I2CBMP280Handler.Instance,len);
 
-        // Read data
-        *reg_data = I2C_ReceiveData(BME280_I2C_CH);
+    // Set slave address
+    LL_I2C_SetSlaveAddr(I2CBMP280Handler.Instance, (*(uint8_t*)intf_ptr));
 
-        // Generate STOP condition
-        I2C_GenerateSTOP(BME280_I2C_CH, ENABLE);
+    // Generate start condition
+    LL_I2C_GenerateStartCondition(I2CBMP280Handler.Instance);
+
+
+    while ((FALSE == LL_I2C_IsActiveFlag_TC(I2CBMP280Handler.Instance)) && \
+           (FALSE == LL_I2C_IsActiveFlag_NACK(I2CBMP280Handler.Instance)) && \
+           (TRUE == LL_I2C_IsActiveFlag_BUSY(I2CBMP280Handler.Instance)))
+    {
+        if (TRUE == LL_I2C_IsActiveFlag_RXNE(I2CBMP280Handler.Instance))
+        {
+            reg_data[nCntBytes] = LL_I2C_ReceiveData8(I2CBMP280Handler.Instance);
+            nCntBytes++;
+        }
+        else
+        {
+            DoNothing();
+        }
+    }
+
+    // Generate stop
+    LL_I2C_GenerateStopCondition(I2CBMP280Handler.Instance);
+
+    if (len == nCntBytes)
+    {
+        rslt = 0U;
     }
     else
     {
-        // Wait EV6
-        while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
-
-        // Acknowledge enable
-        I2C_AcknowledgeConfig(BME280_I2C_CH,ENABLE);
-
-        while(len != 0)
-        {
-            if (0 == (len-1))
-            {
-                // Acknowledge disable
-                I2C_AcknowledgeConfig(BME280_I2C_CH,DISABLE);
-            }
-
-            // Wait EV7
-            while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_RECEIVED));
-
-            // Read data
-            *reg_data = I2C_ReceiveData(BME280_I2C_CH);
-            reg_data++;
-            len--;
-        }
-
-        // Generate STOP condition
-        I2C_GenerateSTOP(BME280_I2C_CH, ENABLE);
+        rslt = 1U;
     }
-
-    // Wait EV8_2
-    //while (SUCCESS != I2C_CheckEvent(BME280_I2C_CH, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
 
     return rslt;
 }// end of user_i2c_read()
@@ -536,7 +514,14 @@ static int8_t user_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t
     }
 
     // Write register address
-    LL_I2C_TransmitData8(I2CBMP280Handler.Instance, reg_addr);
+    if (TRUE == LL_I2C_IsActiveFlag_TXIS(I2CBMP280Handler.Instance))
+    {
+        LL_I2C_TransmitData8(I2CBMP280Handler.Instance, reg_addr);
+    }
+    else
+    {
+        DoNothing();
+    }
 
     while ((FALSE == LL_I2C_IsActiveFlag_TC(I2CBMP280Handler.Instance)) && \
            (FALSE == LL_I2C_IsActiveFlag_NACK(I2CBMP280Handler.Instance)) && \
