@@ -17,6 +17,7 @@
 #define ONE_WIRE_CFG_H
 
 
+
 //**************************************************************************************************
 // Definitions of global (public) constants
 //**************************************************************************************************
@@ -37,15 +38,13 @@
 // Valid value: GPIOA,GPIOB,GPIOC
 // Enable Ch0
 #define ONE_WIRE_CH0_EN                         (ON)
-#define ONE_WIRE_GPIO_PORT_CH0                  (GPIOB)
-// User specify pin
-// Valid value: [0,15]
-#define ONE_WIRE_PIN_CH0                        (12)
+#define ONE_WIRE_GPIO_PORT_CH0                  GPIOB
+#define ONE_WIRE_PIN_CH0                        (GPIO_PIN_3)
 
 
 #define ONE_WIRE_CH1_EN                         (OFF)
 #define ONE_WIRE_GPIO_PORT_CH1                  (GPIOB)
-#define ONE_WIRE_PIN_CH1                        (12)
+#define ONE_WIRE_PIN_CH1                        (GPIO_PIN_3)
 
 // User specify pointer delay function
 #define ONE_WIRE_Delay                          (INIT_Delay)

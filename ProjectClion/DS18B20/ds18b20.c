@@ -36,8 +36,10 @@
 
 // Native header
 #include "ds18b20.h"
+
 // Add 1-wire interface
 #include "OneWire.h"
+
 
 
 //**************************************************************************************************
@@ -47,6 +49,7 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Definitions of global (public) variables
 //**************************************************************************************************
@@ -54,11 +57,13 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of local (private) data types
 //**************************************************************************************************
 
 // None.
+
 
 
 //**************************************************************************************************
@@ -107,6 +112,8 @@
 // number bytes ID
 #define DS18B20_SIZE_ID_BYTES               (8U)
 
+
+
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
@@ -114,23 +121,32 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of local (private) functions
 //**************************************************************************************************
 // Match ROM function
 static STD_RESULT DS18B20_MatchID(const uint8_t nCh, uint64_t ID);
+
 // Skip ROM function
 static void DS18B20_SkipID(const uint8_t nCh);
+
 // Read scratchpad
 static void DS18B20_ReadScratchPad(const uint8_t nCh, uint8_t* data);
+
 // Start convert T
 static STD_RESULT DS18B20_ConvertT(const uint8_t nCh);
+
 // Get temperature value from scratchpad
 static float DS18B20_GetTemFromScratchpad(const uint8_t* scratchpad);
+
 // Calculate CRC
 static uint8_t DS18B20_CalculateCRC(uint8_t* data, uint8_t len);
+
 // Write scratchpad
 static void DS18B20_WriteScratchPad(const uint8_t nCh, uint8_t TL, uint8_t TH, uint8_t resolution);
+
+
 
 //**************************************************************************************************
 //==================================================================================================

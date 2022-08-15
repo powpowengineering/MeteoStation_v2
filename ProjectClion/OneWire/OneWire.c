@@ -45,13 +45,19 @@
 // Native header
 #include "OneWire.h"
 
+// Get LL GPIO HAL
+#include "stm32l4xx_ll_gpio.h"
+
 #include "Init.h"
+
+
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
 //**************************************************************************************************
 
 // None.
+
 
 
 //**************************************************************************************************
@@ -61,11 +67,13 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of local (private) data types
 //**************************************************************************************************
 
 // None.
+
 
 
 //**************************************************************************************************
@@ -90,11 +98,14 @@
 #define ONE_WIRE_CH0                                      (0U)
 #define ONE_WIRE_CH1                                      (1U)
 
+
+
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
 // None.
+
 
 
 //**************************************************************************************************
@@ -109,6 +120,7 @@ static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh);
 static STD_RESULT ONE_WIRE_DQInput(uint8_t nCh);
 // Get value on DQ input
 static STD_RESULT ONE_WIRE_DQGetValue(uint8_t nCh, uint8_t *const bitStatus);
+
 
 
 //**************************************************************************************************
@@ -414,18 +426,16 @@ static void ONE_WIRE_GpioInit(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct;
 #if (ONE_WIRE_CH0_EN == ON)
-    GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN_CH0);
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin  = ONE_WIRE_PIN_CH0;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
 #endif
 #if (ONE_WIRE_CH1_EN == ON)
     GPIO_InitStruct.GPIO_Pin  = (1<<ONE_WIRE_PIN_CH1);
     GPIO_Init(ONE_WIRE_GPIO_PORT_CH1, &GPIO_InitStruct);
 #endif
-
 }// end of ONE_WIRE_GpioInit()
 
 
@@ -444,24 +454,39 @@ static void ONE_WIRE_GpioInit(void)
 static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh)
 {
     STD_RESULT result = RESULT_NOT_OK;
+    GPIO_InitTypeDef GPIO_InitStruct;
 
 #if (ONE_WIRE_CH0_EN == ON)
     if (ONE_WIRE_CH0 == nCh)
     {
-        // Config DQ as OUT
-        ONE_WIRE_GPIO_PORT_CH0->MODER |= GPIO_MODER_MODER0_0 << (ONE_WIRE_PIN_CH0*2);
+        // Config DQ as OUT open drain
+        GPIO_InitStruct.Pin  = ONE_WIRE_PIN_CH0;
+        GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
+        HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
+
         // set DQ low
-        ONE_WIRE_GPIO_PORT_CH0->BSRRH = 1U << ONE_WIRE_PIN_CH0;
+        HAL_GPIO_WritePin(ONE_WIRE_GPIO_PORT_CH0, ONE_WIRE_PIN_CH0, GPIO_PIN_RESET);
+
         result = RESULT_OK;
     }
 #endif
 #if (ONE_WIRE_CH1_EN == ON)
      if (ONE_WIRE_CH1 == nCh)
     {
-        // Config DQ as OUT
-        ONE_WIRE_GPIO_PORT_CH1->MODER |= GPIO_MODER_MODER0_0 << (ONE_WIRE_PIN_CH1*2);
+        // Config DQ as OUT open drain
+        GPIO_InitStruct.Pin  = ONE_WIRE_PIN_CH1;
+        GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH1, &GPIO_InitStruct);
+        HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH1, &GPIO_InitStruct);
+
         // set DQ low
-        ONE_WIRE_GPIO_PORT_CH1->BSRRH = 1U << ONE_WIRE_PIN_CH1;
+        HAL_GPIO_WritePin(ONE_WIRE_GPIO_PORT_CH1, ONE_WIRE_PIN_CH1, GPIO_PIN_RESET);
+
         result = RESULT_OK;
     }
 #endif
@@ -485,12 +510,18 @@ static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh)
 static STD_RESULT ONE_WIRE_DQInput(uint8_t nCh)
 {
     STD_RESULT result = RESULT_NOT_OK;
+    GPIO_InitTypeDef GPIO_InitStruct;
 
 #if (ONE_WIRE_CH0_EN == ON)
     if (ONE_WIRE_CH0 == nCh)
     {
         // Config DQ as INPUT
-        ONE_WIRE_GPIO_PORT_CH0->MODER &= ~(GPIO_MODER_MODER0 << (ONE_WIRE_PIN_CH0 * 2));
+        GPIO_InitStruct.Pin  = ONE_WIRE_PIN_CH0;
+        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
+
         result = RESULT_OK;
     }
 #endif
@@ -498,7 +529,11 @@ static STD_RESULT ONE_WIRE_DQInput(uint8_t nCh)
     if (ONE_WIRE_CH1 == nCh)
     {
         // Config DQ as INPUT
-        ONE_WIRE_GPIO_PORT_CH1->MODER &= ~(GPIO_MODER_MODER0 << (ONE_WIRE_PIN_CH1 * 2));
+        GPIO_InitStruct.Pin  = ONE_WIRE_PIN_CH1;
+        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH1, &GPIO_InitStruct);
         result = RESULT_OK;
     }
 #endif
@@ -527,14 +562,8 @@ static STD_RESULT ONE_WIRE_DQGetValue(uint8_t nCh, uint8_t *const bitStatus)
     if (ONE_WIRE_CH0 == nCh)
     {
         // Get value
-        if ((ONE_WIRE_GPIO_PORT_CH0->IDR & (1<<ONE_WIRE_PIN_CH0)) != (uint32_t)Bit_RESET)
-        {
-            *bitStatus = (uint8_t)Bit_SET;
-        }
-        else
-        {
-            *bitStatus = (uint8_t)Bit_RESET;
-        }
+        *bitStatus = HAL_GPIO_ReadPin(ONE_WIRE_GPIO_PORT_CH0, ONE_WIRE_PIN_CH0);
+
         result = RESULT_OK;
     }
 #endif
@@ -542,14 +571,8 @@ static STD_RESULT ONE_WIRE_DQGetValue(uint8_t nCh, uint8_t *const bitStatus)
     if (ONE_WIRE_CH1 == nCh)
     {
         // Get value
-        if ((ONE_WIRE_GPIO_PORT_CH1->IDR & (1<<ONE_WIRE_PIN_CH1)) != (uint32_t)Bit_RESET)
-        {
-            *bitStatus = (uint8_t)Bit_SET;
-        }
-        else
-        {
-            *bitStatus = (uint8_t)Bit_RESET;
-        }
+        *bitStatus = HAL_GPIO_ReadPin(ONE_WIRE_GPIO_PORT_CH1, ONE_WIRE_PIN_CH1);
+
         result = RESULT_OK;
     }
 #endif
