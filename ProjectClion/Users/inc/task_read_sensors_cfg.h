@@ -21,7 +21,8 @@
 // Definitions of global (public) constants
 //**************************************************************************************************
 
-// None.
+// BPM280 device address
+#define TASK_READ_SEN_BMP280_ADR                (0x76U)
 
 
 

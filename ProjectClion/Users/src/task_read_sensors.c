@@ -45,7 +45,7 @@
 #include "stm32l4xx_ll_i2c.h"
 
 // drivers
-//#include "ds18b20.h"
+#include "ds18b20.h"
 //#include "am2305_drv.h"
 #include "bmp2.h"
 //#include "tf02Pro_drv.h"
@@ -113,6 +113,25 @@ static char bufferPrintf[TASK_SENS_RD_SIZE_BUFF_PRINT];
 
 static RECORD_MAN_TYPE_RECORD TASK_READ_SENS_stMeasData;
 
+// BMP280 config structure
+static struct bmp2_config bmp280Config;
+
+// BMP280 data structure
+static struct bmp2_data bmp280Data;
+
+// BMP280 status structure
+static struct bmp2_status bmp280Status;
+
+// BMP280 device structure
+static struct bmp2_dev bmp280;
+
+static uint8_t TASK_READ_SEN_BMP280_DEV_ADR = TASK_READ_SEN_BMP280_ADR;
+
+// Temperature of DS18B20 sensor
+static float TASK_READ_SEN_fDS18B20_temp = 0.0f;
+
+// Id of DS18B20
+static uint64_t TASK_READ_SEN_nDS18B20_ID = 0;//0xd501211280621728U;
 
 
 //**************************************************************************************************
@@ -136,6 +155,8 @@ static void user_delay_us(uint32_t period, void *intf_ptr);
 //==================================================================================================
 //**************************************************************************************************
 
+
+
 //**************************************************************************************************
 // @Function      vTaskReadSensors()
 //--------------------------------------------------------------------------------------------------
@@ -151,62 +172,71 @@ void vTaskReadSensors(void *pvParameters)
 {
     uint32_t nQtyRecords = 0U;
 
-//    STD_RESULT result = RESULT_NOT_OK;
-//    float tDS = 0.0f;
+    STD_RESULT result = RESULT_NOT_OK;
+
 //    float tAM = 0.0f;
 //    float humidity = 0.0f;
 //    float k = 3.0f / 1024.0f;
 //    float k2 = 6.0f * k;
 //    float wind = 0.0f;
-//    struct bmp2_data bmp280Data;
-//    struct bmp2_status bmp280Status;
-//    struct bmp2_config bmp280Config;
-//    uint64_t ID=0;//0xd501211280621728U;
+
 //    uint8_t presence=0;
 //    uint32_t meas_time;
 //
-//    bmp280.intf_ptr = &bmp280_addr;
-//    bmp280.intf = BMP2_I2C_INTF;
-//    bmp280.read = user_i2c_read;
-//    bmp280.write = user_i2c_write;
-//    bmp280.delay_us = user_delay_us;
-//
-//    if (BMP2_OK== bmp2_init(&bmp280))
-//    {
-//        printf("BME280 was initialize\r\n");
-//    }
-//    else
-//    {
-//        printf("BME280 wasn't initialize\r\n");
-//    }
-//
-//    // Get config
-//    bmp2_get_config(&bmp280Config, &bmp280);
-//
-//    bmp280Config.filter = BMP2_FILTER_OFF;
-//    bmp280Config.os_mode = BMP2_OS_MODE_LOW_POWER;//;
-//    bmp280Config.spi3w_en = BMP2_SPI3_WIRE_DISABLE;
-//    bmp280Config.odr = BMP2_ODR_125_MS;
-//
-//
-//    // Set config
-//    bmp2_set_config(&bmp280Config, &bmp280);
-//    taskENTER_CRITICAL();
-//    // set Power mode NORMAL BMP280
-//    bmp2_set_power_mode(BMP2_POWERMODE_FORCED, &bmp280Config, &bmp280);
-//    taskEXIT_CRITICAL();
-//    // Calculate measurement time in microseconds
-//    bmp2_compute_meas_time(&meas_time, &bmp280Config, &bmp280);
-//    printf("Measurement time %d\r\n", meas_time);
-//
-//
-//       result = DS18B20_GetID(DS18B20_ONE_WIRE_CH,&ID);
-/////*
-////    for (int i=0;i<TAS K_SENS_RD_SIZE_BUFF_PRINT;i++)
-////    {
-////        bufferPrintf[i] = 0;
-////    }
-////*/
+    bmp280.intf_ptr = &TASK_READ_SEN_BMP280_DEV_ADR;
+    bmp280.intf = BMP2_I2C_INTF;
+    bmp280.read = user_i2c_read;
+    bmp280.write = user_i2c_write;
+    bmp280.delay_us = user_delay_us;
+
+    taskENTER_CRITICAL();
+
+    if (BMP2_OK == bmp2_init(&bmp280))
+    {
+        printf("BMP280 was initialize\r\n");
+    }
+    else
+    {
+        printf("BMP280 wasn't initialize\r\n");
+    }
+
+    // Get config
+    if (BMP2_OK == bmp2_get_config(&bmp280Config, &bmp280))
+    {
+        printf("BMP280 read config OK \r\n");
+    }
+    else
+    {
+        printf("BMP280 read config FAIL \r\n");
+    }
+
+    bmp280Config.filter = BMP2_FILTER_OFF;
+    bmp280Config.os_mode = BMP2_OS_MODE_ULTRA_LOW_POWER;
+    bmp280Config.spi3w_en = BMP2_SPI3_WIRE_DISABLE;
+    bmp280Config.odr = BMP2_ODR_125_MS;
+    // Set config
+    if (BMP2_OK == bmp2_set_config(&bmp280Config, &bmp280))
+    {
+        printf("BMP280 configured\r\n");
+    }
+    else
+    {
+        printf("BMP280 wasn't configure\r\n");
+    }
+    taskEXIT_CRITICAL();
+
+
+    taskENTER_CRITICAL();
+    if (RESULT_OK == DS18B20_GetID(DS18B20_ONE_WIRE_CH,&TASK_READ_SEN_nDS18B20_ID))
+    {
+        printf("DS18B20 read ID OK\r\n");
+    }
+    else
+    {
+        printf("DS18B20 read ID FAIL\r\n");
+    }
+    taskEXIT_CRITICAL();
+
 //    ADC_SoftwareStartConv(ADC1);
 //    uint8_t  cnt=0;
 //    while(1)
@@ -236,60 +266,45 @@ void vTaskReadSensors(void *pvParameters)
 //            printf("humidity = %s\r\n",bufferPrintf);
 //        }
 //
-//        result = DS18B20_GetTemperature(DS18B20_ONE_WIRE_CH,&ID,&tDS);
-//        //printf("ID = %llx\r\n",ID);
-//
-//        if (result == RESULT_NOT_OK)
-//        {
-//            printf("DS18B20 isn't OK\r\n");
-//        }
-//        else
-//        {
-//            ftoa(tDS, bufferPrintf, 4);
-//            printf("tDS = %s\r\n",bufferPrintf);
-//        }
-//        printf("I am ready!!!\r\n");
-//
-//
-//        taskENTER_CRITICAL();
-//        bmp2_get_sensor_data(&bmp280Data, &bmp280);
-//        taskEXIT_CRITICAL();
-//
-//        ftoa((float)bmp280Data.temperature, bufferPrintf, 1);
-//        printf("Temperature = %s\r\n",bufferPrintf);
-//
-//        ftoa((float)bmp280Data.pressure, bufferPrintf, 1);
-//        printf("Pressure = %s\r\n",bufferPrintf);
-//        taskENTER_CRITICAL();
-//        bmp2_set_power_mode(BMP2_POWERMODE_FORCED, &bmp280Config, &bmp280);
-//        taskEXIT_CRITICAL();
-////        taskENTER_CRITICAL();
-////        TF02_PRO_GetMeasuredData(&TF02_PRO_Lidar);
-////        taskEXIT_CRITICAL();
-////
-////        printf("Strength = %d\r\n",TF02_PRO_Lidar.nStrength);
-////        printf("Distance = %d\r\n",TF02_PRO_Lidar.nDistance);
-////        printf("\r\n");
-//
-//        TASK_SENSOR_READ_data.temperature = tDS;
-//        TASK_SENSOR_READ_data.humidity = humidity;
-//        TASK_SENSOR_READ_data.pressure = (float)bmp280Data.pressure;
-//
-//        // Put data in queue
-//        xQueueSendToBack( xQueueMeasureData, &TASK_SENSOR_READ_data, 0 );
-//
-//        // Resume MQTT task
-//        vTaskResume( HandleTask_MQTT );
-//
-//        vTaskDelay((60000 * 5)/portTICK_RATE_MS);
+
 //    }
 
     for(;;)
     {
+        // Pressure measure
+        taskENTER_CRITICAL();
+        // Start one measure in force mode
+        bmp2_set_power_mode(BMP2_POWERMODE_FORCED, &bmp280Config, &bmp280);
+
+        // Delay 100 ms
+        user_delay_us(100000,0);
+
+        // Get measure data BMP280
+        bmp2_get_sensor_data(&bmp280Data, &bmp280);
+        taskEXIT_CRITICAL();
+
+        // Temperature measure
+        taskENTER_CRITICAL();
+        result = DS18B20_GetTemperature(DS18B20_ONE_WIRE_CH,&TASK_READ_SEN_nDS18B20_ID,&TASK_READ_SEN_fDS18B20_temp);
+
+        if (result == RESULT_NOT_OK)
+        {
+            printf("DS18B20 isn't OK\r\n");
+        }
+        else
+        {
+            ftoa(TASK_READ_SEN_fDS18B20_temp, bufferPrintf, 4);
+            printf("tDS = %s\r\n",bufferPrintf);
+        }
+        taskEXIT_CRITICAL();
+
+        ftoa((float)bmp280Data.pressure, bufferPrintf, 1);
+        printf("Pressure = %s\r\n",bufferPrintf);
+
         // Prepare test data
-        TASK_READ_SENS_stMeasData.fTemperature = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TASK_READ_SENS_stMeasData.fTemperature = TASK_READ_SEN_fDS18B20_temp;
         TASK_READ_SENS_stMeasData.fHumidity = ((float)rand()/(float)(RAND_MAX)) * 5;
-        TASK_READ_SENS_stMeasData.fPressure = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TASK_READ_SENS_stMeasData.fPressure = (float)bmp280Data.pressure;
         TASK_READ_SENS_stMeasData.fWindSpeed = ((float)rand()/(float)(RAND_MAX)) * 5;
         TASK_READ_SENS_stMeasData.fBatteryVoltage = ((float)rand()/(float)(RAND_MAX)) * 5;
         TASK_READ_SENS_stMeasData.nUnixTime = rand();
@@ -329,6 +344,29 @@ void vTaskReadSensors(void *pvParameters)
 //==================================================================================================
 //**************************************************************************************************
 
+
+
+//**************************************************************************************************
+// @Function      TASK_READ_SEN_MeasurePressure()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static STD_RESULT TASK_READ_SEN_MeasurePressure(void)
+{
+    STD_RESULT enResult = RESULT_NOT_OK;
+
+
+
+    return enResult;
+} // end of TASK_READ_SEN_MeasurePressure()
+
+
 //**************************************************************************************************
 // @Function      user_i2c_read()
 //--------------------------------------------------------------------------------------------------
@@ -348,6 +386,12 @@ static int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, v
 {
     int8_t rslt = 0; /* Return 0 for Success, non-zero for failure */
     uint32_t nCntBytes = 0U;
+
+    // Wait BUSY flag
+    while (TRUE == LL_I2C_IsActiveFlag_BUSY(I2CBMP280Handler.Instance))
+    {
+        DoNothing();
+    }
 
     /*
      * The parameter intf_ptr can be used as a variable to store the I2C address of the device
@@ -369,14 +413,20 @@ static int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, v
      * |------------+---------------------|
      */
 
+    // Disable auto end mode
+    LL_I2C_DisableAutoEndMode(I2CBMP280Handler.Instance);
+
+    // Disable reload mode
+    LL_I2C_DisableReloadMode(I2CBMP280Handler.Instance);
+
+    // Set slave address
+    LL_I2C_SetSlaveAddr(I2CBMP280Handler.Instance, (*(uint8_t*)intf_ptr) << 1U);
+
     // Transfer request
     LL_I2C_SetTransferRequest(I2CBMP280Handler.Instance,LL_I2C_REQUEST_WRITE);
 
     // Set transfer size
     LL_I2C_SetTransferSize(I2CBMP280Handler.Instance,1U);
-
-    // Set slave address
-    LL_I2C_SetSlaveAddr(I2CBMP280Handler.Instance, (*(uint8_t*)intf_ptr));
 
     // Generate start condition
     LL_I2C_GenerateStartCondition(I2CBMP280Handler.Instance);
@@ -391,18 +441,25 @@ static int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, v
            (FALSE == LL_I2C_IsActiveFlag_NACK(I2CBMP280Handler.Instance)) && \
            (TRUE == LL_I2C_IsActiveFlag_BUSY(I2CBMP280Handler.Instance)))
     {
-        DoNothing();
+        // Write register address
+        if (TRUE == LL_I2C_IsActiveFlag_TXIS(I2CBMP280Handler.Instance))
+        {
+            LL_I2C_TransmitData8(I2CBMP280Handler.Instance, reg_addr);
+        }
+        else
+        {
+            DoNothing();
+        }
     }
 
-    // Write register address
-    if (TRUE == LL_I2C_IsActiveFlag_TXIS(I2CBMP280Handler.Instance))
-    {
-        LL_I2C_TransmitData8(I2CBMP280Handler.Instance, reg_addr);
-    }
-    else
-    {
-        DoNothing();
-    }
+    // Disable auto end mode
+    LL_I2C_DisableAutoEndMode(I2CBMP280Handler.Instance);
+
+    // Disable reload mode
+    LL_I2C_DisableReloadMode(I2CBMP280Handler.Instance);
+
+    // Set slave address
+    LL_I2C_SetSlaveAddr(I2CBMP280Handler.Instance, (*(uint8_t*)intf_ptr) << 1U);
 
     // Transfer request
     LL_I2C_SetTransferRequest(I2CBMP280Handler.Instance,LL_I2C_REQUEST_READ);
@@ -410,12 +467,8 @@ static int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, v
     // Set transfer size
     LL_I2C_SetTransferSize(I2CBMP280Handler.Instance,len);
 
-    // Set slave address
-    LL_I2C_SetSlaveAddr(I2CBMP280Handler.Instance, (*(uint8_t*)intf_ptr));
-
     // Generate start condition
     LL_I2C_GenerateStartCondition(I2CBMP280Handler.Instance);
-
 
     while ((FALSE == LL_I2C_IsActiveFlag_TC(I2CBMP280Handler.Instance)) && \
            (FALSE == LL_I2C_IsActiveFlag_NACK(I2CBMP280Handler.Instance)) && \
@@ -470,6 +523,12 @@ static int8_t user_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t
 
     uint32_t nCntBytes = 0U;
 
+    // Wait BUSY flag
+    while (TRUE == LL_I2C_IsActiveFlag_BUSY(I2CBMP280Handler.Instance))
+    {
+        DoNothing();
+    }
+
     /*
      * The parameter intf_ptr can be used as a variable to store the I2C address of the device
      */
@@ -488,14 +547,20 @@ static int8_t user_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t
      * |------------+---------------------|
      */
 
+// Disable auto end mode
+    LL_I2C_DisableAutoEndMode(I2CBMP280Handler.Instance);
+
+    // Disable reload mode
+    LL_I2C_DisableReloadMode(I2CBMP280Handler.Instance);
+
+    // Set slave address
+    LL_I2C_SetSlaveAddr(I2CBMP280Handler.Instance, (*(uint8_t*)intf_ptr) << 1U);
+
     // Transfer request
     LL_I2C_SetTransferRequest(I2CBMP280Handler.Instance,LL_I2C_REQUEST_WRITE);
 
     // Set transfer size
-    LL_I2C_SetTransferSize(I2CBMP280Handler.Instance,len);
-
-    // Set slave address
-    LL_I2C_SetSlaveAddr(I2CBMP280Handler.Instance, (*(uint8_t*)intf_ptr));
+    LL_I2C_SetTransferSize(I2CBMP280Handler.Instance,len + 1U);
 
     // Generate start condition
     LL_I2C_GenerateStartCondition(I2CBMP280Handler.Instance);
@@ -520,6 +585,7 @@ static int8_t user_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t
     }
     else
     {
+
         DoNothing();
     }
 

@@ -248,8 +248,8 @@ void main(void)
 //**************************************************************************************************
 void _putchar(char character)
 {
-//    HAL_USART_Transmit(&UsartTLMHandle, &character, 1,1000);
-    INIT_TerminalSend(&character, 1);
+    HAL_USART_Transmit(&UsartTLMHandle, &character, 1,1000);
+//    INIT_TerminalSend(&character, 1);
 }// end of _putchar
 
 

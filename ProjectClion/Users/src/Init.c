@@ -203,7 +203,7 @@ void Init(void)
 
     // Configure the SCL pin I2C1 for BMP280
     GPIO_InitStruct.Pin  = INIT_BMP280_I2C_SCL_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = INIT_BMP280_I2C_SCL_AF;
@@ -211,7 +211,7 @@ void Init(void)
 
     // Configure the SDA pin I2C1 for BMP280
     GPIO_InitStruct.Pin  = INIT_BMP280_I2C_SDA_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = INIT_BMP280_I2C_SDA_AF;
@@ -219,7 +219,7 @@ void Init(void)
 
     // Configure UART for TLM
     UsartTLMHandle.Instance            = INIT_TLM_USART_NUM;
-    UsartTLMHandle.Init.BaudRate       = 115200;
+    UsartTLMHandle.Init.BaudRate       = 9600;
     UsartTLMHandle.Init.WordLength     = USART_WORDLENGTH_8B;
     UsartTLMHandle.Init.StopBits       = USART_STOPBITS_1;
     UsartTLMHandle.Init.Parity         = USART_PARITY_NONE;
@@ -302,7 +302,6 @@ void Init(void)
     I2CBMP280Handler.Init.OwnAddress1 = INIT_BMP280_I2C_OWNADDRESS1;
     I2CBMP280Handler.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
     I2CBMP280Handler.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-    I2CBMP280Handler.Init.OwnAddress2 = INIT_BMP280_I2C_OWNADDRESS2;
     I2CBMP280Handler.Init.OwnAddress2 = INIT_BMP280_I2C_OWNADDRESS2;
     I2CBMP280Handler.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
     I2CBMP280Handler.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;

@@ -429,7 +429,7 @@ static void ONE_WIRE_GpioInit(void)
     GPIO_InitStruct.Pin  = ONE_WIRE_PIN_CH0;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
     HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
 #endif
 #if (ONE_WIRE_CH1_EN == ON)
@@ -463,8 +463,7 @@ static STD_RESULT ONE_WIRE_DQLow(uint8_t nCh)
         GPIO_InitStruct.Pin  = ONE_WIRE_PIN_CH0;
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
         HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
 
         // set DQ low
@@ -519,7 +518,7 @@ static STD_RESULT ONE_WIRE_DQInput(uint8_t nCh)
         GPIO_InitStruct.Pin  = ONE_WIRE_PIN_CH0;
         GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
         HAL_GPIO_Init(ONE_WIRE_GPIO_PORT_CH0, &GPIO_InitStruct);
 
         result = RESULT_OK;

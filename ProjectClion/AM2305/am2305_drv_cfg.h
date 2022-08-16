@@ -35,15 +35,13 @@
 // The user specify port GPIOx with Tim channel
 #define AM2305_GPIO_PORT                     GPIOB
 // User specify pin with Tim channel
-#define AM2305_PIN                           (14U)
-// Specify PinSource
-#define AM2305_PinSource                     GPIO_PinSource14
+#define AM2305_PIN                           (GPIO_PIN_9)
 // Specify GPIO_AF
-#define AM2305_GPIO_AF                       GPIO_AF_TIM9
+#define AM2305_GPIO_AF                       GPIO_AF14_TIM17
 
 
 // The user specifies a timer with a capture function
-#define AM2305_TIMER                               TIM9
+#define AM2305_TIMER                               TIM17
 // User specify prescaler
 #define AM2305_TIMER_PSC                          (31U)
 // User specify period for one wire delay timer

@@ -45,7 +45,7 @@ set(FREERTOS_DIR ${CMAKE_SOURCE_DIR}/../../../STM32CubeL4-master/Middlewares/Thi
 
 file(GLOB_RECURSE ONE_WIRE_SOURCES "${CMAKE_SOURCE_DIR}/../../OneWire/OneWire.c")
 file(GLOB_RECURSE DS18B20_SOURCES "${CMAKE_SOURCE_DIR}/../../DS18B20/ds18b20.c")
-#file(GLOB_RECURSE AM2305_SOURCES "${CMAKE_SOURCE_DIR}/AM2305/am2305_drv.c")
+file(GLOB_RECURSE AM2305_SOURCES "${CMAKE_SOURCE_DIR}/../../AM2305/am2305_drv.c")
 file(GLOB_RECURSE RECORD_MAN "${CMAKE_SOURCE_DIR}/../../RecordManager/record_manager.c")
 file(GLOB_RECURSE CheckSum_SOURCES "${CMAKE_SOURCE_DIR}/../../CheckSum/checksum.c")
 file(GLOB_RECURSE PRINTF_SOURCES "${CMAKE_SOURCE_DIR}/../../printf-master/printf.c")
@@ -121,7 +121,7 @@ file(
 #include_directories(${CMAKE_SOURCE_DIR}/Users/inc)
 include_directories(${CMAKE_SOURCE_DIR}/../../OneWire)
 include_directories(${CMAKE_SOURCE_DIR}/../../DS18B20)
-#include_directories(${CMAKE_SOURCE_DIR}/AM2305)
+include_directories(${CMAKE_SOURCE_DIR}/../../AM2305)
 include_directories(${CMAKE_SOURCE_DIR}/../../W25Q_FLASH)
 #include_directories(${CMAKE_SOURCE_DIR}/USART_Driver)
 include_directories(${CMAKE_SOURCE_DIR}/../../printf-master)
@@ -169,7 +169,7 @@ add_executable( ${PROJECT_NAME}
         ${ONE_WIRE_SOURCES}
 #        ${USER_SOURCES}
         ${DS18B20_SOURCES}
-#        ${AM2305_SOURCES}
+        ${AM2305_SOURCES}
         ${BMP280}
         ${CORE_MQTT}
 #        ${TF02_PRO}

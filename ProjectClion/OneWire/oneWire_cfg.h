@@ -38,8 +38,8 @@
 // Valid value: GPIOA,GPIOB,GPIOC
 // Enable Ch0
 #define ONE_WIRE_CH0_EN                         (ON)
-#define ONE_WIRE_GPIO_PORT_CH0                  GPIOB
-#define ONE_WIRE_PIN_CH0                        (GPIO_PIN_3)
+#define ONE_WIRE_GPIO_PORT_CH0                  GPIOA
+#define ONE_WIRE_PIN_CH0                        (GPIO_PIN_10)
 
 
 #define ONE_WIRE_CH1_EN                         (OFF)

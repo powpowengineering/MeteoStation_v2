@@ -143,6 +143,10 @@ typedef enum AM2305_SIGNAL_STATUS_enum
 // Pointer of delay function.
 void (*pAM2305_Delay)(uint32_t us);
 
+// Tim handler
+static TIM_HandleTypeDef    AM2305_TimDelayHandle;
+
+
 
 //**************************************************************************************************
 // Declarations of local (private) functions
@@ -150,14 +154,19 @@ void (*pAM2305_Delay)(uint32_t us);
 
 // Set low level on DQ pin
 static void AM2305_DQLow(void);
+
 // DQ configuration as input
 static void AM2305_DQInput(void);
+
 // Get DQ value
 static BitAction AM2305_DQGetValue(void);
+
 // Delay function
 static void AM2305_Delay(uint32_t microseconds);
+
 // capture time.
 static STD_RESULT AM2305_CaptureTime(uint32_t *const microseconds);
+
 
 
 //**************************************************************************************************
@@ -180,36 +189,44 @@ static STD_RESULT AM2305_CaptureTime(uint32_t *const microseconds);
 //**************************************************************************************************
 void AM2305_Init(void)
 {
-    // gpio init
+    // Gpio init
     GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.GPIO_Pin  = 1<<AM2305_PIN;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_10MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(AM2305_GPIO_PORT, &GPIO_InitStruct);
-    GPIO_PinAFConfig(AM2305_GPIO_PORT, AM2305_PinSource, AM2305_GPIO_AF);
+    // Config DQ as OUT open drain
+    GPIO_InitStruct.Pin  = AM2305_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Alternate = AM2305_GPIO_AF;
+    HAL_GPIO_Init(AM2305_GPIO_PORT, &GPIO_InitStruct);
 
     // High DQ line
     AM2305_DQInput();
 
     // Init AM2305_TIMER
-    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
-    TIM_TimeBaseInitStruct.TIM_Period = AM2305_TIMER_PERIOD;
-    TIM_TimeBaseInitStruct.TIM_Prescaler = AM2305_TIMER_PSC;
-    TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
-    TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit(AM2305_TIMER, &TIM_TimeBaseInitStruct);
+    AM2305_TimDelayHandle.Instance = AM2305_TIMER;
 
-    TIM_ICInitTypeDef TIM_ICInitStruct;
-    TIM_ICInitStruct.TIM_Channel = TIM_Channel_2;
-    TIM_ICInitStruct.TIM_ICPolarity = TIM_ICPolarity_BothEdge;
-    TIM_ICInitStruct.TIM_ICSelection = TIM_ICSelection_DirectTI;
-    TIM_ICInitStruct.TIM_ICPrescaler = TIM_ICPSC_DIV1;
-    TIM_ICInitStruct.TIM_ICFilter = 0x00;
-    TIM_ICInit(AM2305_TIMER, &TIM_ICInitStruct);
+    AM2305_TimDelayHandle.Init.Period            = AM2305_TIMER_PERIOD;
+    AM2305_TimDelayHandle.Init.Prescaler         = AM2305_TIMER_PSC;
+    AM2305_TimDelayHandle.Init.ClockDivision     = 0;
+    AM2305_TimDelayHandle.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    AM2305_TimDelayHandle.Init.RepetitionCounter = 0;
+    HAL_TIM_Base_Init(&AM2305_TimDelayHandle);
 
+    AM2305_TimDelayHandle.Channel = HAL_TIM_ACTIVE_CHANNEL_1;
+
+    HAL_TIM_IC_Init(&AM2305_TimDelayHandle);
+
+    TIM_IC_InitTypeDef sConfig;
+    sConfig.ICFilter = 0x00;
+    sConfig.ICPolarity = TIM_ICPOLARITY_BOTHEDGE;
+    sConfig.ICPrescaler = TIM_ICPSC_DIV1;
+    sConfig.ICSelection = TIM_ICSELECTION_DIRECTTI;
+
+    HAL_TIM_IC_ConfigChannel(&AM2305_TimDelayHandle,
+                             &sConfig,
+                            HAL_TIM_ACTIVE_CHANNEL_1);
 }// end of AM2305_Init();
+
 
 
 //**************************************************************************************************
