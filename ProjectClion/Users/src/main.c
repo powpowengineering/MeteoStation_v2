@@ -36,11 +36,11 @@
 //**************************************************************************************************
 
 // drivers
-//#include "OneWire.h"
+#include "OneWire.h"
 //#include "usart_drv.h"
 #include "Init.h"
-//#include "ds18b20.h"
-//#include "am2305_drv.h"
+#include "ds18b20.h"
+#include "am2305_drv.h"
 #include "record_manager.h"
 #include "ftoa.h"
 #include "printf.h"
@@ -175,8 +175,8 @@ void main(void)
     Init();
     RECORD_MAN_Init();
     // Init OneWire
-//    ONE_WIRE_init();
-//    AM2305_Init();
+    ONE_WIRE_init();
+    AM2305_Init();
 //    USART_init();
 
     RECORD_MAN_xMutex = xSemaphoreCreateMutex();

@@ -46,9 +46,9 @@
 
 // drivers
 #include "ds18b20.h"
-//#include "am2305_drv.h"
+#include "am2305_drv.h"
 #include "bmp2.h"
-//#include "tf02Pro_drv.h"
+
 #include "stdlib.h"
 #include "printf.h"
 #include "ftoa.h"
@@ -133,6 +133,13 @@ static float TASK_READ_SEN_fDS18B20_temp = 0.0f;
 // Id of DS18B20
 static uint64_t TASK_READ_SEN_nDS18B20_ID = 0;//0xd501211280621728U;
 
+// AM2305 humidity
+static float TASK_READ_SEN_AM2305_fHumidity = 0.0f;
+
+// AM2305 temperature
+static float TASK_READ_SEN_AM2305_fTemperature = 0.0f;
+
+
 
 //**************************************************************************************************
 // Declarations of local (private) functions
@@ -174,15 +181,11 @@ void vTaskReadSensors(void *pvParameters)
 
     STD_RESULT result = RESULT_NOT_OK;
 
-//    float tAM = 0.0f;
-//    float humidity = 0.0f;
+
 //    float k = 3.0f / 1024.0f;
 //    float k2 = 6.0f * k;
 //    float wind = 0.0f;
 
-//    uint8_t presence=0;
-//    uint32_t meas_time;
-//
     bmp280.intf_ptr = &TASK_READ_SEN_BMP280_DEV_ADR;
     bmp280.intf = BMP2_I2C_INTF;
     bmp280.read = user_i2c_read;
@@ -248,24 +251,7 @@ void vTaskReadSensors(void *pvParameters)
 ////        printf("ADC_anemometer value is %s\r\n", bufferPrintf);
 ////        printf("cnt %d\r\n", cnt);
 ////        cnt++;
-//
-//
-//
-//        taskENTER_CRITICAL();
-//        result = AM2305_GetHumidityTemperature(&humidity,&tAM);
-//        taskEXIT_CRITICAL();
-//        if (result == RESULT_NOT_OK)
-//        {
-//            printf("AM2305 isn't OK\r\n");
-//        }
-//        else
-//        {
-//            ftoa(tAM, bufferPrintf, 4);
-//            printf("tAM = %s\r\n",bufferPrintf);
-//            ftoa(humidity, bufferPrintf, 3);
-//            printf("humidity = %s\r\n",bufferPrintf);
-//        }
-//
+
 
 //    }
 
@@ -283,6 +269,9 @@ void vTaskReadSensors(void *pvParameters)
         bmp2_get_sensor_data(&bmp280Data, &bmp280);
         taskEXIT_CRITICAL();
 
+        ftoa((float)bmp280Data.pressure, bufferPrintf, 1);
+        printf("Pressure = %s\r\n",bufferPrintf);
+
         // Temperature measure
         taskENTER_CRITICAL();
         result = DS18B20_GetTemperature(DS18B20_ONE_WIRE_CH,&TASK_READ_SEN_nDS18B20_ID,&TASK_READ_SEN_fDS18B20_temp);
@@ -298,12 +287,28 @@ void vTaskReadSensors(void *pvParameters)
         }
         taskEXIT_CRITICAL();
 
-        ftoa((float)bmp280Data.pressure, bufferPrintf, 1);
-        printf("Pressure = %s\r\n",bufferPrintf);
+
+        taskENTER_CRITICAL();
+        result = AM2305_GetHumidityTemperature(&TASK_READ_SEN_AM2305_fHumidity,
+                                               &TASK_READ_SEN_AM2305_fTemperature);
+        taskEXIT_CRITICAL();
+        if (result == RESULT_NOT_OK)
+        {
+            printf("AM2305 isn't OK\r\n");
+        }
+        else
+        {
+            ftoa(TASK_READ_SEN_AM2305_fTemperature, bufferPrintf, 4);
+            printf("tAM = %s\r\n",bufferPrintf);
+            ftoa(TASK_READ_SEN_AM2305_fHumidity, bufferPrintf, 3);
+            printf("humidity = %s\r\n",bufferPrintf);
+        }
+
+
 
         // Prepare test data
         TASK_READ_SENS_stMeasData.fTemperature = TASK_READ_SEN_fDS18B20_temp;
-        TASK_READ_SENS_stMeasData.fHumidity = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TASK_READ_SENS_stMeasData.fHumidity = TASK_READ_SEN_AM2305_fHumidity;
         TASK_READ_SENS_stMeasData.fPressure = (float)bmp280Data.pressure;
         TASK_READ_SENS_stMeasData.fWindSpeed = ((float)rand()/(float)(RAND_MAX)) * 5;
         TASK_READ_SENS_stMeasData.fBatteryVoltage = ((float)rand()/(float)(RAND_MAX)) * 5;

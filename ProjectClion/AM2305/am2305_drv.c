@@ -41,6 +41,10 @@
 // Native header
 #include "am2305_drv.h"
 
+// Get HAL TIM LL
+#include "stm32l4xx_ll_tim.h"
+
+
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -159,7 +163,7 @@ static void AM2305_DQLow(void);
 static void AM2305_DQInput(void);
 
 // Get DQ value
-static BitAction AM2305_DQGetValue(void);
+static GPIO_PinState AM2305_DQGetValue(void);
 
 // Delay function
 static void AM2305_Delay(uint32_t microseconds);
@@ -189,6 +193,8 @@ static STD_RESULT AM2305_CaptureTime(uint32_t *const microseconds);
 //**************************************************************************************************
 void AM2305_Init(void)
 {
+    __HAL_RCC_TIM15_CLK_ENABLE();
+
     // Gpio init
     GPIO_InitTypeDef GPIO_InitStruct;
     // Config DQ as OUT open drain
@@ -224,7 +230,10 @@ void AM2305_Init(void)
 
     HAL_TIM_IC_ConfigChannel(&AM2305_TimDelayHandle,
                              &sConfig,
-                            HAL_TIM_ACTIVE_CHANNEL_1);
+                             TIM_CHANNEL_1);
+    // Enable capture
+    HAL_TIM_IC_Start(&AM2305_TimDelayHandle, TIM_CHANNEL_1);
+
 }// end of AM2305_Init();
 
 
@@ -259,11 +268,13 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
     // Start communicate. Getting response from sensor
     // Start signal
     AM2305_DQLow();
+    
     // Host the start signal down time
     AM2305_Delay(AM2305_TIME_T_BE_US);
+    
     // High DQ
     AM2305_DQInput();
-    AM2305_TIMER->SR = (uint16_t)~(TIM_FLAG_CC2|TIM_FLAG_Update);
+    AM2305_TIMER->SR = (uint16_t)~(TIM_FLAG_CC1|TIM_FLAG_UPDATE);
     AM2305_TIMER->CNT = 0;
 
     while(AM2305_TIMER->CNT < AM2305_TIME_MEAS_US)
@@ -408,12 +419,18 @@ STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temp
 //**************************************************************************************************
 static void AM2305_DQLow(void)
 {
-    // Clear MODERx
-    AM2305_GPIO_PORT->MODER &= ~(GPIO_MODER_MODER0 << (AM2305_PIN * 2));
-    // Config DQ as OUT
-    AM2305_GPIO_PORT->MODER |= GPIO_MODER_MODER0_0 << (AM2305_PIN*2);
+    // Gpio init
+    GPIO_InitTypeDef GPIO_InitStruct;
+    
+    // Config DQ as OUT open drain
+    GPIO_InitStruct.Pin  = AM2305_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(AM2305_GPIO_PORT, &GPIO_InitStruct);
+
     // set DQ low
-    AM2305_GPIO_PORT->BSRRH = 1U<<AM2305_PIN;
+    HAL_GPIO_WritePin(AM2305_GPIO_PORT, AM2305_PIN, GPIO_PIN_RESET);
 }// end of AM2305_DQLow()
 
 
@@ -431,10 +448,17 @@ static void AM2305_DQLow(void)
 //**************************************************************************************************
 static void AM2305_DQInput(void)
 {
-    // Config DQ as Input
-    AM2305_GPIO_PORT->MODER &= ~(GPIO_MODER_MODER0 << (AM2305_PIN * 2));
-    // Config DQ as AF
-    AM2305_GPIO_PORT->MODER |= GPIO_MODER_MODER0_1 << (AM2305_PIN * 2);
+    // Gpio init
+    GPIO_InitTypeDef GPIO_InitStruct;
+
+    // Config DQ as Input AF
+    GPIO_InitStruct.Pin  = AM2305_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Alternate = AM2305_GPIO_AF;
+    HAL_GPIO_Init(AM2305_GPIO_PORT, &GPIO_InitStruct);
+    
 }// end of AM2305_DQInput()
 
 
@@ -449,19 +473,19 @@ static void AM2305_DQInput(void)
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-static BitAction AM2305_DQGetValue(void)
+static GPIO_PinState AM2305_DQGetValue(void)
 {
     uint8_t result = 0;
     //set PA1
     *(uint32_t*)0x40020018 = 1<<1;
     // Get value
-    if ((AM2305_GPIO_PORT->IDR & (1<<AM2305_PIN)) != (uint32_t)Bit_RESET)
+    if ((AM2305_GPIO_PORT->IDR & (1<<AM2305_PIN)) != (uint32_t)GPIO_PIN_RESET)
     {
-        result = (uint8_t)Bit_SET;
+        result = (uint8_t)GPIO_PIN_SET;
     }
     else
     {
-        result = (uint8_t)Bit_RESET;
+        result = (uint8_t)GPIO_PIN_RESET;
     }
     //reset PA1
     *(uint32_t*)0x40020018 = ((1<<1)<<16);
@@ -496,20 +520,20 @@ static void AM2305_Delay(uint32_t microseconds)
             /* Disable the TIM Counter */
             AM2305_TIMER->CR1 &= (uint16_t) (~((uint16_t) TIM_CR1_CEN));
             /* Clear the flags */
-            AM2305_TIMER->SR = (uint16_t) ~TIM_FLAG_Update;
+            AM2305_TIMER->SR = (uint16_t) ~TIM_FLAG_UPDATE;
             /* Clear counter */
             AM2305_TIMER->CNT = 0;
             /* Enable the TIM Counter */
             AM2305_TIMER->CR1 |= TIM_CR1_CEN;
             // wait
-            while ((AM2305_TIMER->SR & TIM_FLAG_Update) != TIM_FLAG_Update);
+            while ((AM2305_TIMER->SR & TIM_FLAG_UPDATE) != TIM_FLAG_UPDATE);
         }
     }
 
     /* Disable the TIM Counter */
     AM2305_TIMER->CR1 &= (uint16_t) (~((uint16_t) TIM_CR1_CEN));
     /* Clear the flags */
-    AM2305_TIMER->SR = (uint16_t) ~TIM_FLAG_Update;
+    AM2305_TIMER->SR = (uint16_t) ~TIM_FLAG_UPDATE;
     // Set auto-reload register
     AM2305_TIMER->ARR = microseconds - (nPeriods * AM2305_TIMER_PERIOD);
     /* Clear counter */
@@ -517,7 +541,7 @@ static void AM2305_Delay(uint32_t microseconds)
     /* Enable the TIM Counter */
     AM2305_TIMER->CR1 |= TIM_CR1_CEN;
     // wait
-    while ((AM2305_TIMER->SR & TIM_FLAG_Update) != TIM_FLAG_Update);
+    while ((AM2305_TIMER->SR & TIM_FLAG_UPDATE) != TIM_FLAG_UPDATE);
 }// end of AM2305_Delay()
 
 
@@ -538,19 +562,22 @@ static STD_RESULT AM2305_CaptureTime(uint32_t *const microseconds)
     STD_RESULT result = RESULT_NOT_OK;
 
     AM2305_TIMER->ARR = AM2305_TIMER_PERIOD;
-    uint32_t flag_CC2=0;
+    uint32_t flag_CC1=0;
     uint32_t flag_Update=0;
 
-    while((RESET == flag_CC2) && (RESET == flag_Update))
+    while((RESET == flag_CC1) && (RESET == flag_Update))
     {
-        flag_CC2 = TIM_GetFlagStatus(AM2305_TIMER, TIM_FLAG_CC2);
-        flag_Update = TIM_GetFlagStatus(AM2305_TIMER, TIM_FLAG_Update);
+        flag_CC1 = LL_TIM_IsActiveFlag_CC1(AM2305_TIMER);
+        flag_Update = LL_TIM_IsActiveFlag_UPDATE(AM2305_TIMER);
     }
+
     //AM2305_TIMER->CNT = 0;
-    AM2305_TIMER->SR &= (uint16_t)~(TIM_FLAG_CC2|TIM_FLAG_Update);
-    if (SET == flag_CC2)
+    LL_TIM_ClearFlag_CC1(AM2305_TIMER);
+    LL_TIM_ClearFlag_UPDATE(AM2305_TIMER);
+
+    if (SET == flag_CC1)
     {
-        *microseconds = AM2305_TIMER->CCR2;
+        *microseconds = AM2305_TIMER->CCR1;
         result = RESULT_OK;
     }
     else if (SET == flag_Update)
@@ -559,6 +586,5 @@ static STD_RESULT AM2305_CaptureTime(uint32_t *const microseconds)
     }
 
     return result;
-
 }// end of AM2305_CaptureTime
 //****************************************** end of file *******************************************
