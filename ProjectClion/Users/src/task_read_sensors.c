@@ -94,6 +94,22 @@ TaskHandle_t    TASK_READ_SEN_hHandlerTask;
 // Mutex Acquisition Delay
 #define TASK_READ_SENS_MUTEX_DELAY      (1000U)
 
+// ADC max value
+#define TASK_READ_SEN_ADC_MAX           (255U)
+
+// V power
+#define TASK_READ_SEN_V_POWER           (float)(3.3)
+#define TASK_READ_SEN_ADC_E_M_R                         (float)(TASK_READ_SEN_V_POWER / TASK_READ_SEN_ADC_MAX)
+
+// Battery voltage coefficient
+#define TASK_READ_SEN_BAT_RES_COEFFICIENT               (float)(4.5663083)
+#define TASK_READ_SEN_BAT_CORRECTION_FACTOR             (float)(0.9299488)
+
+// Anemometer voltage coefficient
+#define TASK_READ_SEN_ANEMOMETER_RES_COEFFICIENT        (float)(1.6348123)
+#define TASK_READ_SEN_ANEMOMETER_WIND_COEFFICIENT        (float)(6)
+#define TASK_READ_SEN_ANEMOMETER_CORRECTION_FACTOR      (float)(0.9550999)
+
 
 
 //**************************************************************************************************
@@ -138,6 +154,12 @@ static float TASK_READ_SEN_AM2305_fHumidity = 0.0f;
 
 // AM2305 temperature
 static float TASK_READ_SEN_AM2305_fTemperature = 0.0f;
+
+// Battery voltage
+static float TASK_READ_SEN_fBatVoltage = 0.0f;
+
+// Battery voltage
+static float TASK_READ_SEN_fAnemometer = 0.0f;
 
 
 
@@ -240,20 +262,7 @@ void vTaskReadSensors(void *pvParameters)
     }
     taskEXIT_CRITICAL();
 
-//    ADC_SoftwareStartConv(ADC1);
-//    uint8_t  cnt=0;
-//    while(1)
-//    {
-////        uint16_t get_val;
-////        get_val = ADC_GetConversionValue(ADC1);
-////        wind = (float)get_val * k2;
-////        ftoa(wind, bufferPrintf, 2);
-////        printf("ADC_anemometer value is %s\r\n", bufferPrintf);
-////        printf("cnt %d\r\n", cnt);
-////        cnt++;
-
-
-//    }
+    HAL_ADCEx_Calibration_Start(&ADC_Handle,ADC_SINGLE_ENDED);
 
     for(;;)
     {
@@ -287,7 +296,7 @@ void vTaskReadSensors(void *pvParameters)
         }
         taskEXIT_CRITICAL();
 
-
+        // Humidity measure
         taskENTER_CRITICAL();
         result = AM2305_GetHumidityTemperature(&TASK_READ_SEN_AM2305_fHumidity,
                                                &TASK_READ_SEN_AM2305_fTemperature);
@@ -304,14 +313,39 @@ void vTaskReadSensors(void *pvParameters)
             printf("humidity = %s\r\n",bufferPrintf);
         }
 
+        // Battery voltage measure
+        HAL_ADCEx_InjectedStart(&ADC_Handle);
+        user_delay_us(1000000,0);
+        if (HAL_OK == HAL_ADCEx_InjectedPollForConversion(&ADC_Handle, 1000))
+        {
+            uint32_t temp = 0;
+            temp = HAL_ADCEx_InjectedGetValue(&ADC_Handle, INIT_BAT_RANK);
+            TASK_READ_SEN_fBatVoltage = (((float)temp * TASK_READ_SEN_ADC_E_M_R) * TASK_READ_SEN_BAT_CORRECTION_FACTOR) * \
+                                            TASK_READ_SEN_BAT_RES_COEFFICIENT;
+            ftoa(TASK_READ_SEN_fBatVoltage, bufferPrintf, 2);
+            printf("Battery voltage is %s\r\n", bufferPrintf);
+//            printf("Battery CODE voltage is %d\r\n", temp);
+
+            temp = HAL_ADCEx_InjectedGetValue(&ADC_Handle, INIT_ANEMOMETER_RANK);
+            TASK_READ_SEN_fAnemometer = ((((float)temp * TASK_READ_SEN_ADC_E_M_R) * TASK_READ_SEN_ANEMOMETER_CORRECTION_FACTOR) * \
+                                            TASK_READ_SEN_ANEMOMETER_RES_COEFFICIENT) * TASK_READ_SEN_ANEMOMETER_WIND_COEFFICIENT;
+            ftoa(TASK_READ_SEN_fAnemometer, bufferPrintf, 2);
+//            printf("Anemometer voltage is %s\r\n", bufferPrintf);
+            printf("Wind speed m/s %s\r\n", bufferPrintf);
+//            printf("Anemometer CODE voltage is %d\r\n", temp);
+        }
+        else
+        {
+            printf("Battery voltage FAIL measurement\r\n");
+        }
 
 
-        // Prepare test data
+        // Save data
         TASK_READ_SENS_stMeasData.fTemperature = TASK_READ_SEN_fDS18B20_temp;
         TASK_READ_SENS_stMeasData.fHumidity = TASK_READ_SEN_AM2305_fHumidity;
         TASK_READ_SENS_stMeasData.fPressure = (float)bmp280Data.pressure;
-        TASK_READ_SENS_stMeasData.fWindSpeed = ((float)rand()/(float)(RAND_MAX)) * 5;
-        TASK_READ_SENS_stMeasData.fBatteryVoltage = ((float)rand()/(float)(RAND_MAX)) * 5;
+        TASK_READ_SENS_stMeasData.fWindSpeed = TASK_READ_SEN_fAnemometer;
+        TASK_READ_SENS_stMeasData.fBatteryVoltage = TASK_READ_SEN_fBatVoltage;
         TASK_READ_SENS_stMeasData.nUnixTime = rand();
 
         // Attempt get mutex

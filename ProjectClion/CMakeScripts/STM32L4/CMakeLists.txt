@@ -112,6 +112,8 @@ file(
         "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c"
         "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.c"
         "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.c"
+        "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_adc.c"
+        "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_adc_ex.c"
         "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.c"
         "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.c"
         "${HAL}/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_i2c.c"

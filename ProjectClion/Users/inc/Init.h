@@ -27,6 +27,8 @@
 
 #include "Init_cfg.h"
 
+
+
 //**************************************************************************************************
 // Declarations of global (public) data types
 //**************************************************************************************************
@@ -53,6 +55,8 @@ extern UART_HandleTypeDef UartGSMHandler;
 
 // BMP280 I2C handler
 extern I2C_HandleTypeDef I2CBMP280Handler;
+
+extern ADC_HandleTypeDef ADC_Handle;
 
 
 

@@ -67,6 +67,9 @@ I2C_HandleTypeDef I2CBMP280Handler;
 // Tme delay handler
 TIM_HandleTypeDef    TimDelayHandle;
 
+// ADC Handler
+ADC_HandleTypeDef ADC_Handle;
+
 
 
 //**************************************************************************************************
@@ -124,12 +127,16 @@ void Init(void)
 
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_SPI1_CLK_ENABLE();
     __HAL_RCC_USART1_CLK_ENABLE();
     __HAL_RCC_USART2_CLK_ENABLE();
     __HAL_RCC_USART3_CLK_ENABLE();
     __HAL_RCC_TIM6_CLK_ENABLE();
     __HAL_RCC_I2C1_CLK_ENABLE();
+    __HAL_RCC_ADC_CLK_ENABLE();
+
+
 
     // Configure the GPIO_LED pin
     GPIO_InitStruct.Pin   = GPIO_PIN_5;
@@ -193,13 +200,17 @@ void Init(void)
     GPIO_InitStruct.Alternate  = INIT_GSM_USART_RX_AF;
     HAL_GPIO_Init(INIT_GSM_USART_RX_PORT, &GPIO_InitStruct);
 
-//    //initialize pin A2 for anemometer
-//    GPIO_InitStruct.GPIO_Pin  = GPIO_Pin_2;
-//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AN; //because signal is analogue
-//    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_40MHz; //speed for digital
-//    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-//    GPIO_Init(GPIOA, &GPIO_InitStruct);
+    // Initialize pin PB1 for BATTERY
+    GPIO_InitStruct.Pin        = INIT_BAT_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_ANALOG_ADC_CONTROL;
+    GPIO_InitStruct.Pull       = GPIO_NOPULL;
+    HAL_GPIO_Init(INIT_BAT_PORT, &GPIO_InitStruct);
+
+    // Initialize pin PB0 for ANEMOMETER
+    GPIO_InitStruct.Pin        = INIT_ANEMOMETER_PIN;
+    GPIO_InitStruct.Mode       = GPIO_MODE_ANALOG_ADC_CONTROL;
+    GPIO_InitStruct.Pull       = GPIO_NOPULL;
+    HAL_GPIO_Init(INIT_ANEMOMETER_PORT, &GPIO_InitStruct);
 
     // Configure the SCL pin I2C1 for BMP280
     GPIO_InitStruct.Pin  = INIT_BMP280_I2C_SCL_PIN;
@@ -272,30 +283,45 @@ void Init(void)
 
     HAL_TIM_Base_Init(&TimDelayHandle);
 
+    //ADC set
+    ADC_Handle.Instance = INIT_ADC_NUM;
+    ADC_Handle.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+    ADC_Handle.Init.Resolution = ADC_RESOLUTION_8B;
+    ADC_Handle.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+    ADC_Handle.Init.ScanConvMode = ADC_SCAN_ENABLE;
+    ADC_Handle.Init.EOCSelection = ADC_EOC_SEQ_CONV;
+    ADC_Handle.Init.LowPowerAutoWait = DISABLE;
+    ADC_Handle.Init.ContinuousConvMode = DISABLE;
+    ADC_Handle.Init.NbrOfConversion = 0U;
+    ADC_Handle.Init.DiscontinuousConvMode = DISABLE;
+    ADC_Handle.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+    ADC_Handle.Init.DMAContinuousRequests = DISABLE;
+    ADC_Handle.Init.OversamplingMode = DISABLE;
+    ADC_Handle.InjectionConfig.ChannelCount = 2U;
+    ADC_Handle.InjectionConfig.ContextQueue = 1U;
+    HAL_ADC_Init(&ADC_Handle);
 
-//    /*Init TIM6 for OneWire delay*/
-//    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
-//    TIM_TimeBaseInitStruct.TIM_Period = INIT_PERIOD_TIMER_DELAY;
-//    TIM_TimeBaseInitStruct.TIM_Prescaler = INIT_PSC_TIMER_DELAY;
-//    TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
-//    TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
-//    TIM_TimeBaseInit(INIT_TIMER_DELAY, &TIM_TimeBaseInitStruct);
-//    //ADC set
-//    ADC_InitTypeDef ADC_InitStruct;
-//    /* Reset ADC init structure parameters values */
-//    ADC_InitStruct.ADC_Resolution = ADC_Resolution_12b;
-//    ADC_InitStruct.ADC_ScanConvMode = DISABLE;
-//    ADC_InitStruct.ADC_ContinuousConvMode = ENABLE;
-//    ADC_InitStruct.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-//    ADC_InitStruct.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T2_CC2;
-//    ADC_InitStruct.ADC_DataAlign = ADC_DataAlign_Right;
-//    ADC_InitStruct.ADC_NbrOfConversion = 1;
-//    ADC_Init(ADC1, &ADC_InitStruct);
-//
-//    ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 1, ADC_SampleTime_24Cycles);
-//
-//    ADC_Cmd(ADC1, ENABLE);
-//
+    ADC_InjectionConfTypeDef ADC_InjectionConf;
+    ADC_InjectionConf.InjectedChannel = INIT_BAT_AN_CH;
+    ADC_InjectionConf.InjectedRank = INIT_BAT_RANK;
+    ADC_InjectionConf.InjectedNbrOfConversion = 2;
+    ADC_InjectionConf.InjectedSamplingTime = ADC_SAMPLETIME_247CYCLES_5;
+    ADC_InjectionConf.ExternalTrigInjecConv = ADC_INJECTED_SOFTWARE_START;
+    ADC_InjectionConf.AutoInjectedConv = DISABLE;
+    ADC_InjectionConf.InjectedDiscontinuousConvMode = DISABLE;
+    ADC_InjectionConf.InjectedOffset = 0;
+    HAL_ADCEx_InjectedConfigChannel(&ADC_Handle, &ADC_InjectionConf);
+
+    ADC_InjectionConf.InjectedChannel = INIT_ANEMOMETER_AN_CH;
+    ADC_InjectionConf.InjectedRank = INIT_ANEMOMETER_RANK;
+    ADC_InjectionConf.InjectedNbrOfConversion = 2;
+    ADC_InjectionConf.InjectedSamplingTime = ADC_SAMPLETIME_247CYCLES_5;
+    ADC_InjectionConf.ExternalTrigInjecConv = ADC_INJECTED_SOFTWARE_START;
+    ADC_InjectionConf.AutoInjectedConv = DISABLE;
+    ADC_InjectionConf.InjectedDiscontinuousConvMode = DISABLE;
+    ADC_InjectionConf.InjectedOffset = 0;
+    HAL_ADCEx_InjectedConfigChannel(&ADC_Handle, &ADC_InjectionConf);
+
     // Init I2C1 for BMP280
     I2CBMP280Handler.Instance = INIT_BMP280_I2C_NUM;
     I2CBMP280Handler.Init.Timing = INIT_BMP280_I2C_TIMING;

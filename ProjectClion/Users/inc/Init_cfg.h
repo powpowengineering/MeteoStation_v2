@@ -74,6 +74,24 @@
 #define INIT_BMP280_I2C_DEV_ADR                  (0x76U)
 #define INIT_BMP280_I2C_TIMING                   (0xF0001818U)
 
+// Confugure analog pin for Battery
+#define INIT_BAT_PORT                            GPIOB
+#define INIT_BAT_PIN                             GPIO_PIN_0
+#define INIT_BAT_AN_CH                           ADC_CHANNEL_15
+#define INIT_BAT_RANK                            ADC_INJECTED_RANK_1
+
+
+// Confugure analog pin for anemometr
+#define INIT_ANEMOMETER_PORT                     GPIOB
+#define INIT_ANEMOMETER_PIN                      GPIO_PIN_1
+#define INIT_ANEMOMETER_AN_CH                    ADC_CHANNEL_16
+#define INIT_ANEMOMETER_RANK                     ADC_INJECTED_RANK_2
+
+
+// Confugure ADC
+#define INIT_ADC_NUM                             ADC1
+
+
 //  Confugure for one wire delay
 #define INIT_TIMER_DELAY                          TIM6
 // User specify prescaler for one wire delay timer
