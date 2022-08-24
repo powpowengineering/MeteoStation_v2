@@ -32,7 +32,7 @@
 // Valid values: ON / OFF
 #define MODULE_INTERNAL_DIAGNOSTICS             (OFF)
 
-// Confugure UART for TLM
+// Configure UART for TLM
 #define INIT_TLM_USART_NUM                      USART1
 #define INIT_TLM_USART_TX_PIN                   GPIO_PIN_6
 #define INIT_TLM_USART_TX_PORT                  GPIOB
@@ -41,7 +41,7 @@
 #define INIT_TLM_USART_TX_AF                    GPIO_AF7_USART1
 #define INIT_TLM_USART_RX_AF                    GPIO_AF7_USART1
 
-// Confugure UART for TERMINAL
+// Configure UART for TERMINAL
 #define INIT_TERMINAL_USART_NUM                 USART2
 #define INIT_TERMINAL_USART_TX_PIN              GPIO_PIN_2
 #define INIT_TERMINAL_USART_TX_PORT             GPIOA
@@ -52,7 +52,7 @@
 #define INIT_TERMINAL_DTR_PORT                  GPIOA
 #define INIT_TERMINAL_DTR_PIN                   GPIO_PIN_4
 
-// Confugure UART for GSM
+// Configure UART for GSM
 #define INIT_GSM_USART_NUM                      USART3
 #define INIT_GSM_USART_TX_PIN                   GPIO_PIN_10
 #define INIT_GSM_USART_TX_PORT                  GPIOB
@@ -61,7 +61,7 @@
 #define INIT_GSM_USART_TX_AF                    GPIO_AF7_USART3
 #define INIT_GSM_USART_RX_AF                    GPIO_AF7_USART3
 
-// Confugure I2C1 for BMP280
+// Configure I2C1 for BMP280
 #define INIT_BMP280_I2C_NUM                      I2C1
 #define INIT_BMP280_I2C_SCL_PIN                  GPIO_PIN_8
 #define INIT_BMP280_I2C_SCL_PORT                 GPIOB
@@ -74,25 +74,38 @@
 #define INIT_BMP280_I2C_DEV_ADR                  (0x76U)
 #define INIT_BMP280_I2C_TIMING                   (0xF0001818U)
 
-// Confugure analog pin for Battery
+// Configure analog pin for Battery
 #define INIT_BAT_PORT                            GPIOB
 #define INIT_BAT_PIN                             GPIO_PIN_0
 #define INIT_BAT_AN_CH                           ADC_CHANNEL_15
 #define INIT_BAT_RANK                            ADC_INJECTED_RANK_1
 
 
-// Confugure analog pin for anemometr
+// Configure analog pin for anemometr
 #define INIT_ANEMOMETER_PORT                     GPIOB
 #define INIT_ANEMOMETER_PIN                      GPIO_PIN_1
 #define INIT_ANEMOMETER_AN_CH                    ADC_CHANNEL_16
 #define INIT_ANEMOMETER_RANK                     ADC_INJECTED_RANK_2
 
 
-// Confugure ADC
+// Configure ADC
 #define INIT_ADC_NUM                             ADC1
 
+// Configure RTC
+#define INIT_RTC_ASYNCHPREDIV                   (128U)
+#define INIT_RTC_SYNCHPREDIV                    (256U)
+#define INIT_RTC_OUTPUT                         (RTC_OUTPUT_ALARMA)
+#define INIT_RTC_OUTPUT_REMAP                   (RTC_OUTPUT_REMAP_NONE)
+#define INIT_RTC_OUTPUT_POLARITY                (RTC_OUTPUT_POLARITY_HIGH)
+#define INIT_RTC_OUTPUT_TYPE                    (RTC_OUTPUT_TYPE_PUSHPULL)
+#define INIT_RTC_TIME_HOUR_DEF                  (12U)
+#define INIT_RTC_TIME_MINUTES_DEF               (0U)
+#define INIT_RTC_TIME_SECONDS_DEF               (0U)
+#define INIT_RTC_TIMEFORMAT                     (RTC_HOURFORMAT12_PM)
+#define INIT_RTC_TIMEFORMAT                     (RTC_HOURFORMAT12_PM)
 
-//  Confugure for one wire delay
+
+//  Configure for one wire delay
 #define INIT_TIMER_DELAY                          TIM6
 // User specify prescaler for one wire delay timer
 // Valid value: [0,0xFF]

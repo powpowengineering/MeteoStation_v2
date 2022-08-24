@@ -70,6 +70,9 @@ TIM_HandleTypeDef    TimDelayHandle;
 // ADC Handler
 ADC_HandleTypeDef ADC_Handle;
 
+// RTC handle
+RTC_HandleTypeDef RTC_Handle;
+
 
 
 //**************************************************************************************************
@@ -96,7 +99,8 @@ ADC_HandleTypeDef ADC_Handle;
 // Declarations of local (private) functions
 //**************************************************************************************************
 
-// None.
+// Init RTC
+static void INIT_RTC(void);
 
 
 
@@ -135,8 +139,6 @@ void Init(void)
     __HAL_RCC_TIM6_CLK_ENABLE();
     __HAL_RCC_I2C1_CLK_ENABLE();
     __HAL_RCC_ADC_CLK_ENABLE();
-
-
 
     // Configure the GPIO_LED pin
     GPIO_InitStruct.Pin   = GPIO_PIN_5;
@@ -337,6 +339,9 @@ void Init(void)
 
     HAL_I2C_DeInit(&I2CBMP280Handler);
     HAL_I2C_Init(&I2CBMP280Handler);
+
+    // Init RTC
+    INIT_RTC();
 }
 // end of Init()
 
@@ -420,6 +425,46 @@ void INIT_Delay(uint32_t us)
     while ((INIT_TIMER_DELAY->SR & LL_TIM_SR_UIF) != LL_TIM_SR_UIF);
 }
 // end of INIT_Delay()
+
+
+
+//**************************************************************************************************
+// @Function      INIT_RTC()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void INIT_RTC(void)
+{
+    RTC_TimeTypeDef sTime;
+    // Check cause reset
+
+    // Config RTC
+    RTC_Handle.Instance = RTC;
+    RTC_Handle.Init.HourFormat = RTC_HOURFORMAT_24;
+    RTC_Handle.Init.AsynchPrediv = INIT_RTC_ASYNCHPREDIV;
+    RTC_Handle.Init.SynchPrediv = INIT_RTC_SYNCHPREDIV;
+    RTC_Handle.Init.OutPut = INIT_RTC_OUTPUT;
+    RTC_Handle.Init.OutPutRemap = INIT_RTC_OUTPUT_REMAP;
+    RTC_Handle.Init.OutPutPolarity = INIT_RTC_OUTPUT_POLARITY;
+    RTC_Handle.Init.OutPutType = INIT_RTC_OUTPUT_TYPE;
+    HAL_RTC_Init(&RTC_Handle);
+
+    sTime.Hours =
+
+    // Set time
+    HAL_RTC_SetTime(&RTC_Handle, RTC_TimeTypeDef *sTime, uint32_t Format);
+
+
+
+
+
+} // end of INIT_RTC()
 
 
 
