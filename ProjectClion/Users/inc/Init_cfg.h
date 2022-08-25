@@ -102,7 +102,8 @@
 #define INIT_RTC_TIME_MINUTES_DEF               (0U)
 #define INIT_RTC_TIME_SECONDS_DEF               (0U)
 #define INIT_RTC_TIMEFORMAT                     (RTC_HOURFORMAT12_PM)
-#define INIT_RTC_TIMEFORMAT                     (RTC_HOURFORMAT12_PM)
+
+
 
 
 //  Configure for one wire delay

@@ -442,6 +442,7 @@ void INIT_Delay(uint32_t us)
 static void INIT_RTC(void)
 {
     RTC_TimeTypeDef sTime;
+    RTC_DateTypeDef sDate;
     // Check cause reset
 
     // Config RTC
@@ -455,12 +456,30 @@ static void INIT_RTC(void)
     RTC_Handle.Init.OutPutType = INIT_RTC_OUTPUT_TYPE;
     HAL_RTC_Init(&RTC_Handle);
 
-    sTime.Hours =
+    sTime.Hours = INIT_RTC_TIME_HOUR_DEF;
+    sTime.Minutes = INIT_RTC_TIME_MINUTES_DEF;
+    sTime.Seconds = INIT_RTC_TIME_SECONDS_DEF;
+    sTime.TimeFormat = INIT_RTC_TIMEFORMAT;
+    HAL_RTC_SetTime(&RTC_Handle, &sTime, RTC_FORMAT_BIN);
 
-    // Set time
-    HAL_RTC_SetTime(&RTC_Handle, RTC_TimeTypeDef *sTime, uint32_t Format);
+    sDate.Date = 24;
+    sDate.Month = RTC_MONTH_AUGUST;
+    sDate.WeekDay = RTC_WEEKDAY_WEDNESDAY;
+    sDate.Year = 22;
+    HAL_RTC_SetDate(&RTC_Handle, &sDate, RTC_FORMAT_BIN);
 
-
+    sAlarm.AlarmTime.Hours = sTime.Hours;
+    sAlarm.AlarmTime.Minutes = sTime.Minutes;
+    sAlarm.AlarmTime.Seconds = sTime.Seconds + 5;
+    sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
+    sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_SUB1H;
+    sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
+    sAlarm.AlarmMask = RTC_ALARMMASK_NONE;
+    sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
+    sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+    sAlarm.AlarmDateWeekDay = 1;
+    sAlarm.Alarm = RTC_ALARM_A;
+    HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, FORMAT_BIN);
 
 
 
