@@ -62,7 +62,10 @@
 #include "task_master.h"
 #include "task_GSM.h"
 
+#include "stm32l4xx_ll_pwr.h"
 
+// Get hal_ll rtc
+#include "stm32l4xx_ll_rtc.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -145,6 +148,7 @@ typedef enum
 // System clock configuration
 static void SystemClock_Config(void);
 
+static void TASK_MASTER_SetAlarm(const RTC_TimeTypeDef sTime);
 
 
 //**************************************************************************************************
@@ -166,13 +170,61 @@ static void SystemClock_Config(void);
 //**************************************************************************************************
 void main(void)
 {
-
+    static RTC_TimeTypeDef sTime;
     HAL_Init();
 
     /* Configure the system clock to 80 MHz */
     SystemClock_Config();
 
+
+
     Init();
+
+
+    if (TRUE == LL_RTC_IsActiveFlag_ALRA(RTC_Handle.Instance))
+    {
+        printf("The alarm clock rang\r\n");
+        sTime.Minutes = 1;
+        sTime.Seconds = 15;
+        TASK_MASTER_SetAlarm(sTime);
+    }
+    else
+    {
+        DoNothing();
+    }
+
+
+
+    __HAL_RCC_PWR_CLK_ENABLE();
+    /* Check if the system was resumed from Standby mode */
+    if (__HAL_PWR_GET_FLAG(PWR_FLAG_SB) != RESET)
+    {
+        /* Clear Standby flag */
+        __HAL_PWR_CLEAR_FLAG(PWR_FLAG_SB);
+    }
+
+
+
+
+    /* Enable ultra low power BOR and PVD supply monitoring */
+//    HAL_PWREx_EnableBORPVD_ULP();
+
+    /* Disable all used wakeup sources: PWR_WAKEUP_PIN2 */
+    HAL_PWR_DisableWakeUpPin(PWR_WAKEUP_PIN2);
+
+    /* Clear all related wakeup flags*/
+    __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+
+    /* Enable WakeUp Pin PWR_WAKEUP_PIN2 connected to PC.13 */
+//    HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN2);
+
+
+    // Go to StandBy
+    printf("Go to standBy mode\r\n");
+    /* Enter the Standby mode */
+    HAL_PWR_EnterSTANDBYMode();
+
+
     RECORD_MAN_Init();
     // Init OneWire
     ONE_WIRE_init();
@@ -308,5 +360,55 @@ static void SystemClock_Config(void)
     }
 } // end of SystemClock_Config()
 
+static void TASK_MASTER_SetAlarm(const RTC_TimeTypeDef sTime)
+{
+    RTC_TimeTypeDef sTimeCurrent;
+    RTC_AlarmTypeDef sAlarm;
 
+    /*##-1- Enables the PWR Clock and Enables access to the backup domain ######*/
+    /* To enable access on RTC registers */
+    HAL_PWR_EnableBkUpAccess();
+
+    /* Get the RTC current Time */
+    HAL_RTC_GetTime(&RTC_Handle, &sTimeCurrent, RTC_FORMAT_BIN);
+
+    // Calculate next time alarm
+//    if (60U <= (sTimeCurrent.Seconds + sTime.Seconds))
+//    {
+//        sAlarm.AlarmTime.Seconds = (sTimeCurrent.Seconds + sTime.Seconds)%59U;
+//        sAlarm.AlarmTime.Minutes = sTimeCurrent.Minutes + 1U;
+//    }
+//    else
+//    {
+//        sAlarm.AlarmTime.Seconds = sTimeCurrent.Seconds + sTime.Seconds;
+//
+//    }
+
+
+    sAlarm.AlarmTime.Seconds = (sTimeCurrent.Seconds + sTime.Seconds)%59U;
+
+//    sAlarm.AlarmTime.Minutes = sTimeCurrent.Minutes + sTime.Minutes;
+
+    sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
+    sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+    sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
+    sAlarm.AlarmMask = RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_HOURS | RTC_ALARMMASK_DATEWEEKDAY;
+    sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
+    sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+    sAlarm.AlarmDateWeekDay = 1;
+    sAlarm.Alarm = RTC_ALARM_A;
+
+//    HAL_RTC_SetAlarm(&RTC_Handle, &sAlarm, FORMAT_BIN);
+    HAL_RTC_SetAlarm_IT(&RTC_Handle, &sAlarm, FORMAT_BIN);
+
+//    __HAL_RTC_WRITEPROTECTION_DISABLE(&RTC_Handle);
+//    LL_RTC_DisableIT_TAMP(RTC_Handle.Instance);
+//    LL_RTC_DisableIT_TAMP1(RTC_Handle.Instance);
+//    LL_RTC_DisableIT_TAMP2(RTC_Handle.Instance);
+//    LL_RTC_DisableIT_TAMP3(RTC_Handle.Instance);
+//    LL_RTC_DisableIT_TS(RTC_Handle.Instance);
+//    LL_RTC_DisableIT_WUT(RTC_Handle.Instance);
+//    __HAL_RTC_WRITEPROTECTION_ENABLE(&RTC_Handle);
+
+} // end of TASK_MASTER_SetAlarm()
 //****************************************** end of file *******************************************

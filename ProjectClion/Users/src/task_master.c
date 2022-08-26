@@ -55,6 +55,9 @@
 // Get task GSM interface
 #include "task_GSM.h"
 
+// Get hal_ll rtc
+#include "stm32l4xx_ll_rtc.h"
+
 #include "W25Q_drv.h"
 
 #include "stdlib.h"
@@ -105,6 +108,11 @@
 // Buff for record
 static uint8_t TASK_MASTER_aRecord[RECORD_MAN_MAX_SIZE_RECORD];
 
+/* Buffer used for displaying Time */
+static uint8_t aShowTime[50] = {0};
+
+
+static RTC_TimeTypeDef sTime;
 
 
 //**************************************************************************************************
@@ -123,6 +131,14 @@ static term_srv_cmd_t cmd_list[] = {
         { .cmd = "StoreRecord", .len = 11, .handler = TASK_MASTER_WriteRecordCMD },
         { .cmd = "TestEE", .len = 6, .handler = TASK_MASTER_TestEECMD },
 };
+
+
+
+// Set alarm
+static void TASK_MASTER_SetAlarm(const RTC_TimeTypeDef sTime);
+
+
+static void RTC_TimeShow(uint8_t* showtime);
 
 
 
@@ -160,6 +176,9 @@ void vTaskMaster(void *pvParameters)
 
     vTaskResume(TASK_READ_SEN_hHandlerTask);
 
+    sTime.Minutes = 0;
+    sTime.Seconds = 30;
+
     for(;;)
     {
         if (USART2->ISR & USART_ISR_RXNE)
@@ -196,6 +215,29 @@ void vTaskMaster(void *pvParameters)
         {
             DoNothing();
         }
+
+        RTC_TimeShow(aShowTime);
+
+        if (TRUE == LL_RTC_IsActiveFlag_ALRA(RTC_Handle.Instance))
+        {
+            printf("The alarm clock rang\r\n");
+            sTime.Minutes = 1;
+            sTime.Seconds = 15;
+            TASK_MASTER_SetAlarm(sTime);
+            LL_RTC_ClearFlag_ALRA(RTC_Handle.Instance);
+            HAL_GPIO_TogglePin(INIT_LED2_PORT, INIT_LED2_PIN);
+
+            // Go to StandBy
+            printf("Go to standBy mode\r\n");
+            HAL_PWR_EnterSTANDBYMode();
+        }
+        else
+        {
+            DoNothing();
+        }
+
+
+
 
         vTaskDelay(2000/portTICK_RATE_MS);
     }
@@ -365,6 +407,80 @@ static void TASK_MASTER_TestEECMD(const char* data)
 
 } // end of TASK_MASTER_TestEECMD()
 
+
+
+//**************************************************************************************************
+// @Function      TASK_MASTER_TestEECMD()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void RTC_TimeShow(uint8_t* showtime)
+{
+    RTC_DateTypeDef sdatestructureget;
+    RTC_TimeTypeDef stimestructureget;
+
+    /* Get the RTC current Time */
+    HAL_RTC_GetTime(&RTC_Handle, &stimestructureget, RTC_FORMAT_BIN);
+    /* Get the RTC current Date */
+    HAL_RTC_GetDate(&RTC_Handle, &sdatestructureget, RTC_FORMAT_BIN);
+    /* Display time Format : hh:mm:ss */
+//    sprintf((char*)showtime,"%02d:%02d:%02d",stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
+    printf("%02d:%02d:%02d\r\n",stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
+}
+
+
+
+//**************************************************************************************************
+// @Function      TASK_MASTER_SetAlarm()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void TASK_MASTER_SetAlarm(const RTC_TimeTypeDef sTime)
+{
+    RTC_TimeTypeDef sTimeCurrent;
+    RTC_AlarmTypeDef sAlarm;
+
+    /* Get the RTC current Time */
+    HAL_RTC_GetTime(&RTC_Handle, &sTimeCurrent, RTC_FORMAT_BIN);
+
+    // Calculate next time alarm
+    if (60U <= (sTimeCurrent.Seconds + sTime.Seconds))
+    {
+        sAlarm.AlarmTime.Seconds = (sTimeCurrent.Seconds + sTime.Seconds) - 60U;
+        sAlarm.AlarmTime.Minutes = sTimeCurrent.Minutes + 1U;
+    }
+    else
+    {
+        sAlarm.AlarmTime.Seconds = sTimeCurrent.Seconds + sTime.Seconds;
+
+    }
+
+    sAlarm.AlarmTime.Minutes = sTimeCurrent.Minutes + sTime.Minutes;
+
+    sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
+    sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+    sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
+    sAlarm.AlarmMask = RTC_ALARMMASK_HOURS | RTC_ALARMMASK_DATEWEEKDAY;
+    sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
+    sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+    sAlarm.AlarmDateWeekDay = 1;
+    sAlarm.Alarm = RTC_ALARM_A;
+
+    HAL_RTC_SetAlarm(&RTC_Handle, &sAlarm, FORMAT_BIN);
+
+} // end of TASK_MASTER_SetAlarm()
 
 
 //****************************************** end of file *******************************************

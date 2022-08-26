@@ -40,7 +40,8 @@
 #include "Init.h"
 
 #include "stm32l4xx_ll_tim.h"
-
+// Get hal_ll rtc
+#include "stm32l4xx_ll_rtc.h"
 //**************************************************************************************************
 // Verification of the imported configuration parameters
 //**************************************************************************************************
@@ -139,13 +140,14 @@ void Init(void)
     __HAL_RCC_TIM6_CLK_ENABLE();
     __HAL_RCC_I2C1_CLK_ENABLE();
     __HAL_RCC_ADC_CLK_ENABLE();
+    __HAL_RCC_PWR_CLK_ENABLE();
 
     // Configure the GPIO_LED pin
-    GPIO_InitStruct.Pin   = GPIO_PIN_5;
+    GPIO_InitStruct.Pin   = INIT_LED2_PIN;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(INIT_LED2_PORT, &GPIO_InitStruct);
 
     // Configure the TX pin UART for TLM
     GPIO_InitStruct.Pin        = INIT_TLM_USART_TX_PIN;
@@ -443,45 +445,85 @@ static void INIT_RTC(void)
 {
     RTC_TimeTypeDef sTime;
     RTC_DateTypeDef sDate;
-    // Check cause reset
+    RTC_AlarmTypeDef sAlarm;
+    __HAL_RCC_PWR_CLK_ENABLE();
 
-    // Config RTC
     RTC_Handle.Instance = RTC;
-    RTC_Handle.Init.HourFormat = RTC_HOURFORMAT_24;
-    RTC_Handle.Init.AsynchPrediv = INIT_RTC_ASYNCHPREDIV;
-    RTC_Handle.Init.SynchPrediv = INIT_RTC_SYNCHPREDIV;
-    RTC_Handle.Init.OutPut = INIT_RTC_OUTPUT;
-    RTC_Handle.Init.OutPutRemap = INIT_RTC_OUTPUT_REMAP;
-    RTC_Handle.Init.OutPutPolarity = INIT_RTC_OUTPUT_POLARITY;
-    RTC_Handle.Init.OutPutType = INIT_RTC_OUTPUT_TYPE;
-    HAL_RTC_Init(&RTC_Handle);
 
-    sTime.Hours = INIT_RTC_TIME_HOUR_DEF;
-    sTime.Minutes = INIT_RTC_TIME_MINUTES_DEF;
-    sTime.Seconds = INIT_RTC_TIME_SECONDS_DEF;
-    sTime.TimeFormat = INIT_RTC_TIMEFORMAT;
-    HAL_RTC_SetTime(&RTC_Handle, &sTime, RTC_FORMAT_BIN);
+    // Check cause reset
+    /* Check if the system was resumed not from Standby mode */
+    if (__HAL_PWR_GET_FLAG(PWR_FLAG_SB) == RESET)
+    {
+        RCC_OscInitTypeDef RCC_OscInitStruct;
+        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
 
-    sDate.Date = 24;
-    sDate.Month = RTC_MONTH_AUGUST;
-    sDate.WeekDay = RTC_WEEKDAY_WEDNESDAY;
-    sDate.Year = 22;
-    HAL_RTC_SetDate(&RTC_Handle, &sDate, RTC_FORMAT_BIN);
+        /*##-1- Enables the PWR Clock and Enables access to the backup domain ######*/
+        /* To enable access on RTC registers */
+        HAL_PWR_EnableBkUpAccess();
 
-    sAlarm.AlarmTime.Hours = sTime.Hours;
-    sAlarm.AlarmTime.Minutes = sTime.Minutes;
-    sAlarm.AlarmTime.Seconds = sTime.Seconds + 5;
-    sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
-    sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_SUB1H;
-    sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-    sAlarm.AlarmMask = RTC_ALARMMASK_NONE;
-    sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
-    sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
-    sAlarm.AlarmDateWeekDay = 1;
-    sAlarm.Alarm = RTC_ALARM_A;
-    HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, FORMAT_BIN);
+        /*##-2- Configure LSE/LSI as RTC clock source ###############################*/
+        RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE;
+        RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+        RCC_OscInitStruct.LSEState = RCC_LSE_ON;
+        RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
+        if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+            //Error_Handler();
+        }
+
+        PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+        PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
+        if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+            //Error_Handler();
+        }
+        /* Configures the External Low Speed oscillator (LSE) drive capability */
+        __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_HIGH);
 
 
+        // Config RTC
+        RTC_Handle.Init.HourFormat = RTC_HOURFORMAT_24;
+        RTC_Handle.Init.AsynchPrediv = INIT_RTC_ASYNCHPREDIV;
+        RTC_Handle.Init.SynchPrediv = INIT_RTC_SYNCHPREDIV;
+        RTC_Handle.Init.OutPut = INIT_RTC_OUTPUT;
+        RTC_Handle.Init.OutPutRemap = INIT_RTC_OUTPUT_REMAP;
+        RTC_Handle.Init.OutPutPolarity = INIT_RTC_OUTPUT_POLARITY;
+        RTC_Handle.Init.OutPutType = INIT_RTC_OUTPUT_TYPE;
+        HAL_RTC_Init(&RTC_Handle);
+
+        sTime.Hours = INIT_RTC_TIME_HOUR_DEF;
+        sTime.Minutes = INIT_RTC_TIME_MINUTES_DEF;
+        sTime.Seconds = INIT_RTC_TIME_SECONDS_DEF;
+        sTime.TimeFormat = INIT_RTC_TIMEFORMAT;
+        HAL_RTC_SetTime(&RTC_Handle, &sTime, RTC_FORMAT_BIN);
+
+        sDate.Date = 24;
+        sDate.Month = RTC_MONTH_AUGUST;
+        sDate.WeekDay = RTC_WEEKDAY_WEDNESDAY;
+        sDate.Year = 22;
+        HAL_RTC_SetDate(&RTC_Handle, &sDate, RTC_FORMAT_BIN);
+
+        sAlarm.AlarmTime.Hours = sTime.Hours;
+        sAlarm.AlarmTime.Minutes = sTime.Minutes;
+        sAlarm.AlarmTime.Seconds = sTime.Seconds + 5;
+        sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
+        sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+        sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
+        sAlarm.AlarmMask = RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_HOURS | RTC_ALARMMASK_DATEWEEKDAY;
+        sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
+        sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+        sAlarm.AlarmDateWeekDay = 1;
+        sAlarm.Alarm = RTC_ALARM_A;
+//    HAL_RTC_SetAlarm(&RTC_Handle, &sAlarm, FORMAT_BIN);
+        HAL_RTC_SetAlarm_IT(&RTC_Handle, &sAlarm, FORMAT_BIN);
+
+        __HAL_RTC_WRITEPROTECTION_DISABLE(&RTC_Handle);
+        LL_RTC_DisableIT_TAMP(RTC_Handle.Instance);
+        LL_RTC_DisableIT_TAMP1(RTC_Handle.Instance);
+        LL_RTC_DisableIT_TAMP2(RTC_Handle.Instance);
+        LL_RTC_DisableIT_TAMP3(RTC_Handle.Instance);
+        LL_RTC_DisableIT_TS(RTC_Handle.Instance);
+        LL_RTC_DisableIT_WUT(RTC_Handle.Instance);
+        __HAL_RTC_WRITEPROTECTION_ENABLE(&RTC_Handle);
+    }
 
 } // end of INIT_RTC()
 

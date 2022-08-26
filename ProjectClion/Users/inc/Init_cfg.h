@@ -80,20 +80,18 @@
 #define INIT_BAT_AN_CH                           ADC_CHANNEL_15
 #define INIT_BAT_RANK                            ADC_INJECTED_RANK_1
 
-
 // Configure analog pin for anemometr
 #define INIT_ANEMOMETER_PORT                     GPIOB
 #define INIT_ANEMOMETER_PIN                      GPIO_PIN_1
 #define INIT_ANEMOMETER_AN_CH                    ADC_CHANNEL_16
 #define INIT_ANEMOMETER_RANK                     ADC_INJECTED_RANK_2
 
-
 // Configure ADC
 #define INIT_ADC_NUM                             ADC1
 
 // Configure RTC
-#define INIT_RTC_ASYNCHPREDIV                   (128U)
-#define INIT_RTC_SYNCHPREDIV                    (256U)
+#define INIT_RTC_ASYNCHPREDIV                   (127U)
+#define INIT_RTC_SYNCHPREDIV                    (255U)
 #define INIT_RTC_OUTPUT                         (RTC_OUTPUT_ALARMA)
 #define INIT_RTC_OUTPUT_REMAP                   (RTC_OUTPUT_REMAP_NONE)
 #define INIT_RTC_OUTPUT_POLARITY                (RTC_OUTPUT_POLARITY_HIGH)
@@ -103,6 +101,9 @@
 #define INIT_RTC_TIME_SECONDS_DEF               (0U)
 #define INIT_RTC_TIMEFORMAT                     (RTC_HOURFORMAT12_PM)
 
+// Configure LED2 pin PA5
+#define INIT_LED2_PORT                          GPIOA
+#define INIT_LED2_PIN                           GPIO_PIN_5
 
 
 

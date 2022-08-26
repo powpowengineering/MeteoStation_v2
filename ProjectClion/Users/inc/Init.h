@@ -58,6 +58,9 @@ extern I2C_HandleTypeDef I2CBMP280Handler;
 
 extern ADC_HandleTypeDef ADC_Handle;
 
+// RTC handle
+extern RTC_HandleTypeDef RTC_Handle;
+
 
 
 //**************************************************************************************************
