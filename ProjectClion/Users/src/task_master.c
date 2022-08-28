@@ -218,7 +218,7 @@ void vTaskMaster(void *pvParameters)
 
         RTC_TimeShow(aShowTime);
 
-        if (TRUE == LL_RTC_IsActiveFlag_ALRA(RTC_Handle.Instance))
+        if (0) // (TRUE == LL_RTC_IsActiveFlag_ALRA(RTC_Handle.Instance))
         {
             printf("The alarm clock rang\r\n");
             sTime.Minutes = 1;
@@ -235,8 +235,6 @@ void vTaskMaster(void *pvParameters)
         {
             DoNothing();
         }
-
-
 
 
         vTaskDelay(2000/portTICK_RATE_MS);

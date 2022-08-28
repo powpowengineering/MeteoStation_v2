@@ -303,35 +303,38 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
     connectInfo.cleanSession = true;
 
     // Client ID must be unique to broker. This field is required.
-    connectInfo.pClientIdentifier = "meteostation";
+//    connectInfo.pClientIdentifier = "meteostation";
+    connectInfo.pClientIdentifier = "GDQ3GiwKMyAtAh0SKhshFjk";
     connectInfo.clientIdentifierLength = strlen(connectInfo.pClientIdentifier);
 
     // The following fields are optional.
     // Value for keep alive.
     connectInfo.keepAliveSeconds = 60;
     // Optional username and password.
-    //connectInfo.pUserName = "u_I8KUVV";
-    connectInfo.pUserName = NULL;
-    //connectInfo.userNameLength = strlen( connectInfo.pUserName );
-    connectInfo.userNameLength = 0;
-    //connectInfo.pPassword = "D1MoanFH";
-    connectInfo.pPassword = NULL;
-    //connectInfo.passwordLength = strlen( connectInfo.pPassword );
-    connectInfo.passwordLength = 0;
+    connectInfo.pUserName = "GDQ3GiwKMyAtAh0SKhshFjk";
+//    connectInfo.pUserName = NULL;
+    connectInfo.userNameLength = strlen( connectInfo.pUserName );
+//    connectInfo.userNameLength = 0;
+    connectInfo.pPassword = "XiBjkEwc2EIBfFk8tK3YIfkv";
+//    connectInfo.pPassword = NULL;
+    connectInfo.passwordLength = strlen( connectInfo.pPassword );
+//    connectInfo.passwordLength = 0;
 
     // The last will and testament is optional, it will be published by the broker
     // should this client disconnect without sending a DISCONNECT packet.
     willInfo.qos = MQTTQoS0;
-    willInfo.pTopicName = "base/state/humidity";
+//    willInfo.pTopicName = "base/state/humidity";
+    willInfo.pTopicName = "channels/1843720/publish/fields/field1";
     willInfo.topicNameLength = strlen( willInfo.pTopicName );
-    willInfo.pPayload = "100";
+    willInfo.pPayload = "25";
     willInfo.payloadLength = strlen( "100" );
 
     TASK_GSM_PutString( MQTT_AT_CIPSTATUS);
     TASK_GSM_Delay(2000);
 
     // Start up connection
-    TASK_GSM_PutString( "AT+CIPSTART=\"TCP\",\"dev.rightech.io\",\"1883\"\r");
+//    TASK_GSM_PutString( "AT+CIPSTART=\"TCP\",\"dev.rightech.io\",\"1883\"\r");
+    TASK_GSM_PutString( "AT+CIPSTART=\"TCP\",\"mqtt3.thingspeak.com\",\"1883\"\r");
 
     //TASK_GSM_PutString( MQTT_AT_CIPSTART);
     TASK_GSM_Delay(8000);
@@ -355,7 +358,7 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         ftoa(stRecord.fTemperature, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
-        publishInfo.pTopicName = "base/state/temperature";
+        publishInfo.pTopicName = "channels/1843720/publish/fields/field1";
         publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
         publishInfo.pPayload = TASK_GSM_aBufferPrintf;
         publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);
@@ -368,7 +371,8 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         ftoa(stRecord.fHumidity, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
-        publishInfo.pTopicName = "base/state/humidityyyy";
+//        publishInfo.pTopicName = "base/state/humidityyyy";
+        publishInfo.pTopicName = "channels/1843720/publish/fields/field2";
         publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
         publishInfo.pPayload = TASK_GSM_aBufferPrintf;
         publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);
@@ -381,7 +385,8 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         ftoa(stRecord.fPressure, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
-        publishInfo.pTopicName = "base/state/pressureeee";
+//        publishInfo.pTopicName = "base/state/pressureeee";
+        publishInfo.pTopicName = "channels/1843720/publish/fields/field3";
         publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
         publishInfo.pPayload = TASK_GSM_aBufferPrintf;
         publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);

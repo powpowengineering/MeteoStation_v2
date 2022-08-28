@@ -142,6 +142,7 @@ void Init(void)
     __HAL_RCC_ADC_CLK_ENABLE();
     __HAL_RCC_PWR_CLK_ENABLE();
 
+
     // Configure the GPIO_LED pin
     GPIO_InitStruct.Pin   = INIT_LED2_PIN;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
@@ -446,7 +447,6 @@ static void INIT_RTC(void)
     RTC_TimeTypeDef sTime;
     RTC_DateTypeDef sDate;
     RTC_AlarmTypeDef sAlarm;
-    __HAL_RCC_PWR_CLK_ENABLE();
 
     RTC_Handle.Instance = RTC;
 
@@ -454,30 +454,10 @@ static void INIT_RTC(void)
     /* Check if the system was resumed not from Standby mode */
     if (__HAL_PWR_GET_FLAG(PWR_FLAG_SB) == RESET)
     {
-        RCC_OscInitTypeDef RCC_OscInitStruct;
-        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
-
-        /*##-1- Enables the PWR Clock and Enables access to the backup domain ######*/
-        /* To enable access on RTC registers */
-        HAL_PWR_EnableBkUpAccess();
-
-        /*##-2- Configure LSE/LSI as RTC clock source ###############################*/
-        RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE;
-        RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-        RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-        RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
-        if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-            //Error_Handler();
-        }
-
-        PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
-        PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
-        if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
-            //Error_Handler();
-        }
-        /* Configures the External Low Speed oscillator (LSE) drive capability */
-        __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_HIGH);
-
+        // Do delay to have ability connect debugger
+        HAL_GPIO_WritePin(INIT_LED2_PORT, INIT_LED2_PIN, GPIO_PIN_SET);
+        INIT_Delay(3000000);
+        HAL_GPIO_WritePin(INIT_LED2_PORT, INIT_LED2_PIN, GPIO_PIN_RESET);
 
         // Config RTC
         RTC_Handle.Init.HourFormat = RTC_HOURFORMAT_24;
@@ -528,5 +508,39 @@ static void INIT_RTC(void)
 } // end of INIT_RTC()
 
 
+void HAL_RTC_MspInit(RTC_HandleTypeDef *hrtc)
+{
+    RCC_OscInitTypeDef RCC_OscInitStruct;
+    RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
 
+    /*##-1- Enables the PWR Clock and Enables access to the backup domain ######*/
+    /* To enable access on RTC registers */
+    __HAL_RCC_PWR_CLK_ENABLE();
+    HAL_PWR_EnableBkUpAccess();
+
+
+    /*##-2- Configure LSE/LSI as RTC clock source ###############################*/
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE;
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+    RCC_OscInitStruct.LSEState = RCC_LSE_ON;
+    RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+        //Error_Handler();
+    }
+
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+        //Error_Handler();
+    }
+    /* Configures the External Low Speed oscillator (LSE) drive capability */
+//    __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_HIGH);
+
+    /*##-2- Enable the RTC & BKP peripheral Clock ##############################*/
+    /* Enable RTC Clock */
+    __HAL_RCC_RTC_ENABLE();
+
+    /* Enable RTC APB clock  */
+//    __HAL_RCC_RTCAPB_CLK_ENABLE();
+}
 //****************************************** end of file *******************************************

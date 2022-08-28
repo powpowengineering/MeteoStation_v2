@@ -220,9 +220,9 @@ void main(void)
 
 
     // Go to StandBy
-    printf("Go to standBy mode\r\n");
-    /* Enter the Standby mode */
-    HAL_PWR_EnterSTANDBYMode();
+//    printf("Go to standBy mode\r\n");
+//    /* Enter the Standby mode */
+//    HAL_PWR_EnterSTANDBYMode();
 
 
     RECORD_MAN_Init();
@@ -401,14 +401,17 @@ static void TASK_MASTER_SetAlarm(const RTC_TimeTypeDef sTime)
 //    HAL_RTC_SetAlarm(&RTC_Handle, &sAlarm, FORMAT_BIN);
     HAL_RTC_SetAlarm_IT(&RTC_Handle, &sAlarm, FORMAT_BIN);
 
-//    __HAL_RTC_WRITEPROTECTION_DISABLE(&RTC_Handle);
-//    LL_RTC_DisableIT_TAMP(RTC_Handle.Instance);
-//    LL_RTC_DisableIT_TAMP1(RTC_Handle.Instance);
-//    LL_RTC_DisableIT_TAMP2(RTC_Handle.Instance);
-//    LL_RTC_DisableIT_TAMP3(RTC_Handle.Instance);
-//    LL_RTC_DisableIT_TS(RTC_Handle.Instance);
-//    LL_RTC_DisableIT_WUT(RTC_Handle.Instance);
-//    __HAL_RTC_WRITEPROTECTION_ENABLE(&RTC_Handle);
+    __HAL_RTC_WRITEPROTECTION_DISABLE(&RTC_Handle);
+    LL_RTC_DisableIT_TAMP(RTC_Handle.Instance);
+    LL_RTC_DisableIT_TAMP1(RTC_Handle.Instance);
+    LL_RTC_DisableIT_TAMP2(RTC_Handle.Instance);
+    LL_RTC_DisableIT_TAMP3(RTC_Handle.Instance);
+    LL_RTC_DisableIT_TS(RTC_Handle.Instance);
+    LL_RTC_DisableIT_WUT(RTC_Handle.Instance);
+    __HAL_RTC_WRITEPROTECTION_ENABLE(&RTC_Handle);
+
+    /* To disable access on RTC registers */
+    HAL_PWR_DisableBkUpAccess();
 
 } // end of TASK_MASTER_SetAlarm()
 //****************************************** end of file *******************************************
