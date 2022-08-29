@@ -148,7 +148,6 @@ typedef enum
 // System clock configuration
 static void SystemClock_Config(void);
 
-static void TASK_MASTER_SetAlarm(const RTC_TimeTypeDef sTime);
 
 
 //**************************************************************************************************
@@ -176,17 +175,17 @@ void main(void)
     /* Configure the system clock to 80 MHz */
     SystemClock_Config();
 
-
-
     Init();
 
+    // Power GSM OFF
+    HAL_GPIO_WritePin(INIT_DC_GSM_PORT, INIT_DC_GSM_PIN, GPIO_PIN_SET);
 
-    if (TRUE == LL_RTC_IsActiveFlag_ALRA(RTC_Handle.Instance))
+    if (0)//(TRUE == LL_RTC_IsActiveFlag_ALRA(RTC_Handle.Instance))
     {
         printf("The alarm clock rang\r\n");
         sTime.Minutes = 1;
         sTime.Seconds = 15;
-        TASK_MASTER_SetAlarm(sTime);
+//        TASK_MASTER_SetAlarm(sTime);
     }
     else
     {
@@ -360,58 +359,5 @@ static void SystemClock_Config(void)
     }
 } // end of SystemClock_Config()
 
-static void TASK_MASTER_SetAlarm(const RTC_TimeTypeDef sTime)
-{
-    RTC_TimeTypeDef sTimeCurrent;
-    RTC_AlarmTypeDef sAlarm;
 
-    /*##-1- Enables the PWR Clock and Enables access to the backup domain ######*/
-    /* To enable access on RTC registers */
-    HAL_PWR_EnableBkUpAccess();
-
-    /* Get the RTC current Time */
-    HAL_RTC_GetTime(&RTC_Handle, &sTimeCurrent, RTC_FORMAT_BIN);
-
-    // Calculate next time alarm
-//    if (60U <= (sTimeCurrent.Seconds + sTime.Seconds))
-//    {
-//        sAlarm.AlarmTime.Seconds = (sTimeCurrent.Seconds + sTime.Seconds)%59U;
-//        sAlarm.AlarmTime.Minutes = sTimeCurrent.Minutes + 1U;
-//    }
-//    else
-//    {
-//        sAlarm.AlarmTime.Seconds = sTimeCurrent.Seconds + sTime.Seconds;
-//
-//    }
-
-
-    sAlarm.AlarmTime.Seconds = (sTimeCurrent.Seconds + sTime.Seconds)%59U;
-
-//    sAlarm.AlarmTime.Minutes = sTimeCurrent.Minutes + sTime.Minutes;
-
-    sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
-    sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-    sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-    sAlarm.AlarmMask = RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_HOURS | RTC_ALARMMASK_DATEWEEKDAY;
-    sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
-    sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
-    sAlarm.AlarmDateWeekDay = 1;
-    sAlarm.Alarm = RTC_ALARM_A;
-
-//    HAL_RTC_SetAlarm(&RTC_Handle, &sAlarm, FORMAT_BIN);
-    HAL_RTC_SetAlarm_IT(&RTC_Handle, &sAlarm, FORMAT_BIN);
-
-    __HAL_RTC_WRITEPROTECTION_DISABLE(&RTC_Handle);
-    LL_RTC_DisableIT_TAMP(RTC_Handle.Instance);
-    LL_RTC_DisableIT_TAMP1(RTC_Handle.Instance);
-    LL_RTC_DisableIT_TAMP2(RTC_Handle.Instance);
-    LL_RTC_DisableIT_TAMP3(RTC_Handle.Instance);
-    LL_RTC_DisableIT_TS(RTC_Handle.Instance);
-    LL_RTC_DisableIT_WUT(RTC_Handle.Instance);
-    __HAL_RTC_WRITEPROTECTION_ENABLE(&RTC_Handle);
-
-    /* To disable access on RTC registers */
-    HAL_PWR_DisableBkUpAccess();
-
-} // end of TASK_MASTER_SetAlarm()
 //****************************************** end of file *******************************************

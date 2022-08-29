@@ -215,9 +215,12 @@ void vTaskGSM(void *pvParameters)
 
     for(;;)
     {
+
         // Attempt get mutex
         if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_GSM_MUTEX_DELAY))
         {
+            // Power GSM ON
+            HAL_GPIO_WritePin(INIT_DC_GSM_PORT, INIT_DC_GSM_PIN, GPIO_PIN_RESET);
 
             // Get the next - 1 record
             EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
@@ -258,6 +261,9 @@ void vTaskGSM(void *pvParameters)
             printf("TASK_GSM: Mutex of record manager is busy\r\n");
         }
 
+        // Power GSM OFF
+        HAL_GPIO_WritePin(INIT_DC_GSM_PORT, INIT_DC_GSM_PIN, GPIO_PIN_SET);
+
         // Blocking task GSM
         vTaskSuspend(TASK_GSM_hHandlerTask);
 //        vTaskDelay(1000/portTICK_RATE_MS);
@@ -288,6 +294,8 @@ void vTaskGSM(void *pvParameters)
 static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
 {
     uint16_t packetId;
+
+    TASK_GSM_Delay(8000);
 
     // Init MQTT
     MQTT_Init( &MQTT_Context,
@@ -404,6 +412,7 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
 
         TASK_GSM_PutString( MQTT_AT_CIPSTATUS);
         TASK_GSM_Delay(2000);
+
     }
 
 } // end of TASK_GSM_SendMQTTMessage()

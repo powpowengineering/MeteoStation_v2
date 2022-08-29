@@ -150,6 +150,13 @@ void Init(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(INIT_LED2_PORT, &GPIO_InitStruct);
 
+    // Configure DC GSM Pin
+    GPIO_InitStruct.Pin   = INIT_DC_GSM_PIN;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(INIT_DC_GSM_PORT, &GPIO_InitStruct);
+
     // Configure the TX pin UART for TLM
     GPIO_InitStruct.Pin        = INIT_TLM_USART_TX_PIN;
     GPIO_InitStruct.Mode       = GPIO_MODE_AF_PP;

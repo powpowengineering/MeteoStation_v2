@@ -86,6 +86,10 @@
 #define INIT_ANEMOMETER_AN_CH                    ADC_CHANNEL_16
 #define INIT_ANEMOMETER_RANK                     ADC_INJECTED_RANK_2
 
+// Configure DC/DC control GSM pin
+#define INIT_DC_GSM_PORT                         GPIOC
+#define INIT_DC_GSM_PIN                          GPIO_PIN_12
+
 // Configure ADC
 #define INIT_ADC_NUM                             ADC1
 
