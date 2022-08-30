@@ -163,7 +163,7 @@ void vTaskMaster(void *pvParameters)
 {
     TaskStatus_t xTaskStatus;
 
-//    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_64KB);
+//    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_ALL);
 
 //    EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD, 0);
 

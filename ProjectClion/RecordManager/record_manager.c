@@ -171,6 +171,7 @@ void RECORD_MAN_Init(void)
 {
     uint64_t ID;
     uint16_t ManufID;
+    uint32_t nVar = 0U;
 
     if (FALSE == RECORD_MAN_bInitialezed)
     {
@@ -185,6 +186,22 @@ void RECORD_MAN_Init(void)
 
         // Init eeprom emulation
         EE_Init();
+
+        // Check variables exist in flash
+        if (RESULT_OK != EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,&nVar))
+        {
+            EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,0U);
+        }
+
+        if (RESULT_OK != EE_ReadVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,&nVar))
+        {
+            EE_WriteVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,0U);
+        }
+
+        if (RESULT_OK != EE_ReadVariable32(RECORD_MAN_VIR_ADR32_QTY_RECORD,&nVar))
+        {
+            EE_WriteVariable32(RECORD_MAN_VIR_ADR32_QTY_RECORD,0U);
+        }
 
         RECORD_MAN_bInitialezed = TRUE;
     }
