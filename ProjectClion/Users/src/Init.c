@@ -488,18 +488,32 @@ static void INIT_RTC(void)
         sDate.Year = 22;
         HAL_RTC_SetDate(&RTC_Handle, &sDate, RTC_FORMAT_BIN);
 
-        sAlarm.AlarmTime.Hours = sTime.Hours;
-        sAlarm.AlarmTime.Minutes = sTime.Minutes;
-        sAlarm.AlarmTime.Seconds = sTime.Seconds + 5;
+        // Set alarm fo sensors
+        sAlarm.AlarmTime.Hours = sTime.Hours + INIT_ALARM_SENS_HOURS;
+        sAlarm.AlarmTime.Minutes = sTime.Minutes + INIT_ALARM_SENS_MINUTES;
+        sAlarm.AlarmTime.Seconds = sTime.Seconds + INIT_ALARM_SENS_SECONDS;
         sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
         sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
         sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-        sAlarm.AlarmMask = RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_HOURS | RTC_ALARMMASK_DATEWEEKDAY;
+        sAlarm.AlarmMask = INIT_ALARM_SENS_MASK;
         sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
         sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
         sAlarm.AlarmDateWeekDay = 1;
-        sAlarm.Alarm = RTC_ALARM_A;
-//    HAL_RTC_SetAlarm(&RTC_Handle, &sAlarm, FORMAT_BIN);
+        sAlarm.Alarm = INIT_ALARM_SENS_NUM;
+        HAL_RTC_SetAlarm_IT(&RTC_Handle, &sAlarm, FORMAT_BIN);
+
+        // Set alarm fo GSM
+        sAlarm.AlarmTime.Hours = sTime.Hours + INIT_ALARM_GSM_HOURS;
+        sAlarm.AlarmTime.Minutes = sTime.Minutes + INIT_ALARM_GSM_MINUTES;
+        sAlarm.AlarmTime.Seconds = sTime.Seconds + INIT_ALARM_GSM_SECONDS;
+        sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
+        sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+        sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
+        sAlarm.AlarmMask = INIT_ALARM_GSM_MASK;
+        sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
+        sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+        sAlarm.AlarmDateWeekDay = 1;
+        sAlarm.Alarm = INIT_ALARM_GSM_NUM;
         HAL_RTC_SetAlarm_IT(&RTC_Handle, &sAlarm, FORMAT_BIN);
 
         __HAL_RTC_WRITEPROTECTION_DISABLE(&RTC_Handle);

@@ -105,6 +105,20 @@
 #define INIT_RTC_TIME_SECONDS_DEF               (0U)
 #define INIT_RTC_TIMEFORMAT                     (RTC_HOURFORMAT12_PM)
 
+// Alarm for sensors
+#define INIT_ALARM_SENS_NUM                    (RTC_ALARM_A)
+#define INIT_ALARM_SENS_HOURS                  (0U)
+#define INIT_ALARM_SENS_MINUTES                (0U)
+#define INIT_ALARM_SENS_SECONDS                (0U)
+#define INIT_ALARM_SENS_MASK                   (RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_HOURS | RTC_ALARMMASK_DATEWEEKDAY)
+
+// Alarm for GSM
+#define INIT_ALARM_GSM_NUM                    (RTC_ALARM_B)
+#define INIT_ALARM_GSM_HOURS                  (0U)
+#define INIT_ALARM_GSM_MINUTES                (0U)
+#define INIT_ALARM_GSM_SECONDS                (0U)
+#define INIT_ALARM_GSM_MASK                   (RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_HOURS | RTC_ALARMMASK_DATEWEEKDAY)
+
 // Configure LED2 pin PA5
 #define INIT_LED2_PORT                          GPIOA
 #define INIT_LED2_PIN                           GPIO_PIN_5

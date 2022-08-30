@@ -174,8 +174,6 @@ void vTaskMaster(void *pvParameters)
                   cmd_list,
                   4);
 
-    vTaskResume(TASK_READ_SEN_hHandlerTask);
-
     sTime.Minutes = 0;
     sTime.Seconds = 30;
 
@@ -187,40 +185,17 @@ void vTaskMaster(void *pvParameters)
             term_srv_process(data);
         }
 
-        // Send data to server every TASK_GSM_QTY_REC_TO_SEND records
-        // Attempt get mutex
-        if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_MASTER_MUTEX_DELAY))
-        {
-            uint32_t nLastRecord = 0U;
-            uint32_t nNextRecord = 0U;
-            uint32_t nQtyBytes = 0U;
-
-            // Get the last entry sent to the server
-            EE_ReadVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,
-                              &nLastRecord);
-
-            // Get the current record
-            EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
-                              &nNextRecord);
-
-            // Return mutex
-            xSemaphoreGive(RECORD_MAN_xMutex);
-
-            if ((nNextRecord > nLastRecord) && (((nNextRecord - 1U) - nLastRecord) >= TASK_GSM_QTY_REC_TO_SEND))
-            {
-                vTaskResume(TASK_GSM_hHandlerTask);
-            }
-        }
-        else
-        {
-            DoNothing();
-        }
-
         RTC_TimeShow(aShowTime);
 
+        // Check sensors alarm
         if  (TRUE == LL_RTC_IsActiveFlag_ALRA(RTC_Handle.Instance))
         {
-            printf("The alarm clock rang\r\n");
+            printf("The SENSORS alarm clock rang\r\n");
+
+            // Resume TASK_READ_SEN
+            vTaskResume(TASK_READ_SEN_hHandlerTask);
+
+            // Set sensors alarm
             sTime.Minutes = 1;
             sTime.Seconds = 40;
             TASK_MASTER_SetAlarm(sTime);
@@ -230,15 +205,44 @@ void vTaskMaster(void *pvParameters)
             DoNothing();
         }
 
+        // Check GSM alarm
+        if  (TRUE == LL_RTC_IsActiveFlag_ALRB(RTC_Handle.Instance))
+        {
+            printf("The GSM alarm clock rang\r\n");
+
+            // Resume TASK_GSM
+            vTaskResume(TASK_GSM_hHandlerTask);
+
+            // Set GSM alarm
+            sTime.Minutes = 1;
+            sTime.Seconds = 40;
+            TASK_MASTER_SetAlarm(sTime);
+        }
+        else
+        {
+            DoNothing();
+        }
 
         vTaskDelay(2000/portTICK_RATE_MS);
 
+        // Check TASK_GSM state
         vTaskGetInfo(TASK_GSM_hHandlerTask,&xTaskStatus,pdTRUE,eInvalid );
+
         if (eSuspended == xTaskStatus.eCurrentState)
         {
-            // Go to StandBy
-            printf("Go to standBy mode\r\n");
-            HAL_PWR_EnterSTANDBYMode();
+            // Check TASK_READ_SEN state
+            vTaskGetInfo(TASK_READ_SEN_hHandlerTask,&xTaskStatus,pdTRUE,eInvalid );
+
+            if (eSuspended == xTaskStatus.eCurrentState)
+            {
+                // Go to StandBy
+                printf("Go to standBy mode\r\n");
+                HAL_PWR_EnterSTANDBYMode();
+            }
+            else
+            {
+                DoNothing();
+            }
         }
         else
         {
