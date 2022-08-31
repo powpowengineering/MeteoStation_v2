@@ -62,7 +62,7 @@
 
 #include "stdlib.h"
 
-#include "eeprom.h"
+#include "eeprom_emulation.h"
 
 #include "printf.h"
 
@@ -385,34 +385,34 @@ static void TASK_MASTER_WriteRecordCMD(const char* data)
 //**************************************************************************************************
 static void TASK_MASTER_TestEECMD(const char* data)
 {
-    uint32_t nAdr32Value_A = 0x00010002;
-    uint32_t nValue_A = 0xBEEFDEED;
-
-    VirtAddVarTab[0] = 0x0001;
-    VirtAddVarTab[1] = 0x0002;
-
-    // Write word in EE
-    if (RESULT_OK == EE_WriteVariable32(nAdr32Value_A,
-                       nValue_A))
-    {
-        nValue_A = 0;
-        // Read word
-        if (RESULT_OK == EE_ReadVariable32(nAdr32Value_A,
-                                           &nValue_A))
-        {
-            printf("Value_A = %x",nValue_A);
-        }
-        else
-        {
-            INIT_TerminalSend("Read EE 32-bit value ERROR",
-                              strlen("Read EE 32-bit value ERROR"));
-        }
-    }
-    else
-    {
-        INIT_TerminalSend("Write EE 32-bit value ERROR",
-                          strlen("Write EE 32-bit value ERROR"));
-    }
+//    uint32_t nAdr32Value_A = 0x00010002;
+//    uint32_t nValue_A = 0xBEEFDEED;
+//
+//    VirtAddVarTab[0] = 0x0001;
+//    VirtAddVarTab[1] = 0x0002;
+//
+//    // Write word in EE
+//    if (RESULT_OK == EE_WriteVariable32(nAdr32Value_A,
+//                       nValue_A))
+//    {
+//        nValue_A = 0;
+//        // Read word
+//        if (RESULT_OK == EE_ReadVariable32(nAdr32Value_A,
+//                                           &nValue_A))
+//        {
+//            printf("Value_A = %x",nValue_A);
+//        }
+//        else
+//        {
+//            INIT_TerminalSend("Read EE 32-bit value ERROR",
+//                              strlen("Read EE 32-bit value ERROR"));
+//        }
+//    }
+//    else
+//    {
+//        INIT_TerminalSend("Write EE 32-bit value ERROR",
+//                          strlen("Write EE 32-bit value ERROR"));
+//    }
 
 } // end of TASK_MASTER_TestEECMD()
 

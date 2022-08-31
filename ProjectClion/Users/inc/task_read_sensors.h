@@ -25,6 +25,8 @@
 // Get HAL interface
 #include "stm32l4xx_hal.h"
 
+#include "compiler.h"
+
 // Get general types
 #include "general_types.h"
 

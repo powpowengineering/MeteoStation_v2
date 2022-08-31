@@ -23,6 +23,8 @@
 
 #include "stm32l4xx_hal.h"
 
+#include "compiler.h"
+
 #include "general_types.h"
 
 #include "W25Q_drv_cfg.h"
@@ -82,6 +84,11 @@ extern STD_RESULT W25Q_GetLock(const uint32_t adr, uint8_t *const lock);
 
 // Global Block/Sector Unlock
 extern STD_RESULT W25Q_UnLockGlobal(void);
+
+// Detect blank memory
+extern STD_RESULT W25Q_IsAreaBlank(const uint32_t nAddress, const uint32_t nSize, BOOLEAN *const bResult);
+
+
 
 #endif // #ifndef W25Q_H
 

@@ -21,6 +21,7 @@ set(CMAKE_EXECUTABLE_SUFFIX ".elf")
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/../../Config/STM32L476RGTx_FLASH.ld)
 # Set startup file
 set(STARTUP_FILE ${CMAKE_SOURCE_DIR}/../../StartUp/startup_stm32l476xx.s)
+set(SRC_RTT_ASM_DIR ${CMAKE_SOURCE_DIR}/../../SEGGER_RTT/SEGGER_RTT_ASM_ARMv7M.S)
 set(HAL "${CMAKE_SOURCE_DIR}/../../../STM32CubeL4-master")
 
 # Adding compiler/linker options
@@ -55,7 +56,8 @@ file(GLOB_RECURSE W25Q_FLASH_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/../../W25Q_FLAS
 file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/../../BMP2-Sensor-API-master/bmp2.c")
 #file(GLOB_RECURSE TF02_PRO "${CMAKE_SOURCE_DIR}/TF02_PRO/tf02Pro_drv.c")
 file(GLOB_RECURSE CORE_MQTT "${CMAKE_SOURCE_DIR}/../../coreMQTT/source/*.c")
-file(GLOB_RECURSE EEPROM_EMULATION "${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation/*.c")
+#file(GLOB_RECURSE EEPROM_EMULATION "${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation/*.c")
+file(GLOB_RECURSE EEPROM_EMULATION "${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new/Implementation/Latest/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/api/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/apps/mqtt/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/lwgsm/*.c")
@@ -123,6 +125,12 @@ file(
         "${HAL}/Drivers/BSP/STM32L4xx_Nucleo/*.c"
 )
 
+
+aux_source_directory(
+        ${CMAKE_SOURCE_DIR}/../../SEGGER_RTT
+        SRC_RTT_DIR
+)
+
 #include_directories(${CMAKE_SOURCE_DIR}/Users/inc)
 include_directories(${CMAKE_SOURCE_DIR}/../../OneWire)
 include_directories(${CMAKE_SOURCE_DIR}/../../DS18B20)
@@ -137,7 +145,13 @@ include_directories(${CMAKE_SOURCE_DIR}/../../BMP2-Sensor-API-master)
 include_directories(${CMAKE_SOURCE_DIR}/../../coreMQTT/source/include)
 include_directories(${CMAKE_SOURCE_DIR}/../../coreMQTT/source/interface)
 #include_directories(${CMAKE_SOURCE_DIR}/TF02_PRO)
-include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation)
+#include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation)
+include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new)
+include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new/Interface)
+include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new/Implementation/Latest)
+include_directories(${CMAKE_SOURCE_DIR}/../../SEGGER_RTT)
+
+
 
 
 #include_directories(${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/include)
@@ -186,6 +200,8 @@ add_executable( ${PROJECT_NAME}
 #        ${E_PAPER_TEST}
 #        ${E_PAPER_GUI}
         ${EEPROM_EMULATION}
+        ${SRC_RTT_DIR}
+        ${SRC_RTT_ASM_DIR}
 
         ${PRINTF_SOURCES}
         ${FREERTOS_SOURCES}

@@ -24,6 +24,8 @@
 // Get HAL interface
 #include "stm32l4xx_hal.h"
 
+#include "compiler.h"
+
 // Get general types
 #include "general_types.h"
 
@@ -49,6 +51,13 @@
 
 // Max record package in bytes
 #define RECORD_MAN_MAX_SIZE_RECORD                 (100U)
+
+// Virtual address
+#define RECORD_MAN_VIR_ADR32_LAST_RECORD             (0U)
+#define RECORD_MAN_VIR_ADR32_NEXT_RECORD             (4U)
+
+// Size record adr
+#define RECORD_MAN_SIZE_VIR_ADR                      (4U)
 
 
 

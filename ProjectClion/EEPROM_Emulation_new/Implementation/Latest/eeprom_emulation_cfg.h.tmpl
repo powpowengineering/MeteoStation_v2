@@ -1,0 +1,90 @@
+//**************************************************************************************************
+// @Module        EEPROM Emulation
+// @Filename      eeprom_emulation_cfg.h
+//--------------------------------------------------------------------------------------------------
+// @Description   Configuration of the required functionality of the EEPROM Emulation module.
+//--------------------------------------------------------------------------------------------------
+// @Version       
+//--------------------------------------------------------------------------------------------------
+// @Date          
+//--------------------------------------------------------------------------------------------------
+// @History       Version  Author      Comment
+
+//**************************************************************************************************
+
+#ifndef EEPROM_EMULATION_CFG_H
+#define EEPROM_EMULATION_CFG_H
+
+
+
+//**************************************************************************************************
+// Definitions of global (public) constants
+//**************************************************************************************************
+
+// Enable/disable the internal diagnostic of the program module.
+// Used only for debug purposes and should be disabled in the final release.
+// Valid values: ON / OFF
+#define EMEEP_INTERNAL_DIAGNOSTICS              (OFF)
+
+
+
+// Specify a used emulated EEPROM banks quantity
+// Valid values: [1 ; 4]
+#define EMEEP_USED_BANKS_QTY                    (0U)
+
+
+
+// Specify start address of the emulated EEPROM in the flash memory
+// Valid values: > 0
+// Example:
+// #define EMEEP_BANK_X_START_ADDRESS              (0x00100000UL)
+
+// Specify end address of the emulated EEPROM in the flash memory
+// Valid values: > EMEEP_START_ADDRESS
+// Example:
+// #define EMEEP_BANK_X_END_ADDRESS                (0x00107FFFUL)
+
+// Specify size of the data array in the one record
+// (excluding service data) in bytes
+// Valid values: >= 4
+// Example:
+// #define EMEEP_BANK_X_RECORD_DATA_ARRAY_SIZE     (500U)
+
+// Specify the maximum (or typical) number of sector erase/write cycles
+// Example:
+// #define EMEEP_BANK_X_SECTOR_EW_ENDURANCE       (500000UL)
+
+
+
+#define EMEEP_BANK_0_START_ADDRESS              (0x00000000UL)
+#define EMEEP_BANK_0_END_ADDRESS                (0x00000000UL)
+#define EMEEP_BANK_0_RECORD_DATA_ARRAY_SIZE     (0U)
+#define EMEEP_BANK_0_SECTOR_EW_ENDURANCE        (0UL)
+
+#define EMEEP_BANK_1_START_ADDRESS              (0x00000000UL)
+#define EMEEP_BANK_1_END_ADDRESS                (0x00000000UL)
+#define EMEEP_BANK_1_RECORD_DATA_ARRAY_SIZE     (0U)
+#define EMEEP_BANK_1_SECTOR_EW_ENDURANCE        (0UL)
+
+#define EMEEP_BANK_2_START_ADDRESS              (0x00000000UL)
+#define EMEEP_BANK_2_END_ADDRESS                (0x00000000UL)
+#define EMEEP_BANK_2_RECORD_DATA_ARRAY_SIZE     (0U)
+#define EMEEP_BANK_2_SECTOR_EW_ENDURANCE        (0UL)
+
+#define EMEEP_BANK_3_START_ADDRESS              (0x00000000UL)
+#define EMEEP_BANK_3_END_ADDRESS                (0x00000000UL)
+#define EMEEP_BANK_3_RECORD_DATA_ARRAY_SIZE     (0U)
+#define EMEEP_BANK_3_SECTOR_EW_ENDURANCE        (0UL)
+
+
+
+// Specify wearing level threshold #1 for memory status calculation
+// in percents
+// Valid values: [1 ; 99]
+#define EMEEP_WEAR_LEVEL_THRS_1                 (0U)
+
+
+
+#endif // #ifndef EEPROM_EMULATION_CFG_H
+
+//****************************************** end of file *******************************************

@@ -42,7 +42,7 @@
 #include "record_manager.h"
 
 // Get eeprom interface
-#include "eeprom.h"
+#include "eeprom_emulation.h"
 
 #include "printf.h"
 #include "string.h"
@@ -223,8 +223,9 @@ void vTaskGSM(void *pvParameters)
             HAL_GPIO_WritePin(INIT_DC_GSM_PORT, INIT_DC_GSM_PIN, GPIO_PIN_RESET);
 
             // Get the next - 1 record
-            EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
-                              &nNextRecord);
+            EMEEP_Load(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
+                       (U8*)&nNextRecord,
+                       RECORD_MAN_SIZE_VIR_ADR);
 
             if (0 != nNextRecord)
             {
@@ -249,9 +250,11 @@ void vTaskGSM(void *pvParameters)
                 printf("Record Load error\r\n");
             }
 
+
             // Update last record number
-            EE_WriteVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,
-                               nNextRecord);
+            EMEEP_Store(RECORD_MAN_VIR_ADR32_LAST_RECORD,
+                        (U8*)&nNextRecord,
+                        RECORD_MAN_SIZE_VIR_ADR);
 
             // Return mutex
             xSemaphoreGive(RECORD_MAN_xMutex);

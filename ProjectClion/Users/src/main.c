@@ -56,9 +56,9 @@
 // Include task_sensors_read interface
 #include "task_read_sensors.h"
 // Include task_test_flash interface
-#include "task_test_flash.h"
-#include "task_mqtt.h"
-#include "task_test_EE.h"
+//#include "task_test_flash.h"
+
+//#include "task_test_EE.h"
 #include "task_master.h"
 #include "task_GSM.h"
 

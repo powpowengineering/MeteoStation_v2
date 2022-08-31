@@ -1,20 +1,19 @@
 //**************************************************************************************************
-// @Module        AM2305
-// @Filename      am2305.h
+// @Module        Memory types
+// @Filename      memory_types.h
 //--------------------------------------------------------------------------------------------------
-// @Description   Interface of the AM2305 module.
-//                
+// @Description   Interface of the Memory types.
 //--------------------------------------------------------------------------------------------------
-// @Version       1.0.0
+// @Version       
 //--------------------------------------------------------------------------------------------------
-// @Date          XX.XX.XXXX
+// @Date          
 //--------------------------------------------------------------------------------------------------
 // @History       Version  Author      Comment
-// XX.XX.XXXX     1.0.0    KPS         First release.
+
 //**************************************************************************************************
 
-#ifndef AM2305_H
-#define AM2305_H
+#ifndef MEMORY_TYPES_H
+#define MEMORY_TYPES_H
 
 
 
@@ -22,15 +21,7 @@
 // Project Includes
 //**************************************************************************************************
 
-#include "stm32l4xx_hal.h"
-
-#include "compiler.h"
-
-
-#include "general_types.h"
-
-// Get configuration of the program module
-#include "am2305_drv_cfg.h"
+// None.
 
 
 
@@ -38,7 +29,9 @@
 // Declarations of global (public) data types
 //**************************************************************************************************
 
-// None.
+// End of memory job callback
+typedef void (*MEM_END_OF_JOB_CALLBACK)(const U8 nEventID,
+                                        const U8 nJobResult);
 
 
 
@@ -46,7 +39,26 @@
 // Definitions of global (public) constants
 //**************************************************************************************************
 
-// None.
+// Memory job possible results
+#define MEM_JOB_RESULT_OK         (0U)
+#define MEM_JOB_RESULT_NOT_OK     (1U)
+#define MEM_JOB_RESULT_PENDING    (2U)
+
+// Memory job callbacks
+#define MEM_JOB_CALLBACK_READ     (0U)
+#define MEM_JOB_CALLBACK_LOAD     (0U)
+#define MEM_JOB_CALLBACK_WRITE    (1U)
+#define MEM_JOB_CALLBACK_STORE    (1U)
+#define MEM_JOB_CALLBACK_ERASE    (2U)
+
+// Memory statuses
+#define MEM_STATUS_READ_ERR_MASK          (ON << 0U)
+#define MEM_STATUS_WRITE_ERR_MASK         (ON << 1U)
+#define MEM_STATUS_ERASE_ERR_MASK         (ON << 2U)
+#define MEM_STATUS_RECOVER_WARN_MASK      (ON << 3U)
+#define MEM_STATUS_NON_RECOVER_ERR_MASK   (ON << 4U)
+#define MEM_STATUS_WEAR_THRS_1_WARN_MASK  (ON << 5U)
+#define MEM_STATUS_WEAR_THRS_2_ERR_MASK   (ON << 6U)
 
 
 
@@ -57,15 +69,15 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Declarations of global (public) functions
 //**************************************************************************************************
 
-// Init am2305
-extern void AM2305_Init(void);
-// Get humidity and temperature
-extern STD_RESULT AM2305_GetHumidityTemperature(float *const humidity,float *const temperature);
+// None.
 
-#endif // #ifndef AM2305_H
+
+
+#endif // #ifndef MEMORY_TYPES_H
 
 //****************************************** end of file *******************************************

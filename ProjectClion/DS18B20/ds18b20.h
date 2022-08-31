@@ -23,6 +23,8 @@
 
 #include "stm32l4xx_hal.h"
 
+#include "compiler.h"
+
 #include "general_types.h"
 
 #include "ds18b20_cfg.h"

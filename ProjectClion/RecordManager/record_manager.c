@@ -49,7 +49,7 @@
 #include "ftoa.h"
 
 // Get eeprom emulation interface
-#include "eeprom.h"
+#include "eeprom_emulation.h"
 
 // RTOS
 #include "FreeRTOS.h"
@@ -185,22 +185,49 @@ void RECORD_MAN_Init(void)
         W25Q_ReadManufactureID(&ManufID);
 
         // Init eeprom emulation
-        EE_Init();
+        EMEEP_Init();
 
-        // Check variables exist in flash
-        if (RESULT_OK != EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,&nVar))
+        // Check variables exist in EEPROM
+        if (RESULT_OK == EMEEP_Load(RECORD_MAN_VIR_ADR32_LAST_RECORD,(U8*)&(nVar),RECORD_MAN_SIZE_VIR_ADR))
         {
-            EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,0U);
+            if (0xFFFFFFFF == nVar)
+            {
+                nVar = 0U;
+                // No init
+                if (RESULT_OK == EMEEP_Store(RECORD_MAN_VIR_ADR32_LAST_RECORD,(U8*)&(nVar),RECORD_MAN_SIZE_VIR_ADR))
+                {
+                    DoNothing();
+                }
+                else
+                {
+                    printf("EMEEP_Store ERROR\r\n");
+                }
+            }
+        }
+        else
+        {
+            printf("EMEEP_Load ERROR\r\n");
         }
 
-        if (RESULT_OK != EE_ReadVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,&nVar))
+        if (RESULT_OK == EMEEP_Load(RECORD_MAN_VIR_ADR32_NEXT_RECORD,(U8*)&(nVar),RECORD_MAN_SIZE_VIR_ADR))
         {
-            EE_WriteVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,0U);
+            if (0xFFFFFFFF == nVar)
+            {
+                nVar = 0U;
+                // No init
+                if (RESULT_OK == EMEEP_Store(RECORD_MAN_VIR_ADR32_NEXT_RECORD,(U8*)&(nVar),RECORD_MAN_SIZE_VIR_ADR))
+                {
+                    DoNothing();
+                }
+                else
+                {
+                    printf("EMEEP_Store ERROR\r\n");
+                }
+            }
         }
-
-        if (RESULT_OK != EE_ReadVariable32(RECORD_MAN_VIR_ADR32_QTY_RECORD,&nVar))
+        else
         {
-            EE_WriteVariable32(RECORD_MAN_VIR_ADR32_QTY_RECORD,0U);
+            printf("EMEEP_Load ERROR\r\n");
         }
 
         RECORD_MAN_bInitialezed = TRUE;
@@ -238,8 +265,9 @@ STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
         if (RECORD_MAN_SIZE_OF_RECORD_BYTES == nDataQty)
         {
             // Get next record number
-            if (RESULT_OK == EE_ReadVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
-                                               &nNumberNextRecord))
+            if (RESULT_OK == EMEEP_Load(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
+                                        (U8*)&(nNumberNextRecord),
+                                        RECORD_MAN_SIZE_VIR_ADR))
             {
                 // Create record
                 for (int nItem = 0U; nItem < nDataQty - 1U; nItem++)
@@ -262,10 +290,12 @@ STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
                                                 RECORD_MAN_SIZE_OF_RECORD_BYTES))
                 {
                     // Write next record number in eeprom
-                    if (RESULT_OK == EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
-                                                        nNumberNextRecord + 1U))
+                    nNumberNextRecord += 1U;
+                    if (RESULT_OK == EMEEP_Store(RECORD_MAN_VIR_ADR32_NEXT_RECORD,
+                                                 (U8*)&(nNumberNextRecord),
+                                                 RECORD_MAN_SIZE_VIR_ADR))
                     {
-                        *pQtyRecord = nNumberNextRecord + 1U;
+                        *pQtyRecord = nNumberNextRecord;
                         enResult = RESULT_OK;
                     }
                     else

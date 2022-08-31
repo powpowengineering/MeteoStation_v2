@@ -1,33 +1,37 @@
 //**************************************************************************************************
-// @Module        TASK_MQTT
-// @Filename      task_mqtt.h
+// @Module        EEPROM Emulation
+// @Filename      eeprom_emulation.h
 //--------------------------------------------------------------------------------------------------
-// @Description   Interface of the TASK_MQTT interface.
-//
+// @Description   Interface of the EEPROM Emulation module.
 //--------------------------------------------------------------------------------------------------
-// @Version       1.0.0
+// @Version       
 //--------------------------------------------------------------------------------------------------
-// @Date          xx.xx.xxxx
+// @Date          
 //--------------------------------------------------------------------------------------------------
 // @History       Version  Author      Comment
-// XX.XX.XXXX     1.0.0    KPS         First release.
+
 //**************************************************************************************************
 
-#ifndef TASK_MQTT_H
-#define TASK_MQTT_H
+#ifndef EEPROM_EMULATION_H
+#define EEPROM_EMULATION_H
+
 
 
 //**************************************************************************************************
 // Project Includes
 //**************************************************************************************************
 
-#include "stm32l4xx_hal.h"
+// Get data types
+#include "compiler.h"
 
-#include "task_mqtt_cfg.h"
+// Get generic definitions
+#include "general.h"
 
-#include "general_types.h"
+// Get configuration of the program module
+#include "eeprom_emulation_cfg.h"
 
-#include "cmsis_os.h"
+// Get memory types
+#include "memory_types.h"
 
 
 
@@ -36,6 +40,7 @@
 //**************************************************************************************************
 
 // None.
+
 
 
 //**************************************************************************************************
@@ -50,16 +55,47 @@
 // Declarations of global (public) variables
 //**************************************************************************************************
 
-extern TaskHandle_t HandleTask_MQTT;
+// None.
+
 
 
 //**************************************************************************************************
 // Declarations of global (public) functions
 //**************************************************************************************************
 
-// Task sensors read.
-extern void vTaskMQTT(void *pvParameters);
+// Initializes SW and HW resources of the program module
+extern void EMEEP_Init(void);
 
-#endif // #ifndef TASK_MQTT_H
+// Deinitializes SW and HW resources of the program module
+extern void EMEEP_DeInit(void);
+
+// Sets "end of job" callback function pointer(s) for the specified job type
+// (Load / Store)
+extern STD_RESULT EMEEP_SetJobCallback(const U8 nJobType,
+                                       const U8 nEventID,
+                                       const MEM_END_OF_JOB_CALLBACK pCallback);
+
+// Loads the last valid data image from the emulated EEPROM memory to the specified buffer
+extern STD_RESULT EMEEP_Load(const U32 nSourceAddress,
+                             U8* const pDataBuffer,
+                             const U32 nDataQty);
+
+// Stores a new data image to the emulated EEPROM memory from the specified buffer
+extern STD_RESULT EMEEP_Store(const U32 nTargetAddress,
+                              const U8* const pDataBuffer,
+                              const U32 nDataQty);
+
+// Returns the last emulated EEPROM job result
+extern U8 EMEEP_GetJobResult(void);
+
+// Returns memory status mask
+extern U32 EMEEP_GetMemoryStatus(void);
+
+// Sets a new memory status mask
+extern void EMEEP_SetMemoryStatus(const U32 nStatusMask);
+
+
+
+#endif // #ifndef EEPROM_EMULATION_H
 
 //****************************************** end of file *******************************************
