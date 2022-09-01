@@ -113,6 +113,9 @@ typedef struct TEST_EE_METEO_DATA_struct
 #define RECORD_MAN_MODE_STORAGE_FIXED                       (0U)
 #define RECORD_MAN_MODE_STORAGE_VARIABLE                    (1U)
 
+// Size of Dump
+#define RECORD_MAN_SIZE_DUMP                                (W25Q_CAPACITY_SECTOR_BYTES * 2U)
+
 
 
 //**************************************************************************************************
@@ -120,7 +123,7 @@ typedef struct TEST_EE_METEO_DATA_struct
 //**************************************************************************************************
 
 // Init flag
-uint8_t RECORD_MAN_bInitialezed = FALSE;
+static uint8_t RECORD_MAN_bInitialezed = FALSE;
 
 // Array max size data record
 #if (RECORD_MAN_MODE_STORAGE_FIXED == RECORD_MAN_MODE_STORAGE)
@@ -128,6 +131,9 @@ static uint8_t RECORD_MAN_aRecordDataPackage[RECORD_MAN_SIZE_OF_RECORD_BYTES];
 #elif (RECORD_MAN_MODE_STORAGE_VARIABLE == RECORD_MAN_MODE_STORAGE)
 static uint8_t RECORD_MAN_aRecordDataPackage[RECORD_MAN_MAX_SIZE_RECORD];
 #endif
+
+// Dump memory W25Q
+static uint8_t RECORD_MAN_aDump[RECORD_MAN_SIZE_DUMP];
 
 
 
@@ -184,8 +190,33 @@ void RECORD_MAN_Init(void)
         // Read manufacture ID
         W25Q_ReadManufactureID(&ManufID);
 
+        // Update dump eeprom
+        RECORD_MAN_UpdateDumpMem();
+
+//        W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_ALL);
+        W25Q_EraseBlock(0xfff000,W25Q_BLOCK_MEMORY_4KB);
+
+
+        for (int i = 0; i < 4096;i++)
+        {
+            uint8_t data = 0xaa;
+            if (RESULT_OK == W25Q_WriteData((0xfff000 + i),&data,1U))
+            {
+                DoNothing();
+            }
+            else
+            {
+                EMEEP_Init();
+            }
+        }
+
+
+
         // Init eeprom emulation
         EMEEP_Init();
+
+        // Update dump eeprom
+        RECORD_MAN_UpdateDumpMem();
 
         // Check variables exist in EEPROM
         if (RESULT_OK == EMEEP_Load(RECORD_MAN_VIR_ADR32_LAST_RECORD,(U8*)&(nVar),RECORD_MAN_SIZE_VIR_ADR))
@@ -333,6 +364,37 @@ STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
 
 
 //**************************************************************************************************
+// @Function      RECORD_MAN_UpdateDumpMem()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+STD_RESULT RECORD_MAN_UpdateDumpMem(void)
+{
+    STD_RESULT enResult = RESULT_NOT_OK;
+
+    if (RESULT_OK == W25Q_ReadData(EMEEP_BANK_0_START_ADDRESS,
+                                   RECORD_MAN_aDump,
+                                   (EMEEP_BANK_0_END_ADDRESS - EMEEP_BANK_0_START_ADDRESS) + 1U))
+    {
+        printf("RECORD_MAN_UpdateDumpMem: dump updated\r");
+    }
+    else
+    {
+        printf("RECORD_MAN_UpdateDumpMem: ERROR - W25Q_ReadData NOT OK\r");
+    }
+
+    return enResult;
+} // end of RECORD_MAN_UpdateDumpMem()
+
+
+
+//**************************************************************************************************
 // @Function      RECORD_MAN_Load()
 //--------------------------------------------------------------------------------------------------
 // @Description   None.
@@ -343,7 +405,7 @@ STD_RESULT RECORD_MAN_Store(const uint8_t *pData,
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-extern STD_RESULT RECORD_MAN_Load(uint32_t nNumberRecord,
+STD_RESULT RECORD_MAN_Load(uint32_t nNumberRecord,
                                   uint8_t *pRecord,
                                   uint32_t* nQtyBytes)
 {

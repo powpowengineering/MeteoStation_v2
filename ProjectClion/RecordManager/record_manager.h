@@ -93,6 +93,9 @@ extern STD_RESULT RECORD_MAN_GetNumberOfRecords(uint32_t* nNumberOfRecords);
 // Get available memory
 extern STD_RESULT RECORD_MAN_GetAvailableMem(uint32_t *pQtyByte);
 
+// Get dump memory
+extern STD_RESULT RECORD_MAN_UpdateDumpMem(void);
+
 
 
 #endif // #ifndef RECORD_MAN_H

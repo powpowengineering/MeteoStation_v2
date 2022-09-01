@@ -61,7 +61,6 @@
 //**************************************************************************************************
 // Verification of the imported configuration parameters
 //**************************************************************************************************
-#define CPU_WORD_SIZE               (8U)
 // Type of each of the record fields
 #if (CPU_WORD_SIZE == 32U)
 #define EMEEP_CHECKSUM_FIELD_TYPE           uint32_t
@@ -385,7 +384,7 @@ static const EMEEP_BANK_STATIC_CFG EMEEP_banksStaticCfg[EMEEP_USED_BANKS_QTY] =
 //**************************************************************************************************
 
 // Program module initialization state
-static BOOLEAN EMEEP_bInitialized;
+static BOOLEAN EMEEP_bInitialized = FALSE;
 
 #if (ON == EMEEP_INTERNAL_DIAGNOSTICS)
 // Diagnostic counters
@@ -450,8 +449,11 @@ static BOOLEAN EMEEP_IsChecksumValid(const uint8_t  nBankNumber,
                                      const uint32_t nRecordAddress);
 
 // Calculates 32-bit arithmetic checksum of the specified data array.
-static EMEEP_CHECKSUM_FIELD_TYPE EMEEP_CalcChecksum(const uint8_t* const pDataBuffer,
+static EMEEP_CHECKSUM_FIELD_TYPE EMEEP_CalcChecksumW25Q(const uint32_t nAddress,
                                                     const uint32_t nDataQty);
+
+static EMEEP_CHECKSUM_FIELD_TYPE EMEEP_CalcChecksum(const U8* const pDataBuffer,
+                                                    const U32 nDataQty);
 
 // Returns "checksum" field address from the specified record address
 static uint32_t EMEEP_GetChecksumFieldAddress(const uint32_t nRecordAddress);
@@ -859,7 +861,7 @@ STD_RESULT EMEEP_Store(const uint32_t nTargetAddress,
                                 // N.B.: checksum field in EMEEP_RECORD structure
                                 // are always 32-bit long for memory alignment purpose, NOT the checksum value itself!
                                 EMEEP_newRecordsContent[nBankNumber].nChecksum =
-                                    (uint32_t)EMEEP_CalcChecksum((uint8_t*)&EMEEP_newRecordsContent[nBankNumber].nNumber,
+                                    (uint32_t)EMEEP_CalcChecksum((U8*)&EMEEP_newRecordsContent[nBankNumber].nNumber,
                                                             (EMEEP_NUMBER_FIELD_SIZE +
                                                             EMEEP_banksStaticCfg[nBankNumber].nRecordDataSize));
 
@@ -1468,10 +1470,11 @@ static BOOLEAN EMEEP_IsChecksumValid(const uint8_t  nBankNumber,
 {
     BOOLEAN bChecksumValid = FALSE;
 
+
     // Current checksum value
     EMEEP_CHECKSUM_FIELD_TYPE nRecordChecksum =
-        EMEEP_CalcChecksum((uint8_t*)EMEEP_GetNumberFieldAddress(nRecordAddress),
-                           (EMEEP_banksStaticCfg[nBankNumber].nRecordDataSize + 
+            EMEEP_CalcChecksumW25Q(EMEEP_GetNumberFieldAddress(nRecordAddress),
+                           (EMEEP_banksStaticCfg[nBankNumber].nRecordDataSize +
                             EMEEP_NUMBER_FIELD_SIZE));
 
     if (nRecordChecksum == EMEEP_GetChecksumFieldValue(nRecordAddress))
@@ -1482,7 +1485,6 @@ static BOOLEAN EMEEP_IsChecksumValid(const uint8_t  nBankNumber,
     return bChecksumValid;
 
 } // end of EMEEP_IsChecksumValid()
-
 
 
 //**************************************************************************************************
@@ -1497,13 +1499,13 @@ static BOOLEAN EMEEP_IsChecksumValid(const uint8_t  nBankNumber,
 // @Parameters    pDataBuffer - pointer to the data array
 //                nDataQty    - size of the specified array to be calculated
 //**************************************************************************************************
-static EMEEP_CHECKSUM_FIELD_TYPE EMEEP_CalcChecksum(const uint8_t* const pDataBuffer,
-                                                    const uint32_t nDataQty)
+static EMEEP_CHECKSUM_FIELD_TYPE EMEEP_CalcChecksum(const U8* const pDataBuffer,
+                                                    const U32 nDataQty)
 {
     // Current checksum value
     EMEEP_CHECKSUM_FIELD_TYPE nCurrentChecksum = 0U;
     // Current byte number
-    uint32_t nByteNumber = 0U;
+    U32 nByteNumber = 0U;
 
     for (nByteNumber = 0U; nByteNumber < nDataQty; nByteNumber++)
     {
@@ -1513,6 +1515,45 @@ static EMEEP_CHECKSUM_FIELD_TYPE EMEEP_CalcChecksum(const uint8_t* const pDataBu
     return nCurrentChecksum;
 
 } // end of EMEEP_CalcChecksum()
+
+
+
+//**************************************************************************************************
+// @Function      EMEEP_CalcChecksumW25Q()
+//--------------------------------------------------------------------------------------------------
+// @Description   Calculates 32-bit arithmetic checksum of the specified data array.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   32-bit arithmetic checksum of the specified data array.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    pDataBuffer - pointer to the data array
+//                nDataQty    - size of the specified array to be calculated
+//**************************************************************************************************
+static EMEEP_CHECKSUM_FIELD_TYPE EMEEP_CalcChecksumW25Q(const uint32_t nAddress,
+                                                    const uint32_t nDataQty)
+{
+    // Current checksum value
+    EMEEP_CHECKSUM_FIELD_TYPE nCurrentChecksum = 0U;
+    // Current byte number
+    uint32_t nByteNumber = 0U;
+    uint8_t nByte = 0U;
+
+    for (nByteNumber = 0U; nByteNumber < nDataQty; nByteNumber++)
+    {
+        if (RESULT_OK == W25Q_ReadData(nAddress + nByteNumber,&nByte,1U))
+        {
+            nCurrentChecksum += nByte;
+        }
+        else
+        {
+            SEGGER_RTT_printf(0, "EMEEP_CalcChecksum: W25Q read error\r");
+        }
+    }
+
+    return nCurrentChecksum;
+
+} // end of EMEEP_CalcChecksumW25Q()
 
 
 
@@ -1550,9 +1591,17 @@ static EMEEP_CHECKSUM_FIELD_TYPE EMEEP_GetChecksumFieldValue(const uint32_t nRec
 {
     uint32_t nCheckSum = 0U;
 
-    W25Q_ReadData(EMEEP_GetNumberFieldAddress(nRecordAddress),(U8*)&nCheckSum,4U);
+    if (RESULT_OK == W25Q_ReadData(EMEEP_GetChecksumFieldAddress(nRecordAddress),(U8*)&nCheckSum,4U))
+    {
+        DoNothing();
+    }
+    else
+    {
+        SEGGER_RTT_printf(0, "EMEEP_GetChecksumFieldValue: W25Q read error\r");
+    }
 
-    return *(EMEEP_CHECKSUM_FIELD_TYPE*)EMEEP_GetChecksumFieldAddress(nRecordAddress);
+//    return *(EMEEP_CHECKSUM_FIELD_TYPE*)EMEEP_GetChecksumFieldAddress(nRecordAddress);
+    return nCheckSum;
 
 } // end of EMEEP_GetChecksumFieldValue()
 

@@ -101,6 +101,7 @@
 #define TASK_GSM_QTY_REC_TO_SEND            (10U)
 
 
+
 //**************************************************************************************************
 // Definitions of static global (private) variables
 //**************************************************************************************************
@@ -113,6 +114,7 @@ static uint8_t aShowTime[50] = {0};
 
 
 static RTC_TimeTypeDef sTime;
+
 
 
 //**************************************************************************************************
@@ -165,9 +167,6 @@ void vTaskMaster(void *pvParameters)
 
 //    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_ALL);
 //while(1);
-//    EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD, 0);
-
-//    EE_WriteVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,0);
 
     // Init Terminal
     term_srv_init(INIT_TerminalSend,
@@ -177,10 +176,15 @@ void vTaskMaster(void *pvParameters)
     sTime.Minutes = 0;
     sTime.Seconds = 30;
 
+    vTaskResume(TASK_READ_SEN_hHandlerTask);
+
+
     for(;;)
     {
+        // Update dump eeprom
+//        RECORD_MAN_UpdateDumpMem();
 
-        vTaskResume(TASK_READ_SEN_hHandlerTask);
+//        vTaskResume(TASK_READ_SEN_hHandlerTask);
 
         if (USART2->ISR & USART_ISR_RXNE)
         {
@@ -199,8 +203,8 @@ void vTaskMaster(void *pvParameters)
             vTaskResume(TASK_READ_SEN_hHandlerTask);
 
             // Set sensors alarm
-            sTime.Minutes = 1;
-            sTime.Seconds = 40;
+            sTime.Minutes = 0;
+            sTime.Seconds = 30;
             TASK_MASTER_SetAlarm(sTime);
         }
         else
@@ -214,11 +218,11 @@ void vTaskMaster(void *pvParameters)
             printf("The GSM alarm clock rang\r\n");
 
             // Resume TASK_GSM
-            vTaskResume(TASK_GSM_hHandlerTask);
+//            vTaskResume(TASK_GSM_hHandlerTask);
 
             // Set GSM alarm
-            sTime.Minutes = 1;
-            sTime.Seconds = 40;
+            sTime.Minutes = 2;
+            sTime.Seconds = 0;
             TASK_MASTER_SetAlarm(sTime);
         }
         else
@@ -226,7 +230,7 @@ void vTaskMaster(void *pvParameters)
             DoNothing();
         }
 
-        vTaskDelay(2000/portTICK_RATE_MS);
+        vTaskDelay(1000/portTICK_RATE_MS);
 
         // Check TASK_GSM state
         vTaskGetInfo(TASK_GSM_hHandlerTask,&xTaskStatus,pdTRUE,eInvalid );
@@ -513,6 +517,11 @@ static void TASK_MASTER_SetAlarm(const RTC_TimeTypeDef sTime)
     HAL_PWR_DisableBkUpAccess();
 
 } // end of TASK_MASTER_SetAlarm()
+
+
+
+
+
 
 
 //****************************************** end of file *******************************************
