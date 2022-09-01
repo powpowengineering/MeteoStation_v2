@@ -180,50 +180,6 @@ void main(void)
     // Power GSM OFF
     HAL_GPIO_WritePin(INIT_DC_GSM_PORT, INIT_DC_GSM_PIN, GPIO_PIN_SET);
 
-    if (0)//(TRUE == LL_RTC_IsActiveFlag_ALRA(RTC_Handle.Instance))
-    {
-        printf("The alarm clock rang\r\n");
-        sTime.Minutes = 1;
-        sTime.Seconds = 15;
-//        TASK_MASTER_SetAlarm(sTime);
-    }
-    else
-    {
-        DoNothing();
-    }
-
-
-
-    __HAL_RCC_PWR_CLK_ENABLE();
-    /* Check if the system was resumed from Standby mode */
-    if (__HAL_PWR_GET_FLAG(PWR_FLAG_SB) != RESET)
-    {
-        /* Clear Standby flag */
-        __HAL_PWR_CLEAR_FLAG(PWR_FLAG_SB);
-    }
-
-
-
-
-    /* Enable ultra low power BOR and PVD supply monitoring */
-//    HAL_PWREx_EnableBORPVD_ULP();
-
-    /* Disable all used wakeup sources: PWR_WAKEUP_PIN2 */
-    HAL_PWR_DisableWakeUpPin(PWR_WAKEUP_PIN2);
-
-    /* Clear all related wakeup flags*/
-    __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
-
-    /* Enable WakeUp Pin PWR_WAKEUP_PIN2 connected to PC.13 */
-//    HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN2);
-
-
-    // Go to StandBy
-//    printf("Go to standBy mode\r\n");
-//    /* Enter the Standby mode */
-//    HAL_PWR_EnterSTANDBYMode();
-
-
     RECORD_MAN_Init();
     // Init OneWire
     ONE_WIRE_init();

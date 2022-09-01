@@ -1427,12 +1427,23 @@ static uint32_t EMEEP_GetPrevRecordAddr(const uint8_t  nBankNumber,
 static BOOLEAN EMEEP_IsSignatureValid(const uint32_t nRecordAddress)
 {
     BOOLEAN bFuncResult = FALSE;
-    
-    EMEEP_SIGNATURE_FIELD_TYPE nSignatureValue = 
-        *(EMEEP_SIGNATURE_FIELD_TYPE*)(nRecordAddress + EMEEP_CHECKSUM_FIELD_SIZE);
 
-    bFuncResult = (EMEEP_RECORD_SIGNATURE_VALUE == nSignatureValue) ?
-                  TRUE : FALSE;
+    EMEEP_SIGNATURE_FIELD_TYPE nSignatureValue;
+
+    if (RESULT_OK == W25Q_ReadData(nRecordAddress + EMEEP_CHECKSUM_FIELD_SIZE,(U8*)&nSignatureValue,4U))
+    {
+        bFuncResult = (EMEEP_RECORD_SIGNATURE_VALUE == nSignatureValue) ?
+                      TRUE : FALSE;
+    }
+    else
+    {
+        SEGGER_RTT_printf(0, "EMEEP_IsSignatureValid: W25Q read error\r");
+    }
+
+//    EMEEP_SIGNATURE_FIELD_TYPE nSignatureValue =
+//        *(EMEEP_SIGNATURE_FIELD_TYPE*)(nRecordAddress + EMEEP_CHECKSUM_FIELD_SIZE);
+
+
 
     return bFuncResult;
 
@@ -1537,6 +1548,10 @@ static uint32_t EMEEP_GetChecksumFieldAddress(const uint32_t nRecordAddress)
 //**************************************************************************************************
 static EMEEP_CHECKSUM_FIELD_TYPE EMEEP_GetChecksumFieldValue(const uint32_t nRecordAddress)
 {
+    uint32_t nCheckSum = 0U;
+
+    W25Q_ReadData(EMEEP_GetNumberFieldAddress(nRecordAddress),(U8*)&nCheckSum,4U);
+
     return *(EMEEP_CHECKSUM_FIELD_TYPE*)EMEEP_GetChecksumFieldAddress(nRecordAddress);
 
 } // end of EMEEP_GetChecksumFieldValue()
@@ -1597,7 +1612,12 @@ static uint32_t EMEEP_GetNumberFieldAddress(const uint32_t nRecordAddress)
 //**************************************************************************************************
 static uint32_t EMEEP_GetNumberFieldValue(const uint32_t nRecordAddress)
 {
-    return *(EMEEP_NUMBER_FIELD_TYPE*)EMEEP_GetNumberFieldAddress(nRecordAddress);
+    uint32_t nFieldNumber = 0U;
+
+    W25Q_ReadData(EMEEP_GetNumberFieldAddress(nRecordAddress),(U8*)&nFieldNumber,4U);
+
+//    return *(EMEEP_NUMBER_FIELD_TYPE*)EMEEP_GetNumberFieldAddress(nRecordAddress);
+    return nFieldNumber;
 
 } // end of EMEEP_GetNumberFieldValue()
 

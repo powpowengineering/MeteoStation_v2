@@ -164,7 +164,7 @@ void vTaskMaster(void *pvParameters)
     TaskStatus_t xTaskStatus;
 
 //    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_ALL);
-
+//while(1);
 //    EE_WriteVariable32(RECORD_MAN_VIR_ADR32_NEXT_RECORD, 0);
 
 //    EE_WriteVariable32(RECORD_MAN_VIR_ADR32_LAST_RECORD,0);
@@ -179,6 +179,9 @@ void vTaskMaster(void *pvParameters)
 
     for(;;)
     {
+
+        vTaskResume(TASK_READ_SEN_hHandlerTask);
+
         if (USART2->ISR & USART_ISR_RXNE)
         {
             uint8_t data = USART2->RDR;
@@ -237,7 +240,7 @@ void vTaskMaster(void *pvParameters)
             {
                 // Go to StandBy
                 printf("Go to standBy mode\r\n");
-                HAL_PWR_EnterSTANDBYMode();
+//                HAL_PWR_EnterSTANDBYMode();
             }
             else
             {
