@@ -40,8 +40,15 @@
 #include "Init.h"
 
 #include "stm32l4xx_ll_tim.h"
-// Get hal_ll rtc
-#include "stm32l4xx_ll_rtc.h"
+
+#include "time_drv.h"
+
+#include "stm32l4xx_ll_dma.h"
+
+#include "stm32l4xx_ll_usart.h"
+
+
+
 //**************************************************************************************************
 // Verification of the imported configuration parameters
 //**************************************************************************************************
@@ -71,9 +78,8 @@ TIM_HandleTypeDef    TimDelayHandle;
 // ADC Handler
 ADC_HandleTypeDef ADC_Handle;
 
-// RTC handle
-RTC_HandleTypeDef RTC_Handle;
-
+#define TERMINAL_RX_BUF_SIZE            (512U)
+uint8_t TERMINAL_BufRx[TERMINAL_RX_BUF_SIZE];
 
 
 //**************************************************************************************************
@@ -93,16 +99,16 @@ RTC_HandleTypeDef RTC_Handle;
 // Definitions of static global (private) variables
 //**************************************************************************************************
 
-// None.
+// DMA hanle for UART TERMINAL
+static DMA_HandleTypeDef DMA_Handle;
+
 
 
 //**************************************************************************************************
 // Declarations of local (private) functions
 //**************************************************************************************************
 
-// Init RTC
-static void INIT_RTC(void);
-
+// None.
 
 
 //**************************************************************************************************
@@ -141,6 +147,7 @@ void Init(void)
     __HAL_RCC_I2C1_CLK_ENABLE();
     __HAL_RCC_ADC_CLK_ENABLE();
     __HAL_RCC_PWR_CLK_ENABLE();
+    __HAL_RCC_DMA1_CLK_ENABLE();
 
 
     // Configure the GPIO_LED pin
@@ -252,6 +259,23 @@ void Init(void)
     // Init UART TLM
     HAL_USART_Init(&UsartTLMHandle);
 
+    // Configure DMA for UART TERMINAL
+    DMA_Handle.Instance = DMA1_Channel6;
+    DMA_Handle.Init.Request = DMA_REQUEST_2;
+    DMA_Handle.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    DMA_Handle.Init.PeriphInc = DMA_PINC_DISABLE;
+    DMA_Handle.Init.MemInc = DMA_MINC_ENABLE;
+    DMA_Handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    DMA_Handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    DMA_Handle.Init.Mode = DMA_CIRCULAR;
+    DMA_Handle.Init.Priority = DMA_PRIORITY_LOW;
+    DMA_Handle.DmaBaseAddress = DMA1;
+    HAL_DMA_Init(&DMA_Handle);
+    HAL_DMA_Start (&DMA_Handle,
+                   LL_USART_DMA_GetRegAddr(INIT_TERMINAL_USART_NUM, LL_USART_DMA_REG_DATA_RECEIVE),
+                   (uint32_t)TERMINAL_BufRx,
+                   TERMINAL_RX_BUF_SIZE);
+
     // Configure UART for TERMINAL
     UartTERMINALHandle.Instance            = INIT_TERMINAL_USART_NUM;
     UartTERMINALHandle.Init.BaudRate       = 9600;
@@ -262,8 +286,8 @@ void Init(void)
 
     HAL_UART_DeInit(&UartTERMINALHandle);
     // Init UART TERMINAL
-//    HAL_USART_Init(&UsartTERMINALHandle);
     HAL_UART_Init(&UartTERMINALHandle);
+//    LL_USART_EnableDMAReq_RX(INIT_TERMINAL_USART_NUM);
 
     // Configure UART for GSM
     UartGSMHandler.Instance            = INIT_GSM_USART_NUM;
@@ -351,31 +375,9 @@ void Init(void)
     HAL_I2C_Init(&I2CBMP280Handler);
 
     // Init RTC
-    INIT_RTC();
+    TIME_Init();
 }
 // end of Init()
-
-
-//**************************************************************************************************
-// @Function      INIT_TerminalSend()
-//--------------------------------------------------------------------------------------------------
-// @Description   None.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-void INIT_TerminalSend(const char* data, int16_t size)
-{
-    while (size) {
-        while ((INIT_TERMINAL_USART_NUM->ISR & USART_ISR_TXE) != USART_ISR_TXE);
-        INIT_TERMINAL_USART_NUM->TDR = *data;
-        ++data;
-        --size;
-    }
-} // end of INIT_TerminalSend()
 
 
 
@@ -438,130 +440,4 @@ void INIT_Delay(uint32_t us)
 
 
 
-//**************************************************************************************************
-// @Function      INIT_RTC()
-//--------------------------------------------------------------------------------------------------
-// @Description   None.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static void INIT_RTC(void)
-{
-    RTC_TimeTypeDef sTime;
-    RTC_DateTypeDef sDate;
-    RTC_AlarmTypeDef sAlarm;
-
-    RTC_Handle.Instance = RTC;
-
-    // Check cause reset
-    /* Check if the system was resumed not from Standby mode */
-    if (__HAL_PWR_GET_FLAG(PWR_FLAG_SB) == RESET)
-    {
-        // Do delay to have ability connect debugger
-        HAL_GPIO_WritePin(INIT_LED2_PORT, INIT_LED2_PIN, GPIO_PIN_SET);
-        INIT_Delay(3000000);
-        HAL_GPIO_WritePin(INIT_LED2_PORT, INIT_LED2_PIN, GPIO_PIN_RESET);
-
-        // Config RTC
-        RTC_Handle.Init.HourFormat = RTC_HOURFORMAT_24;
-        RTC_Handle.Init.AsynchPrediv = INIT_RTC_ASYNCHPREDIV;
-        RTC_Handle.Init.SynchPrediv = INIT_RTC_SYNCHPREDIV;
-        RTC_Handle.Init.OutPut = INIT_RTC_OUTPUT;
-        RTC_Handle.Init.OutPutRemap = INIT_RTC_OUTPUT_REMAP;
-        RTC_Handle.Init.OutPutPolarity = INIT_RTC_OUTPUT_POLARITY;
-        RTC_Handle.Init.OutPutType = INIT_RTC_OUTPUT_TYPE;
-        HAL_RTC_Init(&RTC_Handle);
-
-        sTime.Hours = INIT_RTC_TIME_HOUR_DEF;
-        sTime.Minutes = INIT_RTC_TIME_MINUTES_DEF;
-        sTime.Seconds = INIT_RTC_TIME_SECONDS_DEF;
-        sTime.TimeFormat = INIT_RTC_TIMEFORMAT;
-        HAL_RTC_SetTime(&RTC_Handle, &sTime, RTC_FORMAT_BIN);
-
-        sDate.Date = 24;
-        sDate.Month = RTC_MONTH_AUGUST;
-        sDate.WeekDay = RTC_WEEKDAY_WEDNESDAY;
-        sDate.Year = 22;
-        HAL_RTC_SetDate(&RTC_Handle, &sDate, RTC_FORMAT_BIN);
-
-        // Set alarm fo sensors
-        sAlarm.AlarmTime.Hours = sTime.Hours + INIT_ALARM_SENS_HOURS;
-        sAlarm.AlarmTime.Minutes = sTime.Minutes + INIT_ALARM_SENS_MINUTES;
-        sAlarm.AlarmTime.Seconds = sTime.Seconds + INIT_ALARM_SENS_SECONDS;
-        sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
-        sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-        sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-        sAlarm.AlarmMask = INIT_ALARM_SENS_MASK;
-        sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
-        sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
-        sAlarm.AlarmDateWeekDay = 1;
-        sAlarm.Alarm = INIT_ALARM_SENS_NUM;
-        HAL_RTC_SetAlarm_IT(&RTC_Handle, &sAlarm, FORMAT_BIN);
-
-        // Set alarm fo GSM
-        sAlarm.AlarmTime.Hours = sTime.Hours + INIT_ALARM_GSM_HOURS;
-        sAlarm.AlarmTime.Minutes = sTime.Minutes + INIT_ALARM_GSM_MINUTES;
-        sAlarm.AlarmTime.Seconds = sTime.Seconds + INIT_ALARM_GSM_SECONDS;
-        sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
-        sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-        sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-        sAlarm.AlarmMask = INIT_ALARM_GSM_MASK;
-        sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
-        sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
-        sAlarm.AlarmDateWeekDay = 1;
-        sAlarm.Alarm = INIT_ALARM_GSM_NUM;
-        HAL_RTC_SetAlarm_IT(&RTC_Handle, &sAlarm, FORMAT_BIN);
-
-        __HAL_RTC_WRITEPROTECTION_DISABLE(&RTC_Handle);
-        LL_RTC_DisableIT_TAMP(RTC_Handle.Instance);
-        LL_RTC_DisableIT_TAMP1(RTC_Handle.Instance);
-        LL_RTC_DisableIT_TAMP2(RTC_Handle.Instance);
-        LL_RTC_DisableIT_TAMP3(RTC_Handle.Instance);
-        LL_RTC_DisableIT_TS(RTC_Handle.Instance);
-        LL_RTC_DisableIT_WUT(RTC_Handle.Instance);
-        __HAL_RTC_WRITEPROTECTION_ENABLE(&RTC_Handle);
-    }
-
-} // end of INIT_RTC()
-
-
-void HAL_RTC_MspInit(RTC_HandleTypeDef *hrtc)
-{
-    RCC_OscInitTypeDef RCC_OscInitStruct;
-    RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
-
-    /*##-1- Enables the PWR Clock and Enables access to the backup domain ######*/
-    /* To enable access on RTC registers */
-    __HAL_RCC_PWR_CLK_ENABLE();
-    HAL_PWR_EnableBkUpAccess();
-
-
-    /*##-2- Configure LSE/LSI as RTC clock source ###############################*/
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE;
-    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-    RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-    RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
-    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-        //Error_Handler();
-    }
-
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
-    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
-        //Error_Handler();
-    }
-    /* Configures the External Low Speed oscillator (LSE) drive capability */
-//    __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_HIGH);
-
-    /*##-2- Enable the RTC & BKP peripheral Clock ##############################*/
-    /* Enable RTC Clock */
-    __HAL_RCC_RTC_ENABLE();
-
-    /* Enable RTC APB clock  */
-//    __HAL_RCC_RTCAPB_CLK_ENABLE();
-}
 //****************************************** end of file *******************************************

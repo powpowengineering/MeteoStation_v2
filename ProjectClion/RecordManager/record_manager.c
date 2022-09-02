@@ -194,23 +194,8 @@ void RECORD_MAN_Init(void)
         RECORD_MAN_UpdateDumpMem();
 
 //        W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_ALL);
-        W25Q_EraseBlock(0xfff000,W25Q_BLOCK_MEMORY_4KB);
-
-
-        for (int i = 0; i < 4096;i++)
-        {
-            uint8_t data = 0xaa;
-            if (RESULT_OK == W25Q_WriteData((0xfff000 + i),&data,1U))
-            {
-                DoNothing();
-            }
-            else
-            {
-                EMEEP_Init();
-            }
-        }
-
-
+//        W25Q_EraseBlock(0xffe000,W25Q_BLOCK_MEMORY_4KB);
+//        W25Q_EraseBlock(0xfff000,W25Q_BLOCK_MEMORY_4KB);
 
         // Init eeprom emulation
         EMEEP_Init();

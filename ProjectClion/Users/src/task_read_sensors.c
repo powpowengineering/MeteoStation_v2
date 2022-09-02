@@ -55,6 +55,8 @@
 #include "Init.h"
 #include "string.h"
 
+#include "time_drv.h"
+
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -346,7 +348,9 @@ void vTaskReadSensors(void *pvParameters)
         TASK_READ_SENS_stMeasData.fPressure = (float)bmp280Data.pressure;
         TASK_READ_SENS_stMeasData.fWindSpeed = TASK_READ_SEN_fAnemometer;
         TASK_READ_SENS_stMeasData.fBatteryVoltage = TASK_READ_SEN_fBatVoltage;
-        TASK_READ_SENS_stMeasData.nUnixTime = rand();
+
+
+        TASK_READ_SENS_stMeasData.nUnixTime = TIME_GetUnixTimestamp();
 
         // Attempt get mutex
         if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_READ_SENS_MUTEX_DELAY))

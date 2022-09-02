@@ -21,15 +21,10 @@
 // Definitions of global (public) constants
 //**************************************************************************************************
 
-// Enable/disable the development error detection feature of the program module.
-// Used only for debug purposes and should be disabled in the final release.
-// Valid values: ON / OFF
-#define MODULE_DEVELOPMENT_ERROR_DETECTION      (OFF)
-
-// User can enable/disable the internal diagnostic of the program module.
-// Used only for debug purposes and should be disabled in the final release.
-// Valid values: ON / OFF
-#define MODULE_INTERNAL_DIAGNOSTICS             (OFF)
+// Prm vTaskMaster
+#define TASK_MASTER_STACK_DEPTH          (256U)
+#define TASK_MASTER_PARAMETERS           (NULL)
+#define TASK_MASTER_PRIORITY             (1U)
 
 
 

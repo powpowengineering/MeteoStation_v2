@@ -55,9 +55,6 @@
 // Get task GSM interface
 #include "task_GSM.h"
 
-// Get hal_ll rtc
-#include "stm32l4xx_ll_rtc.h"
-
 #include "W25Q_drv.h"
 
 #include "stdlib.h"
@@ -65,6 +62,8 @@
 #include "eeprom_emulation.h"
 
 #include "printf.h"
+
+#include "time_drv.h"
 
 
 
@@ -95,10 +94,10 @@
 //**************************************************************************************************
 
 // Mutex Acquisition Delay
-#define TASK_MASTER_MUTEX_DELAY      (1000U)
+#define TASK_MASTER_MUTEX_DELAY                 (1000U)
 
 // Number of entries to send to the server
-#define TASK_GSM_QTY_REC_TO_SEND            (10U)
+#define TASK_GSM_QTY_REC_TO_SEND                (10U)
 
 
 
@@ -112,8 +111,7 @@ static uint8_t TASK_MASTER_aRecord[RECORD_MAN_MAX_SIZE_RECORD];
 /* Buffer used for displaying Time */
 static uint8_t aShowTime[50] = {0};
 
-
-static RTC_TimeTypeDef sTime;
+static TIME_type sTime;
 
 
 
@@ -121,26 +119,7 @@ static RTC_TimeTypeDef sTime;
 // Declarations of local (private) functions
 //**************************************************************************************************
 
-static void test_cmd1(const char* data);
-static void TASK_MASTER_ReadRecordCMD(const char* data);
-static void TASK_MASTER_WriteRecordCMD(const char* data);
-static void TASK_MASTER_TestEECMD(const char* data);
-
-
-static term_srv_cmd_t cmd_list[] = {
-        { .cmd = "command1", .len = 8, .handler = test_cmd1 },
-        { .cmd = "ReadRecord", .len = 10, .handler = TASK_MASTER_ReadRecordCMD },
-        { .cmd = "StoreRecord", .len = 11, .handler = TASK_MASTER_WriteRecordCMD },
-        { .cmd = "TestEE", .len = 6, .handler = TASK_MASTER_TestEECMD },
-};
-
-
-
-// Set alarm
-static void TASK_MASTER_SetAlarm(const RTC_TimeTypeDef sTime);
-
-
-static void RTC_TimeShow(uint8_t* showtime);
+// None.
 
 
 
@@ -168,16 +147,18 @@ void vTaskMaster(void *pvParameters)
 //    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_ALL);
 //while(1);
 
-    // Init Terminal
-    term_srv_init(INIT_TerminalSend,
-                  cmd_list,
-                  4);
-
-    sTime.Minutes = 0;
-    sTime.Seconds = 30;
-
     vTaskResume(TASK_READ_SEN_hHandlerTask);
 
+
+    // Set sensors alarm
+    sTime.tm_min = 0;
+    sTime.tm_sec = 30;
+    TIME_SetAlarm(sTime,TIME_ALARM_SENS);
+
+    // Set GSM alarm
+    sTime.tm_min = 2;
+    sTime.tm_sec = 0;
+    TIME_SetAlarm(sTime, TIME_ALARM_GSM);
 
     for(;;)
     {
@@ -186,26 +167,19 @@ void vTaskMaster(void *pvParameters)
 
 //        vTaskResume(TASK_READ_SEN_hHandlerTask);
 
-        if (USART2->ISR & USART_ISR_RXNE)
-        {
-            uint8_t data = USART2->RDR;
-            term_srv_process(data);
-        }
-
-        RTC_TimeShow(aShowTime);
+        // Show current time
+        TIME_TimeShow();
 
         // Check sensors alarm
-        if  (TRUE == LL_RTC_IsActiveFlag_ALRA(RTC_Handle.Instance))
+        if (TRUE == TIME_CheckAlarm(TIME_ALARM_SENS))
         {
             printf("The SENSORS alarm clock rang\r\n");
 
-            // Resume TASK_READ_SEN
-            vTaskResume(TASK_READ_SEN_hHandlerTask);
-
             // Set sensors alarm
-            sTime.Minutes = 0;
-            sTime.Seconds = 30;
-            TASK_MASTER_SetAlarm(sTime);
+            sTime.tm_min = 0;
+            sTime.tm_sec = 30;
+
+            TIME_SetAlarm(sTime, TIME_ALARM_SENS);
         }
         else
         {
@@ -213,24 +187,22 @@ void vTaskMaster(void *pvParameters)
         }
 
         // Check GSM alarm
-        if  (TRUE == LL_RTC_IsActiveFlag_ALRB(RTC_Handle.Instance))
+        if (TRUE == TIME_CheckAlarm(TIME_ALARM_GSM))
         {
             printf("The GSM alarm clock rang\r\n");
 
-            // Resume TASK_GSM
-//            vTaskResume(TASK_GSM_hHandlerTask);
+            // Set sensors alarm
+            sTime.tm_min = 2;
+            sTime.tm_sec = 0;
 
-            // Set GSM alarm
-            sTime.Minutes = 2;
-            sTime.Seconds = 0;
-            TASK_MASTER_SetAlarm(sTime);
+            TIME_SetAlarm(sTime, TIME_ALARM_GSM);
         }
         else
         {
             DoNothing();
         }
 
-        vTaskDelay(1000/portTICK_RATE_MS);
+        vTaskDelay(100/portTICK_RATE_MS);
 
         // Check TASK_GSM state
         vTaskGetInfo(TASK_GSM_hHandlerTask,&xTaskStatus,pdTRUE,eInvalid );
@@ -267,261 +239,6 @@ void vTaskMaster(void *pvParameters)
 //==================================================================================================
 //**************************************************************************************************
 
-//**************************************************************************************************
-// @Function      test_cmd1()
-//--------------------------------------------------------------------------------------------------
-// @Description   None.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static void test_cmd1(const char* data)
-{
-    INIT_TerminalSend("test_cmd1", strlen("test_cmd1"));
-}// end of test_cmd1()
-
-
-
-//**************************************************************************************************
-// @Function      TASK_MASTER_ReadRecordCMD()
-//--------------------------------------------------------------------------------------------------
-// @Description   None.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static void TASK_MASTER_ReadRecordCMD(const char* data)
-{
-    uint32_t nRecordSize = 0U;
-
-    // Attempt get mutex
-    if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_MASTER_MUTEX_DELAY))
-    {
-        // Load record
-        if (RESULT_OK == RECORD_MAN_Load(0,TASK_MASTER_aRecord,
-                                         &nRecordSize))
-        {
-            INIT_TerminalSend("Record load successful", strlen("Record load successful"));
-        }
-        else
-        {
-            INIT_TerminalSend("Record load error", strlen("Record load error"));
-        }
-
-        // Return mutex
-        xSemaphoreGive(RECORD_MAN_xMutex);
-    }
-    else
-    {
-        DoNothing();
-    }
-} // end of TASK_MASTER_ReadRecordCMD()
-
-
-
-//**************************************************************************************************
-// @Function      TASK_MASTER_WriteRecordCMD()
-//--------------------------------------------------------------------------------------------------
-// @Description   None.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static void TASK_MASTER_WriteRecordCMD(const char* data)
-{
-
-    uint8_t aDataSource[RECORD_MAN_SIZE_OF_RECORD_BYTES];
-    uint32_t nQtyRecord = 0U;
-
-    // Clear buf
-    for (int i = 0; i < RECORD_MAN_SIZE_OF_RECORD_BYTES; ++i)
-    {
-        aDataSource[i] = 0U;
-    }
-
-    // Prepare data
-    for (int i = 0; i < RECORD_MAN_SIZE_OF_RECORD_BYTES - 1U; ++i)
-    {
-        aDataSource[i] = rand()%255;
-    }
-
-    // Attempt get mutex
-    if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_MASTER_MUTEX_DELAY))
-    {
-        if (RESULT_OK == RECORD_MAN_Store(aDataSource,
-                                          RECORD_MAN_SIZE_OF_RECORD_BYTES,
-                                          &nQtyRecord))
-        {
-            printf("Record store OK; Quantity records %d",nQtyRecord);
-        }
-        else
-        {
-            INIT_TerminalSend("Record store error", strlen("Record store error"));
-        }
-
-        // Return mutex
-        xSemaphoreGive(RECORD_MAN_xMutex);
-    }
-    else
-    {
-        INIT_TerminalSend("Mutex is busy", strlen("Mutex is busy"));
-    }
-} // end of TASK_MASTER_WriteRecordCMD()
-
-
-
-//**************************************************************************************************
-// @Function      TASK_MASTER_TestEECMD()
-//--------------------------------------------------------------------------------------------------
-// @Description   None.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static void TASK_MASTER_TestEECMD(const char* data)
-{
-//    uint32_t nAdr32Value_A = 0x00010002;
-//    uint32_t nValue_A = 0xBEEFDEED;
-//
-//    VirtAddVarTab[0] = 0x0001;
-//    VirtAddVarTab[1] = 0x0002;
-//
-//    // Write word in EE
-//    if (RESULT_OK == EE_WriteVariable32(nAdr32Value_A,
-//                       nValue_A))
-//    {
-//        nValue_A = 0;
-//        // Read word
-//        if (RESULT_OK == EE_ReadVariable32(nAdr32Value_A,
-//                                           &nValue_A))
-//        {
-//            printf("Value_A = %x",nValue_A);
-//        }
-//        else
-//        {
-//            INIT_TerminalSend("Read EE 32-bit value ERROR",
-//                              strlen("Read EE 32-bit value ERROR"));
-//        }
-//    }
-//    else
-//    {
-//        INIT_TerminalSend("Write EE 32-bit value ERROR",
-//                          strlen("Write EE 32-bit value ERROR"));
-//    }
-
-} // end of TASK_MASTER_TestEECMD()
-
-
-
-//**************************************************************************************************
-// @Function      TASK_MASTER_TestEECMD()
-//--------------------------------------------------------------------------------------------------
-// @Description   None.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static void RTC_TimeShow(uint8_t* showtime)
-{
-    RTC_DateTypeDef sdatestructureget;
-    RTC_TimeTypeDef stimestructureget;
-
-    /* Get the RTC current Time */
-    HAL_RTC_GetTime(&RTC_Handle, &stimestructureget, RTC_FORMAT_BIN);
-    /* Get the RTC current Date */
-    HAL_RTC_GetDate(&RTC_Handle, &sdatestructureget, RTC_FORMAT_BIN);
-    /* Display time Format : hh:mm:ss */
-//    sprintf((char*)showtime,"%02d:%02d:%02d",stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
-    printf("%02d:%02d:%02d\r\n",stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
-}
-
-
-
-//**************************************************************************************************
-// @Function      TASK_MASTER_SetAlarm()
-//--------------------------------------------------------------------------------------------------
-// @Description   None.
-//--------------------------------------------------------------------------------------------------
-// @Notes         None.
-//--------------------------------------------------------------------------------------------------
-// @ReturnValue   None.
-//--------------------------------------------------------------------------------------------------
-// @Parameters    None.
-//**************************************************************************************************
-static void TASK_MASTER_SetAlarm(const RTC_TimeTypeDef sTime)
-{
-    RTC_TimeTypeDef sTimeCurrent;
-    RTC_AlarmTypeDef sAlarm;
-
-    /*##-1- Enables the PWR Clock and Enables access to the backup domain ######*/
-    /* To enable access on RTC registers */
-    HAL_PWR_EnableBkUpAccess();
-
-    /* Get the RTC current Time */
-    HAL_RTC_GetTime(&RTC_Handle, &sTimeCurrent, RTC_FORMAT_BIN);
-
-    // Calculate next time alarm
-//    if (60U <= (sTimeCurrent.Seconds + sTime.Seconds))
-//    {
-//        sAlarm.AlarmTime.Seconds = (sTimeCurrent.Seconds + sTime.Seconds)%59U;
-//        sAlarm.AlarmTime.Minutes = sTimeCurrent.Minutes + 1U;
-//    }
-//    else
-//    {
-//        sAlarm.AlarmTime.Seconds = sTimeCurrent.Seconds + sTime.Seconds;
-//
-//    }
-
-
-    sAlarm.AlarmTime.Seconds = (sTimeCurrent.Seconds + sTime.Seconds)%59U;
-
-//    sAlarm.AlarmTime.Minutes = sTimeCurrent.Minutes + sTime.Minutes;
-
-    sAlarm.AlarmTime.TimeFormat = RTC_HOURFORMAT12_AM;
-    sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-    sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-    sAlarm.AlarmMask = RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_HOURS | RTC_ALARMMASK_DATEWEEKDAY;
-    sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
-    sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
-    sAlarm.AlarmDateWeekDay = 1;
-    sAlarm.Alarm = RTC_ALARM_A;
-
-//    HAL_RTC_SetAlarm(&RTC_Handle, &sAlarm, FORMAT_BIN);
-    HAL_RTC_SetAlarm_IT(&RTC_Handle, &sAlarm, FORMAT_BIN);
-
-    __HAL_RTC_WRITEPROTECTION_DISABLE(&RTC_Handle);
-    LL_RTC_DisableIT_TAMP(RTC_Handle.Instance);
-    LL_RTC_DisableIT_TAMP1(RTC_Handle.Instance);
-    LL_RTC_DisableIT_TAMP2(RTC_Handle.Instance);
-    LL_RTC_DisableIT_TAMP3(RTC_Handle.Instance);
-    LL_RTC_DisableIT_TS(RTC_Handle.Instance);
-    LL_RTC_DisableIT_WUT(RTC_Handle.Instance);
-    __HAL_RTC_WRITEPROTECTION_ENABLE(&RTC_Handle);
-
-    /* To disable access on RTC registers */
-    HAL_PWR_DisableBkUpAccess();
-
-} // end of TASK_MASTER_SetAlarm()
-
-
-
-
-
-
+// None.
 
 //****************************************** end of file *******************************************

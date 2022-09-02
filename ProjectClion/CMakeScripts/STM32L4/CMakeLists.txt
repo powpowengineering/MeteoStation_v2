@@ -50,7 +50,7 @@ file(GLOB_RECURSE AM2305_SOURCES "${CMAKE_SOURCE_DIR}/../../AM2305/am2305_drv.c"
 file(GLOB_RECURSE RECORD_MAN "${CMAKE_SOURCE_DIR}/../../RecordManager/record_manager.c")
 file(GLOB_RECURSE CheckSum_SOURCES "${CMAKE_SOURCE_DIR}/../../CheckSum/checksum.c")
 file(GLOB_RECURSE PRINTF_SOURCES "${CMAKE_SOURCE_DIR}/../../printf-master/printf.c")
-file(GLOB_RECURSE TERMINAL "${CMAKE_SOURCE_DIR}/../../TERMINAL/term-srv.c")
+file(GLOB_RECURSE TERMINAL "${CMAKE_SOURCE_DIR}/../../TERMINAL/*.c")
 #file(GLOB_RECURSE USART_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/USART_Driver/usart_drv.c")
 file(GLOB_RECURSE W25Q_FLASH_DRIVER_SOURCES "${CMAKE_SOURCE_DIR}/../../W25Q_FLASH/W25Q_drv.c")
 file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/../../BMP2-Sensor-API-master/bmp2.c")
@@ -58,6 +58,7 @@ file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/../../BMP2-Sensor-API-master/bmp2.
 file(GLOB_RECURSE CORE_MQTT "${CMAKE_SOURCE_DIR}/../../coreMQTT/source/*.c")
 #file(GLOB_RECURSE EEPROM_EMULATION "${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation/*.c")
 file(GLOB_RECURSE EEPROM_EMULATION "${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new/Implementation/Latest/*.c")
+file(GLOB_RECURSE TIME "${CMAKE_SOURCE_DIR}/../../TIME/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/api/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/apps/mqtt/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/lwgsm/*.c")
@@ -150,6 +151,7 @@ include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new)
 include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new/Interface)
 include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new/Implementation/Latest)
 include_directories(${CMAKE_SOURCE_DIR}/../../SEGGER_RTT)
+include_directories(${CMAKE_SOURCE_DIR}/../../TIME)
 
 
 
@@ -207,6 +209,7 @@ add_executable( ${PROJECT_NAME}
         ${FREERTOS_SOURCES}
         ${W25Q_FLASH_DRIVER_SOURCES}
         ${CheckSum_SOURCES}
+        ${TIME}
 )
 
 

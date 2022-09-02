@@ -61,11 +61,9 @@
 //#include "task_test_EE.h"
 #include "task_master.h"
 #include "task_GSM.h"
+#include "task_terminal.h"
 
-#include "stm32l4xx_ll_pwr.h"
 
-// Get hal_ll rtc
-#include "stm32l4xx_ll_rtc.h"
 
 //**************************************************************************************************
 // Verification of the imported configuration parameters
@@ -105,31 +103,6 @@ typedef enum
 #define PRINTF_DISABLE_SUPPORT_FLOAT
 #define PRINTF_DISABLE_SUPPORT_EXPONENTIAL
 #define TLM_CHANNEL                     (0)
-
-// Prm vTaskSensorsRead
-#define TASK_SEN_R_STACK_DEPTH          (256U)
-#define TASK_SEN_R_PARAMETERS           (NULL)
-#define TASK_SEN_R_PRIORITY             (1U)
-
-// Prm vTaskTestFlash
-#define TASK_TEST_FLASH_STACK_DEPTH          (256U)
-#define TASK_TEST_FLASH_PARAMETERS           (NULL)
-#define TASK_TEST_FLASH_PRIORITY             (1U)
-
-// Prm vTaskMQTT
-#define TASK_MQTT_STACK_DEPTH          (800U)
-#define TASK_MQTT_PARAMETERS           (NULL)
-#define TASK_MQTT_PRIORITY             (1U)
-
-// Prm vTaskEE
-#define TASK_EE_STACK_DEPTH          (256U)
-#define TASK_EE_PARAMETERS           (NULL)
-#define TASK_EE_PRIORITY             (1U)
-
-// Prm vTaskMaster
-#define TASK_MASTER_STACK_DEPTH          (256U)
-#define TASK_MASTER_PARAMETERS           (NULL)
-#define TASK_MASTER_PRIORITY             (1U)
 
 
 
@@ -206,6 +179,10 @@ void main(void)
     xTaskCreate(vTaskGSM,"vTaskGSM",TASK_GSM_STACK_DEPTH,\
                 TASK_GSM_PARAMETERS,\
                 TASK_GSM_PRIORITY,&TASK_GSM_hHandlerTask);
+
+    xTaskCreate(vTaskTerminal,"vTaskTERMINAL",TASK_TERMINAL_STACK_DEPTH,\
+                TASK_TERMINAL_PARAMETERS,\
+                TASK_TERMINAL_PRIORITY,&TASK_TERMINAL_hHandlerTask);
 
 //    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
 //                TASK_MQTT_PARAMETERS,\

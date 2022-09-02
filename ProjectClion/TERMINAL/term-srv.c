@@ -68,7 +68,8 @@ static inline void load_cursor_pos() { send_data("\x1B[u", 3); }
 /// @param  none
 /// @return none
 //  ***************************************************************************
-void term_srv_init(void(*_send_data)(const char*, int16_t), term_srv_cmd_t* _ext_cmd_list, uint8_t _ext_cmd_count) {
+void term_srv_init(void(*_send_data)(const char*, int16_t), term_srv_cmd_t* _ext_cmd_list, uint8_t _ext_cmd_count)
+{
     send_data = _send_data;
     ext_cmd_list = _ext_cmd_list;
     ext_cmd_count = _ext_cmd_count;
@@ -78,7 +79,8 @@ void term_srv_init(void(*_send_data)(const char*, int16_t), term_srv_cmd_t* _ext
 //  ***************************************************************************
 /// @brief  Call when client is connected
 //  ***************************************************************************
-void term_srv_attach(void) {
+void term_srv_attach(void)
+{
     send_data("\r\n", 2);
     send_data(GREETING_STRING, strlen(GREETING_STRING));
 }
@@ -86,7 +88,8 @@ void term_srv_attach(void) {
 //  ***************************************************************************
 /// @brief  Call when client is disconnected
 //  ***************************************************************************
-void term_srv_detach(void) {
+void term_srv_detach(void)
+{
     cursor_pos = 0;
     memset(&current_cmd, 0, sizeof(current_cmd));
     
@@ -94,7 +97,8 @@ void term_srv_detach(void) {
     memset(esc_seq_buffer, 0, sizeof(esc_seq_buffer));
     
     memset(history_elements, 0, sizeof(history_elements));
-    for (int16_t i = 0; i < MAX_COMMAND_HISTORY_LENGTH; ++i) {
+    for (int16_t i = 0; i < MAX_COMMAND_HISTORY_LENGTH; ++i)
+    {
         history[i] = &history_elements[i];
     }
     history_len = 0;
@@ -106,19 +110,26 @@ void term_srv_detach(void) {
 /// @param  symbol: received symbol
 /// @return none
 //  ***************************************************************************
-void term_srv_process(char symbol) {
-    if (current_cmd.len + 1 >= MAX_COMMAND_LENGTH) {
+void term_srv_process(char symbol)
+{
+    if (current_cmd.len + 1 >= MAX_COMMAND_LENGTH)
+    {
         return; // Incoming buffer is overflow
     }
     
-    if (esc_seq_length == 0) {
+    if (esc_seq_length == 0)
+    {
         // Check escape signature
-        if (symbol <= 0x1F || symbol == 0x7F) {
+        if (symbol <= 0x1F || symbol == 0x7F)
+        {
             esc_seq_buffer[esc_seq_length++] = symbol;
         }
+
         // Print symbol if escape sequence signature is not found
-        if (esc_seq_length == 0) {
-            if (cursor_pos < current_cmd.len) {
+        if (esc_seq_length == 0)
+        {
+            if (cursor_pos < current_cmd.len)
+            {
                 memmove(&current_cmd.cmd[cursor_pos + 1], &current_cmd.cmd[cursor_pos], current_cmd.len - cursor_pos); // Offset symbols after cursor
                 save_cursor_pos();
                 send_data(&current_cmd.cmd[cursor_pos], current_cmd.len - cursor_pos + 1);
@@ -128,25 +139,33 @@ void term_srv_process(char symbol) {
             ++current_cmd.len;
             send_data(&symbol, 1); 
         }
-    } else {
+    }
+    else
+    {
         esc_seq_buffer[esc_seq_length++] = symbol;
     }
     
     // Process escape sequence
-    if (esc_seq_length != 0) {
+    if (esc_seq_length != 0)
+    {
         int8_t possible_esc_seq_count = 0;
         int8_t possible_esc_idx = 0;
-        for (int8_t i = 0; i < ESCAPE_SEQUENCES_COUNT; ++i) {
-            if (esc_seq_length <= esc_seq_list[i].len && memcmp(esc_seq_buffer, esc_seq_list[i].cmd, esc_seq_length) == 0) {
+        for (int8_t i = 0; i < ESCAPE_SEQUENCES_COUNT; ++i)
+        {
+            if (esc_seq_length <= esc_seq_list[i].len && memcmp(esc_seq_buffer, esc_seq_list[i].cmd, esc_seq_length) == 0)
+            {
                 ++possible_esc_seq_count;
                 possible_esc_idx = i;
             }
         }
         
-        switch (possible_esc_seq_count) {
+        switch (possible_esc_seq_count)
+        {
         case 0: // No sequence - display all symbols
-            for (int8_t i = 0; i < esc_seq_length && current_cmd.len + 1 < MAX_COMMAND_LENGTH; ++i) {
-                if (esc_seq_buffer[i] <= 0x1F || esc_seq_buffer[i] == 0x7F) {
+            for (int8_t i = 0; i < esc_seq_length && current_cmd.len + 1 < MAX_COMMAND_LENGTH; ++i)
+            {
+                if (esc_seq_buffer[i] <= 0x1F || esc_seq_buffer[i] == 0x7F)
+                {
                     esc_seq_buffer[i] = '?';
                 }
                 current_cmd.cmd[cursor_pos + i] = esc_seq_buffer[i];
@@ -158,7 +177,8 @@ void term_srv_process(char symbol) {
             break;
         
         case 1: // We found one possible sequence - check size and call handler
-            if (esc_seq_list[possible_esc_idx].len == esc_seq_length) {
+            if (esc_seq_list[possible_esc_idx].len == esc_seq_length)
+            {
                 esc_seq_length = 0;
                 esc_seq_list[possible_esc_idx].handler(NULL);
             }
@@ -177,15 +197,19 @@ void term_srv_process(char symbol) {
 /// @param  none
 /// @return none
 //  ***************************************************************************
-static void esc_return_handler(const char* cmd) {
+static void esc_return_handler(const char* cmd)
+{
     send_data("\r\n", 2);
     
     // Add command into history
-    if (current_cmd.len) {
-        if (history_len >= MAX_COMMAND_HISTORY_LENGTH) {
+    if (current_cmd.len)
+    {
+        if (history_len >= MAX_COMMAND_HISTORY_LENGTH)
+        {
             // If history is overflow -- offset all items to begin by 1 position, first item move to end
             void* temp_addr = history[0];
-            for (int16_t i = 0; i < MAX_COMMAND_HISTORY_LENGTH - 1; ++i) {
+            for (int16_t i = 0; i < MAX_COMMAND_HISTORY_LENGTH - 1; ++i)
+            {
                 history[i] = history[i + 1];
             }
             history[MAX_COMMAND_HISTORY_LENGTH - 1] = temp_addr;
@@ -198,21 +222,26 @@ static void esc_return_handler(const char* cmd) {
     // Calc command length without args
     void* addr = memchr(current_cmd.cmd, ' ', current_cmd.len);
     int16_t cmd_len = current_cmd.len;
-    if (addr != NULL) {
+    if (addr != NULL)
+    {
         cmd_len = (uint32_t)addr - (uint32_t)current_cmd.cmd;
     }
     
     // Search command
     bool is_find = false;
-    for (int16_t i = 0; i < ext_cmd_count; ++i) {
-        if (cmd_len == ext_cmd_list[i].len && memcmp(ext_cmd_list[i].cmd, current_cmd.cmd, cmd_len) == 0) {
+    for (int16_t i = 0; i < ext_cmd_count; ++i)
+    {
+        if (cmd_len == ext_cmd_list[i].len && memcmp(ext_cmd_list[i].cmd, current_cmd.cmd, cmd_len) == 0)
+        {
             ext_cmd_list[i].handler(current_cmd.cmd);
             send_data("\r\n", 2);
             is_find = true;
             break;
         }
     }
-    if (!is_find && cmd_len) {
+
+    if (!is_find && cmd_len)
+    {
         send_data(current_cmd.cmd, cmd_len);
         send_data(UNKNOWN_COMMAND_STRING, strlen(UNKNOWN_COMMAND_STRING));
         send_data("\r\n", 2);
@@ -227,7 +256,8 @@ static void esc_return_handler(const char* cmd) {
 //  ***************************************************************************
 /// @brief  Process BACKSPACE escape
 //  ***************************************************************************
-static void esc_backspace_handler(const char* cmd) {
+static void esc_backspace_handler(const char* cmd)
+{
     if (cursor_pos > 0) {
         memmove(&current_cmd.cmd[cursor_pos - 1], &current_cmd.cmd[cursor_pos], current_cmd.len - cursor_pos); // Remove symbol from buffer
         current_cmd.cmd[current_cmd.len - 1] = 0; // Clear last symbol

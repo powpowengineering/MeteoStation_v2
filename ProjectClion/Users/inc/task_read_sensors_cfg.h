@@ -24,6 +24,10 @@
 // BPM280 device address
 #define TASK_READ_SEN_BMP280_ADR                (0x76U)
 
+// Prm vTaskSensorsRead
+#define TASK_SEN_R_STACK_DEPTH          (256U)
+#define TASK_SEN_R_PARAMETERS           (NULL)
+#define TASK_SEN_R_PRIORITY             (1U)
 
 
 #endif // #ifndef TASK_READ_SENSORS_CFG_H

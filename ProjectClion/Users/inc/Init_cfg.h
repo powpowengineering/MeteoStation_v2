@@ -93,32 +93,6 @@
 // Configure ADC
 #define INIT_ADC_NUM                             ADC1
 
-// Configure RTC
-#define INIT_RTC_ASYNCHPREDIV                   (127U)
-#define INIT_RTC_SYNCHPREDIV                    (255U)
-#define INIT_RTC_OUTPUT                         (RTC_OUTPUT_ALARMA)
-#define INIT_RTC_OUTPUT_REMAP                   (RTC_OUTPUT_REMAP_NONE)
-#define INIT_RTC_OUTPUT_POLARITY                (RTC_OUTPUT_POLARITY_HIGH)
-#define INIT_RTC_OUTPUT_TYPE                    (RTC_OUTPUT_TYPE_PUSHPULL)
-#define INIT_RTC_TIME_HOUR_DEF                  (12U)
-#define INIT_RTC_TIME_MINUTES_DEF               (0U)
-#define INIT_RTC_TIME_SECONDS_DEF               (0U)
-#define INIT_RTC_TIMEFORMAT                     (RTC_HOURFORMAT12_PM)
-
-// Alarm for sensors
-#define INIT_ALARM_SENS_NUM                    (RTC_ALARM_A)
-#define INIT_ALARM_SENS_HOURS                  (0U)
-#define INIT_ALARM_SENS_MINUTES                (0U)
-#define INIT_ALARM_SENS_SECONDS                (0U)
-#define INIT_ALARM_SENS_MASK                   (RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_HOURS | RTC_ALARMMASK_DATEWEEKDAY)
-
-// Alarm for GSM
-#define INIT_ALARM_GSM_NUM                    (RTC_ALARM_B)
-#define INIT_ALARM_GSM_HOURS                  (0U)
-#define INIT_ALARM_GSM_MINUTES                (0U)
-#define INIT_ALARM_GSM_SECONDS                (0U)
-#define INIT_ALARM_GSM_MASK                   ( RTC_ALARMMASK_HOURS | RTC_ALARMMASK_DATEWEEKDAY)
-
 // Configure LED2 pin PA5
 #define INIT_LED2_PORT                          GPIOA
 #define INIT_LED2_PIN                           GPIO_PIN_5

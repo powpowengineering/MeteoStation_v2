@@ -38,11 +38,13 @@
 // None.
 
 
+
 //**************************************************************************************************
 // Definitions of global (public) constants
 //**************************************************************************************************
 
 // None.
+
 
 
 //**************************************************************************************************
@@ -60,9 +62,6 @@ extern I2C_HandleTypeDef I2CBMP280Handler;
 
 extern ADC_HandleTypeDef ADC_Handle;
 
-// RTC handle
-extern RTC_HandleTypeDef RTC_Handle;
-
 
 
 //**************************************************************************************************
@@ -71,10 +70,6 @@ extern RTC_HandleTypeDef RTC_Handle;
 
 // Init MCU
 extern void Init(void);
-
-// Send function for terminal
-extern void INIT_TerminalSend(const char* data,
-                              int16_t size);
 
 // Delay function
 extern void INIT_Delay(uint32_t us);

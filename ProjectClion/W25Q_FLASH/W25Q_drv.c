@@ -451,7 +451,7 @@ STD_RESULT W25Q_WriteData(uint32_t adr,uint8_t* data, uint32_t len)
     uint32_t indexBuf=0;
 
     // check capacity
-    if((adr + len) < W25Q_CAPACITY_ALL_MEMORY_BYTES)
+    if((adr + len - 1U) < W25Q_CAPACITY_ALL_MEMORY_BYTES)
     {
         while(len != 0)
         {
