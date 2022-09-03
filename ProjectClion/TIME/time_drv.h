@@ -83,6 +83,12 @@ extern U32 TIME_GetUnixTimestamp(void);
 // Set alarm
 extern void TIME_SetAlarm(const TIME_type time, U32 nAlarmName);
 
+// Set date
+extern void TIME_SetDate(TIME_type time);
+
+// Set time
+extern void TIME_SetTime(TIME_type time);
+
 // Check alarm
 extern BOOLEAN TIME_CheckAlarm(U32 nAlarmName);
 

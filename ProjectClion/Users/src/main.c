@@ -184,22 +184,6 @@ void main(void)
                 TASK_TERMINAL_PARAMETERS,\
                 TASK_TERMINAL_PRIORITY,&TASK_TERMINAL_hHandlerTask);
 
-//    xTaskCreate(vTaskMQTT,"TaskMQTT",TASK_MQTT_STACK_DEPTH,\
-//                TASK_MQTT_PARAMETERS,\
-//                TASK_MQTT_PRIORITY,&HandleTask_MQTT);
-
-//    xTaskCreate(vTaskTestEE,"TaskTestEE",TASK_EE_STACK_DEPTH,\
-//                TASK_EE_PARAMETERS,\
-//                TASK_EE_PRIORITY,NULL);
-
-//    osThreadCreate(osThread(THREAD_TEST_FLASH), NULL);
-//    osThreadCreate(osThread(THREAD_TEST_EE), NULL);
-//    osThreadCreate(osThread(THREAD_TEST_FLASH_WITH_EE), NULL);
-//    osThreadCreate(osThread(THREAD_TEST_MQTT), NULL);
-//    osThreadCreate(osThread(THREAD_MASTER), NULL);
-//    osThreadCreate(osThread(THREAD_READ_SENSORS), NULL);
-
-
     // Blocking task
     vTaskSuspend( TASK_READ_SEN_hHandlerTask );
 

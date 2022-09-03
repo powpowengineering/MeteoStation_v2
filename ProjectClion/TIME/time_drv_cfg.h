@@ -32,7 +32,7 @@
 #define TIME_RTC_TIME_HOUR_DEF                  (12U)
 #define TIME_RTC_TIME_MINUTES_DEF               (0U)
 #define TIME_RTC_TIME_SECONDS_DEF               (0U)
-#define TIME_RTC_TIMEFORMAT                     (RTC_HOURFORMAT12_PM)
+#define TIME_RTC_TIMEFORMAT                     (RTC_HOURFORMAT12_AM)
 
 // Alarm for sensors
 #define TIME_ALARM_SENS_NUM                    (RTC_ALARM_A)

@@ -148,7 +148,7 @@ void TIME_Init(void)
         HAL_GPIO_WritePin(INIT_LED2_PORT, INIT_LED2_PIN, GPIO_PIN_RESET);
 
         // Config RTC
-        RTC_Handle.Init.HourFormat = RTC_HOURFORMAT_24;
+        RTC_Handle.Init.HourFormat = RTC_HOURFORMAT_12;
         RTC_Handle.Init.AsynchPrediv = TIME_RTC_ASYNCHPREDIV;
         RTC_Handle.Init.SynchPrediv = TIME_RTC_SYNCHPREDIV;
         RTC_Handle.Init.OutPut = TIME_RTC_OUTPUT;
@@ -255,8 +255,9 @@ void HAL_RTC_MspInit(RTC_HandleTypeDef *hrtc)
     /* Enable RTC Clock */
     __HAL_RCC_RTC_ENABLE();
 
-    /* Enable RTC APB clock  */
-//    __HAL_RCC_RTCAPB_CLK_ENABLE();
+    /* To disable access on RTC registers */
+//    HAL_PWR_DisableBkUpAccess();
+
 } // end of HAL_RTC_MspInit()
 
 
@@ -420,9 +421,77 @@ void TIME_TimeShow(void)
     // Get the RTC current Date
     HAL_RTC_GetDate(&RTC_Handle, &sdatestructureget, RTC_FORMAT_BIN);
 
-    // Display time Format : hh:mm:ss
+    // Display time Format : dd:mm:yy | hh:mm:ss
+    printf("%02d:%02d:%02d | ",sdatestructureget.Date, sdatestructureget.Month, sdatestructureget.Year);
     printf("%02d:%02d:%02d\r\n",stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
+
 } // end of TIME_TimeShow()
+
+
+
+//**************************************************************************************************
+// @Function      TIME_SetDate()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+void TIME_SetDate(TIME_type time)
+{
+
+    RTC_DateTypeDef sDate;
+
+    /*##-1- Enables the PWR Clock and Enables access to the backup domain ######*/
+    /* To enable access on RTC registers */
+    HAL_PWR_EnableBkUpAccess();
+
+    // Set default date
+    sDate.Date = time.tm_mday;
+    sDate.Month = time.tm_mon;
+    sDate.Year = time.tm_year;
+    sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+    HAL_RTC_SetDate(&RTC_Handle, &sDate, RTC_FORMAT_BIN);
+
+    // Disable BKUP access
+    HAL_PWR_DisableBkUpAccess();
+} // end of TIME_SetDate()
+
+
+
+//**************************************************************************************************
+// @Function      TIME_SetDate()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+void TIME_SetTime(TIME_type time)
+{
+    RTC_TimeTypeDef sTime;
+
+    /*##-1- Enables the PWR Clock and Enables access to the backup domain ######*/
+    /* To enable access on RTC registers */
+    HAL_PWR_EnableBkUpAccess();
+
+    // Set default date
+    sTime.Hours = time.tm_hour;
+    sTime.Minutes = time.tm_min;
+    sTime.Seconds = time.tm_sec;
+    HAL_RTC_SetTime(&RTC_Handle, &sTime, RTC_FORMAT_BIN);
+
+    HAL_RTC_DST_Sub1Hour(&RTC_Handle);
+
+    // Disable BKUP access
+    HAL_PWR_DisableBkUpAccess();
+} // end of TIME_SetDate()
 
 
 

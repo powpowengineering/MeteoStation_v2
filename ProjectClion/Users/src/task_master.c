@@ -147,9 +147,6 @@ void vTaskMaster(void *pvParameters)
 //    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_ALL);
 //while(1);
 
-    vTaskResume(TASK_READ_SEN_hHandlerTask);
-
-
     // Set sensors alarm
     sTime.tm_min = 0;
     sTime.tm_sec = 30;
@@ -165,8 +162,6 @@ void vTaskMaster(void *pvParameters)
         // Update dump eeprom
 //        RECORD_MAN_UpdateDumpMem();
 
-//        vTaskResume(TASK_READ_SEN_hHandlerTask);
-
         // Show current time
         TIME_TimeShow();
 
@@ -174,6 +169,9 @@ void vTaskMaster(void *pvParameters)
         if (TRUE == TIME_CheckAlarm(TIME_ALARM_SENS))
         {
             printf("The SENSORS alarm clock rang\r\n");
+
+            // Start measure
+            vTaskResume(TASK_READ_SEN_hHandlerTask);
 
             // Set sensors alarm
             sTime.tm_min = 0;
@@ -191,8 +189,11 @@ void vTaskMaster(void *pvParameters)
         {
             printf("The GSM alarm clock rang\r\n");
 
+            // Send data to server
+            vTaskResume(TASK_GSM_hHandlerTask);
+
             // Set sensors alarm
-            sTime.tm_min = 2;
+            sTime.tm_min = 5;
             sTime.tm_sec = 0;
 
             TIME_SetAlarm(sTime, TIME_ALARM_GSM);
@@ -202,7 +203,7 @@ void vTaskMaster(void *pvParameters)
             DoNothing();
         }
 
-        vTaskDelay(100/portTICK_RATE_MS);
+        vTaskDelay(2000/portTICK_RATE_MS);
 
         // Check TASK_GSM state
         vTaskGetInfo(TASK_GSM_hHandlerTask,&xTaskStatus,pdTRUE,eInvalid );

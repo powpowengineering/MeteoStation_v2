@@ -375,10 +375,10 @@ void vTaskReadSensors(void *pvParameters)
             printf("TASK_READ_SENS: Mutex of record manager is busy\r\n");
         }
 
-        vTaskDelay(1000/portTICK_RATE_MS);
+//        vTaskDelay(1000/portTICK_RATE_MS);
 
         // Blocking vTaskReadSensors
-//        vTaskSuspend(TASK_READ_SEN_hHandlerTask);
+        vTaskSuspend(TASK_READ_SEN_hHandlerTask);
     }
 
 }// end of vTaskReadSensors

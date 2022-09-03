@@ -45,9 +45,10 @@
 
 // STD lib
 #include "string.h"
+#include "stdlib.h"
 
 #include "Init.h"
-
+#include "time_drv.h"
 
 
 //**************************************************************************************************
@@ -92,6 +93,7 @@ static void TASK_MASTER_ReadRecordCMD(const char* data);
 static void TASK_MASTER_WriteRecordCMD(const char* data);
 static void TASK_MASTER_TestEECMD(const char* data);
 static void TASK_MASTER_SetDate(const char* data);
+static void TASK_MASTER_SetTime(const char* data);
 
 static term_srv_cmd_t cmd_list[] = {
         { .cmd = "command1", .len = 8, .handler = test_cmd1 },
@@ -99,6 +101,7 @@ static term_srv_cmd_t cmd_list[] = {
         { .cmd = "StoreRecord", .len = 11, .handler = TASK_MASTER_WriteRecordCMD },
         { .cmd = "TestEE", .len = 6, .handler = TASK_MASTER_TestEECMD },
         { .cmd = "SetDate", .len = 7, .handler = TASK_MASTER_SetDate },
+        { .cmd = "SetTime", .len = 7, .handler = TASK_MASTER_SetTime }
 };
 
 
@@ -109,6 +112,7 @@ static term_srv_cmd_t cmd_list[] = {
 
 // Send data to terminal
 static void TASK_TERMINAL_Send(const char* data, int16_t size);
+
 
 
 
@@ -356,9 +360,94 @@ static void TASK_MASTER_TestEECMD(const char* data)
 //**************************************************************************************************
 static void TASK_MASTER_SetDate(const char* data)
 {
-    TASK_TERMINAL_Send(data, strlen(data));
+    // Get parameter
+    char* pArg = memchr(data,' ',strlen(data));
+    char* pEnd;
+    int day = 0U;
+    int month = 0U;
+    int year = 0U;
+
+    TIME_type time;
+
+    // Check parameter
+    if ((NULL != pArg) && (2 < strlen(pArg)))
+    {
+        day = strtol(pArg,&pEnd,10U);
+        month = strtol(pEnd + 1U,&pEnd,10U);
+        year = strtol(pEnd + 1U,&pEnd,10U);
+
+        if ((0U == day) || (0U == month) || (0U == year))
+        {
+            TASK_TERMINAL_Send("Parameter ERROR",strlen("Parameter ERROR"));
+        }
+        else
+        {
+            // Set date
+            time.tm_year = year;
+            time.tm_mon = month;
+            time.tm_mday = day;
+
+            TIME_SetDate(time);
+
+            TASK_TERMINAL_Send(pArg + 1U, strlen(pArg));
+        }
+    }
+    else
+    {
+        TASK_TERMINAL_Send("Parameter ERROR",strlen("Parameter ERROR"));
+    }
 } // end of TASK_MASTER_SetDate()
 
 
 
+//**************************************************************************************************
+// @Function      TASK_MASTER_SetTime()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+static void TASK_MASTER_SetTime(const char* data)
+{
+    // Get parameter
+    char* pArg = memchr(data,' ',strlen(data));
+    char* pEnd;
+    int seconds = 0U;
+    int minutes = 0U;
+    int hour = 0U;
+
+    TIME_type time;
+
+    // Check parameter
+    if ((NULL != pArg) && (2 < strlen(pArg)))
+    {
+        hour = strtol(pArg,&pEnd,10U);
+        minutes = strtol(pEnd + 1U,&pEnd,10U);
+        seconds = strtol(pEnd + 1U,&pEnd,10U);
+
+//        if ((0U == seconds) || (0U == month) || (0U == year))
+//        {
+//            TASK_TERMINAL_Send("Parameter ERROR",strlen("Parameter ERROR"));
+//        }
+//        else
+//        {
+            // Set date
+            time.tm_sec= seconds;
+            time.tm_min= minutes;
+            time.tm_hour = hour;
+
+            TIME_SetTime(time);
+
+            TASK_TERMINAL_Send(pArg + 1U, strlen(pArg));
+//        }
+    }
+    else
+    {
+        TASK_TERMINAL_Send("Parameter ERROR",strlen("Parameter ERROR"));
+    }
+} // end of TASK_MASTER_SetTime()
 //****************************************** end of file *******************************************
