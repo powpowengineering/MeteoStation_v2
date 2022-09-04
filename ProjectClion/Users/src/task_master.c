@@ -147,16 +147,6 @@ void vTaskMaster(void *pvParameters)
 //    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_ALL);
 //while(1);
 
-    // Set sensors alarm
-    sTime.tm_min = 0;
-    sTime.tm_sec = 30;
-    TIME_SetAlarm(sTime,TIME_ALARM_SENS);
-
-    // Set GSM alarm
-    sTime.tm_min = 2;
-    sTime.tm_sec = 0;
-    TIME_SetAlarm(sTime, TIME_ALARM_GSM);
-
     for(;;)
     {
         // Update dump eeprom
@@ -215,9 +205,16 @@ void vTaskMaster(void *pvParameters)
 
             if (eSuspended == xTaskStatus.eCurrentState)
             {
+                // W25Q power down
+//                W25Q_PowerDown();
+//                printf("W25Q power down\r\n");
+
                 // Go to StandBy
                 printf("Go to standBy mode\r\n");
-//                HAL_PWR_EnterSTANDBYMode();
+                HAL_PWREx_EnableGPIOPullUp(PWR_GPIO_C, PWR_GPIO_BIT_4);
+                HAL_PWREx_EnablePullUpPullDownConfig();
+                HAL_PWR_EnterSTANDBYMode();
+//                HAL_PWREx_EnterSHUTDOWNMode();
             }
             else
             {

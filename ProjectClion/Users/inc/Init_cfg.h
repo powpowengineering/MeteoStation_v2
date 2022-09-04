@@ -88,7 +88,7 @@
 
 // Configure DC/DC control GSM pin
 #define INIT_DC_GSM_PORT                         GPIOC
-#define INIT_DC_GSM_PIN                          GPIO_PIN_12
+#define INIT_DC_GSM_PIN                          GPIO_PIN_4
 
 // Configure ADC
 #define INIT_ADC_NUM                             ADC1

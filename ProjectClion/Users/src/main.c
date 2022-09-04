@@ -52,7 +52,7 @@
 #include "FreeRTOSConfig.h"
 #include "cmsis_os.h"
 
-
+#include "W25Q_drv.h"
 // Include task_sensors_read interface
 #include "task_read_sensors.h"
 // Include task_test_flash interface
@@ -161,12 +161,6 @@ void main(void)
 
     RECORD_MAN_xMutex = xSemaphoreCreateMutex();
 
-//    osThreadDef(THREAD_TEST_FLASH, vTaskTestFlash, osPriorityNormal, 0, TASK_TEST_FLASH_STACK_DEPTH);
-//    osThreadDef(THREAD_TEST_EE, vTaskTestEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
-//    osThreadDef(THREAD_TEST_FLASH_WITH_EE, vTaskTestFlashWithEE, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
-//    osThreadDef(THREAD_TEST_MQTT, vTaskMQTT, osPriorityNormal, 0, TASK_EE_STACK_DEPTH);
-//    osThreadDef(THREAD_MASTER, vTaskMaster, osPriorityNormal, 0, TASK_MASTER_STACK_DEPTH);
-//    osThreadDef(THREAD_READ_SENSORS, vTaskReadSensors, osPriorityNormal, 0, TASK_SEN_R_STACK_DEPTH);
 
     xTaskCreate(vTaskReadSensors,"vTaskReadSensors",TASK_SEN_R_STACK_DEPTH,\
                 TASK_SEN_R_PARAMETERS,\

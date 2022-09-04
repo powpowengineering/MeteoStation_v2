@@ -806,6 +806,62 @@ STD_RESULT W25Q_IsAreaBlank(const uint32_t nAddress, const uint32_t nSize, BOOLE
 } // end of W25Q_IsAreaBlank()
 
 
+//**************************************************************************************************
+// @Function      W25Q_PowerDown()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+STD_RESULT W25Q_PowerDown(void)
+{
+    STD_RESULT enResult = RESULT_NOT_OK;
+    uint8_t cmd = 0;
+    uint8_t status = 0;
+
+    //check BUSY W25Q
+    cmd = (uint8_t) W25Q_CMD_READ_STATUS_REG_1;
+    status = 0xff;
+
+    if (RESULT_OK ==  W25Q_ReadWriteSPI(&cmd,
+                                        W25Q_SIZE_CMD_WORD_BYTES,
+                                        &status,
+                                        1))
+    {
+        if ((status & W25Q_REG1_BUSY_BIT) == 0U)
+        {
+            // Power down instruction
+            cmd = (uint8_t) W25Q_CMD_POWER_DOWN;
+            if (RESULT_OK == W25Q_ReadWriteSPI(&cmd,
+                                               W25Q_SIZE_CMD_WORD_BYTES,
+                                               0,
+                                               0))
+            {
+                enResult = RESULT_OK;
+            }
+            else
+            {
+                enResult = RESULT_NOT_OK;
+            }
+        }
+        else
+        {
+            enResult = RESULT_NOT_OK;
+        }
+    }
+    else
+    {
+        enResult = RESULT_NOT_OK;
+    }
+
+
+    return enResult;
+} // end of W25Q_PowerDown()
+
 
 
 //**************************************************************************************************

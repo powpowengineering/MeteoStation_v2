@@ -88,6 +88,9 @@ extern STD_RESULT W25Q_UnLockGlobal(void);
 // Detect blank memory
 extern STD_RESULT W25Q_IsAreaBlank(const uint32_t nAddress, const uint32_t nSize, BOOLEAN *const bResult);
 
+// Power down
+extern STD_RESULT W25Q_PowerDown(void);
+
 
 
 #endif // #ifndef W25Q_H
