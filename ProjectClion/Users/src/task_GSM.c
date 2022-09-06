@@ -382,7 +382,6 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         ftoa(stRecord.fHumidity, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
-//        publishInfo.pTopicName = "base/state/humidityyyy";
         publishInfo.pTopicName = "channels/1843720/publish/fields/field2";
         publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
         publishInfo.pPayload = TASK_GSM_aBufferPrintf;
@@ -396,8 +395,20 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         ftoa(stRecord.fPressure, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
-//        publishInfo.pTopicName = "base/state/pressureeee";
         publishInfo.pTopicName = "channels/1843720/publish/fields/field3";
+        publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
+        publishInfo.pPayload = TASK_GSM_aBufferPrintf;
+        publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);
+        TASK_GSM_PutString( MQTT_AT_CIPSEND);
+        TASK_GSM_Delay(4000);
+        MQTT_Publish(&MQTT_Context, &publishInfo, packetId);
+        TASK_GSM_PutChar( 0x1a);
+        TASK_GSM_Delay(4000);
+
+        ftoa(stRecord.fBatteryVoltage, TASK_GSM_aBufferPrintf, 3);
+        packetId = MQTT_GetPacketId(&MQTT_Context);
+        publishInfo.qos = MQTTQoS0;
+        publishInfo.pTopicName = "channels/1843720/publish/fields/field4";
         publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
         publishInfo.pPayload = TASK_GSM_aBufferPrintf;
         publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);

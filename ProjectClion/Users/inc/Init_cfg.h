@@ -49,8 +49,8 @@
 #define INIT_TERMINAL_USART_RX_PORT             GPIOA
 #define INIT_TERMINAL_USART_TX_AF               GPIO_AF7_USART2
 #define INIT_TERMINAL_USART_RX_AF               GPIO_AF7_USART2
-#define INIT_TERMINAL_DTR_PORT                  GPIOA
-#define INIT_TERMINAL_DTR_PIN                   GPIO_PIN_4
+//#define INIT_TERMINAL_DTR_PORT                  GPIOA
+//#define INIT_TERMINAL_DTR_PIN                   GPIO_PIN_4
 
 // Configure UART for GSM
 #define INIT_GSM_USART_NUM                      USART3
@@ -75,15 +75,15 @@
 #define INIT_BMP280_I2C_TIMING                   (0xF0001818U)
 
 // Configure analog pin for Battery
-#define INIT_BAT_PORT                            GPIOB
-#define INIT_BAT_PIN                             GPIO_PIN_0
-#define INIT_BAT_AN_CH                           ADC_CHANNEL_15
+#define INIT_BAT_PORT                            GPIOA
+#define INIT_BAT_PIN                             GPIO_PIN_4
+#define INIT_BAT_AN_CH                           ADC_CHANNEL_9
 #define INIT_BAT_RANK                            ADC_INJECTED_RANK_1
 
 // Configure analog pin for anemometr
-#define INIT_ANEMOMETER_PORT                     GPIOB
-#define INIT_ANEMOMETER_PIN                      GPIO_PIN_1
-#define INIT_ANEMOMETER_AN_CH                    ADC_CHANNEL_16
+#define INIT_ANEMOMETER_PORT                     GPIOC
+#define INIT_ANEMOMETER_PIN                      GPIO_PIN_5
+#define INIT_ANEMOMETER_AN_CH                    ADC_CHANNEL_14
 #define INIT_ANEMOMETER_RANK                     ADC_INJECTED_RANK_2
 
 // Configure DC/DC control GSM pin

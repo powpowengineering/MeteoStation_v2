@@ -146,6 +146,7 @@ void Init(void)
     __HAL_RCC_TIM6_CLK_ENABLE();
     __HAL_RCC_I2C1_CLK_ENABLE();
     __HAL_RCC_ADC_CLK_ENABLE();
+//    __HAL_RCC_ADC_CONFIG(RCC_ADCCLKSOURCE_SYSCLK);
     __HAL_RCC_PWR_CLK_ENABLE();
     __HAL_RCC_DMA1_CLK_ENABLE();
 
@@ -197,11 +198,11 @@ void Init(void)
     HAL_GPIO_Init(INIT_TERMINAL_USART_RX_PORT, &GPIO_InitStruct);
 
     // Configure the RX pin UART for TERMINAL DTR
-    GPIO_InitStruct.Pin        = INIT_TERMINAL_DTR_PIN;
-    GPIO_InitStruct.Mode       = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull       = GPIO_PULLUP;
-    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
-    HAL_GPIO_Init(INIT_TERMINAL_DTR_PORT, &GPIO_InitStruct);
+//    GPIO_InitStruct.Pin        = INIT_TERMINAL_DTR_PIN;
+//    GPIO_InitStruct.Mode       = GPIO_MODE_OUTPUT_PP;
+//    GPIO_InitStruct.Pull       = GPIO_PULLUP;
+//    GPIO_InitStruct.Speed      = GPIO_SPEED_FREQ_VERY_HIGH;
+//    HAL_GPIO_Init(INIT_TERMINAL_DTR_PORT, &GPIO_InitStruct);
 
     // Configure the TX pin UART for GSM
     GPIO_InitStruct.Pin        = INIT_GSM_USART_TX_PIN;
@@ -322,7 +323,7 @@ void Init(void)
     //ADC set
     ADC_Handle.Instance = INIT_ADC_NUM;
     ADC_Handle.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
-    ADC_Handle.Init.Resolution = ADC_RESOLUTION_8B;
+    ADC_Handle.Init.Resolution = ADC_RESOLUTION_10B;
     ADC_Handle.Init.DataAlign = ADC_DATAALIGN_RIGHT;
     ADC_Handle.Init.ScanConvMode = ADC_SCAN_ENABLE;
     ADC_Handle.Init.EOCSelection = ADC_EOC_SEQ_CONV;
@@ -332,6 +333,7 @@ void Init(void)
     ADC_Handle.Init.DiscontinuousConvMode = DISABLE;
     ADC_Handle.Init.ExternalTrigConv = ADC_SOFTWARE_START;
     ADC_Handle.Init.DMAContinuousRequests = DISABLE;
+    ADC_Handle.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
     ADC_Handle.Init.OversamplingMode = DISABLE;
     ADC_Handle.InjectionConfig.ChannelCount = 2U;
     ADC_Handle.InjectionConfig.ContextQueue = 1U;
@@ -340,23 +342,29 @@ void Init(void)
     ADC_InjectionConfTypeDef ADC_InjectionConf;
     ADC_InjectionConf.InjectedChannel = INIT_BAT_AN_CH;
     ADC_InjectionConf.InjectedRank = INIT_BAT_RANK;
+    ADC_InjectionConf.InjectedSingleDiff = ADC_SINGLE_ENDED;
     ADC_InjectionConf.InjectedNbrOfConversion = 2;
-    ADC_InjectionConf.InjectedSamplingTime = ADC_SAMPLETIME_247CYCLES_5;
+    ADC_InjectionConf.InjectedSamplingTime = ADC_SAMPLETIME_47CYCLES_5;
     ADC_InjectionConf.ExternalTrigInjecConv = ADC_INJECTED_SOFTWARE_START;
     ADC_InjectionConf.AutoInjectedConv = DISABLE;
+    ADC_InjectionConf.InjecOversamplingMode = DISABLE;
     ADC_InjectionConf.InjectedDiscontinuousConvMode = DISABLE;
-    ADC_InjectionConf.InjectedOffset = 0;
+    ADC_InjectionConf.InjectedOffsetNumber = ADC_OFFSET_NONE;
     HAL_ADCEx_InjectedConfigChannel(&ADC_Handle, &ADC_InjectionConf);
 
     ADC_InjectionConf.InjectedChannel = INIT_ANEMOMETER_AN_CH;
     ADC_InjectionConf.InjectedRank = INIT_ANEMOMETER_RANK;
+    ADC_InjectionConf.InjectedSingleDiff = ADC_SINGLE_ENDED;
     ADC_InjectionConf.InjectedNbrOfConversion = 2;
-    ADC_InjectionConf.InjectedSamplingTime = ADC_SAMPLETIME_247CYCLES_5;
+    ADC_InjectionConf.InjectedSamplingTime = ADC_SAMPLETIME_47CYCLES_5;
     ADC_InjectionConf.ExternalTrigInjecConv = ADC_INJECTED_SOFTWARE_START;
     ADC_InjectionConf.AutoInjectedConv = DISABLE;
+    ADC_InjectionConf.InjecOversamplingMode = DISABLE;
     ADC_InjectionConf.InjectedDiscontinuousConvMode = DISABLE;
-    ADC_InjectionConf.InjectedOffset = 0;
+    ADC_InjectionConf.InjectedOffsetNumber = ADC_OFFSET_NONE;
     HAL_ADCEx_InjectedConfigChannel(&ADC_Handle, &ADC_InjectionConf);
+
+    HAL_ADCEx_Calibration_Start(&ADC_Handle, ADC_SINGLE_ENDED);
 
     // Init I2C1 for BMP280
     I2CBMP280Handler.Instance = INIT_BMP280_I2C_NUM;

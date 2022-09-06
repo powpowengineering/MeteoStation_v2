@@ -151,6 +151,7 @@ void vTaskMaster(void *pvParameters)
     {
         // Update dump eeprom
 //        RECORD_MAN_UpdateDumpMem();
+        vTaskResume(TASK_READ_SEN_hHandlerTask);
 
         // Show current time
         TIME_TimeShow();

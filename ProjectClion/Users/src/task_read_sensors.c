@@ -97,20 +97,20 @@ TaskHandle_t    TASK_READ_SEN_hHandlerTask;
 #define TASK_READ_SENS_MUTEX_DELAY      (1000U)
 
 // ADC max value
-#define TASK_READ_SEN_ADC_MAX           (255U)
+#define TASK_READ_SEN_ADC_MAX           (1023U)
 
 // V power
 #define TASK_READ_SEN_V_POWER           (float)(3.3)
 #define TASK_READ_SEN_ADC_E_M_R                         (float)(TASK_READ_SEN_V_POWER / TASK_READ_SEN_ADC_MAX)
 
 // Battery voltage coefficient
-#define TASK_READ_SEN_BAT_RES_COEFFICIENT               (float)(4.5663083)
-#define TASK_READ_SEN_BAT_CORRECTION_FACTOR             (float)(0.9299488)
+#define TASK_READ_SEN_BAT_RES_COEFFICIENT               (float)(4.5833333)
+#define TASK_READ_SEN_BAT_CORRECTION_FACTOR             (float)(1.0)
 
 // Anemometer voltage coefficient
-#define TASK_READ_SEN_ANEMOMETER_RES_COEFFICIENT        (float)(1.6348123)
-#define TASK_READ_SEN_ANEMOMETER_WIND_COEFFICIENT        (float)(6)
-#define TASK_READ_SEN_ANEMOMETER_CORRECTION_FACTOR      (float)(0.9550999)
+#define TASK_READ_SEN_ANEMOMETER_RES_COEFFICIENT        (float)(4.5833333)
+#define TASK_READ_SEN_ANEMOMETER_WIND_COEFFICIENT       (float)(6.0)
+#define TASK_READ_SEN_ANEMOMETER_CORRECTION_FACTOR      (float)(1.0)
 
 
 
