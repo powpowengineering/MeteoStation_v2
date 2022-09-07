@@ -152,6 +152,8 @@ void vTaskMaster(void *pvParameters)
         // Update dump eeprom
 //        RECORD_MAN_UpdateDumpMem();
         vTaskResume(TASK_READ_SEN_hHandlerTask);
+        vTaskDelay(2000/portTICK_RATE_MS);
+
 
         // Show current time
         TIME_TimeShow();
@@ -165,8 +167,8 @@ void vTaskMaster(void *pvParameters)
             vTaskResume(TASK_READ_SEN_hHandlerTask);
 
             // Set sensors alarm
-            sTime.tm_min = 0;
-            sTime.tm_sec = 30;
+            sTime.tm_min = 1;
+            sTime.tm_sec = 0;
 
             TIME_SetAlarm(sTime, TIME_ALARM_SENS);
         }
@@ -184,7 +186,8 @@ void vTaskMaster(void *pvParameters)
             vTaskResume(TASK_GSM_hHandlerTask);
 
             // Set sensors alarm
-            sTime.tm_min = 5;
+            sTime.tm_hour = 1;
+            sTime.tm_min = 0;
             sTime.tm_sec = 0;
 
             TIME_SetAlarm(sTime, TIME_ALARM_GSM);

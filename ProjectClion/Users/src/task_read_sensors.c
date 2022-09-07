@@ -205,10 +205,8 @@ void vTaskReadSensors(void *pvParameters)
 
     STD_RESULT result = RESULT_NOT_OK;
 
-
-//    float k = 3.0f / 1024.0f;
-//    float k2 = 6.0f * k;
-//    float wind = 0.0f;
+    // Power ON anemometer
+    HAL_GPIO_WritePin(INIT_PWR_ANEMOMETER_PORT, INIT_PWR_ANEMOMETER_PIN, GPIO_PIN_SET);
 
     bmp280.intf_ptr = &TASK_READ_SEN_BMP280_DEV_ADR;
     bmp280.intf = BMP2_I2C_INTF;
@@ -348,9 +346,10 @@ void vTaskReadSensors(void *pvParameters)
         TASK_READ_SENS_stMeasData.fPressure = (float)bmp280Data.pressure;
         TASK_READ_SENS_stMeasData.fWindSpeed = TASK_READ_SEN_fAnemometer;
         TASK_READ_SENS_stMeasData.fBatteryVoltage = TASK_READ_SEN_fBatVoltage;
-
-
         TASK_READ_SENS_stMeasData.nUnixTime = TIME_GetUnixTimestamp();
+
+        // Power OFF anemometer
+        HAL_GPIO_WritePin(INIT_PWR_ANEMOMETER_PORT, INIT_PWR_ANEMOMETER_PIN, GPIO_PIN_RESET);
 
         // Attempt get mutex
         if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TASK_READ_SENS_MUTEX_DELAY))

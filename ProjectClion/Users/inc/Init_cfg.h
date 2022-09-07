@@ -90,6 +90,10 @@
 #define INIT_DC_GSM_PORT                         GPIOC
 #define INIT_DC_GSM_PIN                          GPIO_PIN_4
 
+// Configure PWR control Anemometr pin
+#define INIT_PWR_ANEMOMETER_PORT                 GPIOC
+#define INIT_PWR_ANEMOMETER_PIN                  GPIO_PIN_6
+
 // Configure ADC
 #define INIT_ADC_NUM                             ADC1
 

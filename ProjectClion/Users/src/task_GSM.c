@@ -418,6 +418,19 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         TASK_GSM_PutChar( 0x1a);
         TASK_GSM_Delay(4000);
 
+        ftoa(stRecord.fWindSpeed, TASK_GSM_aBufferPrintf, 3);
+        packetId = MQTT_GetPacketId(&MQTT_Context);
+        publishInfo.qos = MQTTQoS0;
+        publishInfo.pTopicName = "channels/1843720/publish/fields/field5";
+        publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
+        publishInfo.pPayload = TASK_GSM_aBufferPrintf;
+        publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);
+        TASK_GSM_PutString( MQTT_AT_CIPSEND);
+        TASK_GSM_Delay(4000);
+        MQTT_Publish(&MQTT_Context, &publishInfo, packetId);
+        TASK_GSM_PutChar( 0x1a);
+        TASK_GSM_Delay(4000);
+
         TASK_GSM_PutString( MQTT_AT_CIPSEND);
         TASK_GSM_Delay(4000);
         MQTT_Disconnect(&MQTT_Context);
