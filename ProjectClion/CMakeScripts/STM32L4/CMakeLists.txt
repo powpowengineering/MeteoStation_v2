@@ -59,6 +59,7 @@ file(GLOB_RECURSE CORE_MQTT "${CMAKE_SOURCE_DIR}/../../coreMQTT/source/*.c")
 #file(GLOB_RECURSE EEPROM_EMULATION "${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation/*.c")
 file(GLOB_RECURSE EEPROM_EMULATION "${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new/Implementation/Latest/*.c")
 file(GLOB_RECURSE TIME "${CMAKE_SOURCE_DIR}/../../TIME/*.c")
+file(GLOB_RECURSE CIR_BUF "${CMAKE_SOURCE_DIR}/../../Circular_Buffer/Latest/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/api/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/apps/mqtt/*.c")
 #file(GLOB_RECURSE BMP280 "${CMAKE_SOURCE_DIR}/lwgsm-0.1.0/lwgsm/src/lwgsm/*.c")
@@ -152,6 +153,7 @@ include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new/Interface)
 include_directories(${CMAKE_SOURCE_DIR}/../../EEPROM_Emulation_new/Implementation/Latest)
 include_directories(${CMAKE_SOURCE_DIR}/../../SEGGER_RTT)
 include_directories(${CMAKE_SOURCE_DIR}/../../TIME)
+include_directories(${CMAKE_SOURCE_DIR}/../../Circular_Buffer/Latest)
 
 
 
@@ -210,6 +212,7 @@ add_executable( ${PROJECT_NAME}
         ${W25Q_FLASH_DRIVER_SOURCES}
         ${CheckSum_SOURCES}
         ${TIME}
+        ${CIR_BUF}
 )
 
 
