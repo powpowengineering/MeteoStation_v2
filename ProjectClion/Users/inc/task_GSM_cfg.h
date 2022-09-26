@@ -26,6 +26,9 @@
 #define TASK_GSM_PARAMETERS           (NULL)
 #define TASK_GSM_PRIORITY             (1U)
 
+#define SECRET_MQTT_USERNAME            "NSMjKhsxJT0DPRUdLA44Gw0"
+#define SECRET_MQTT_CLIENT_ID           "NSMjKhsxJT0DPRUdLA44Gw0"
+#define SECRET_MQTT_PASSWORD            "1rYHUximMilQSJ8Z+X68Sk2b"
 
 
 #endif // #ifndef TASK_GSM_CFG_H

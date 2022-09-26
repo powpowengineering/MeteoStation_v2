@@ -27,7 +27,9 @@
 #define TASK_TERMINAL_PARAMETERS           (NULL)
 #define TASK_TERMINAL_PRIORITY             (1U)
 
-
+// timeout
+#define TASK_TERMINAL_TIMEOUT              (30U * 1000U)
+#define TASK_TERMINAL_DELAY                (10U)
 
 #endif // #ifndef TERMINAL_CFG_H
 

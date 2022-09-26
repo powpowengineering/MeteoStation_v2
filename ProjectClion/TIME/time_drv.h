@@ -34,6 +34,8 @@
 // Get configuration of the program module
 #include "time_drv_cfg.h"
 
+#include "cmsis_os.h"
+
 
 
 //**************************************************************************************************
@@ -82,6 +84,12 @@ extern U32 TIME_GetUnixTimestamp(void);
 
 // Set alarm
 extern void TIME_SetAlarm(const TIME_type time, U32 nAlarmName);
+
+// Store alarm value
+extern void TIME_StoreAlarm(const TIME_type time, uint32_t nAlarmName);
+
+// Load alarm value
+extern STD_RESULT TIME_LoadAlarm(TIME_type *const time, uint32_t nAlarmName);
 
 // Set date
 extern void TIME_SetDate(TIME_type time);

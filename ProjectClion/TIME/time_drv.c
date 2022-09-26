@@ -46,6 +46,10 @@
 // Get hal_ll rtc
 #include "stm32l4xx_ll_rtc.h"
 
+#include "record_manager.h"
+
+#include "eeprom_emulation.h"
+
 
 
 //**************************************************************************************************
@@ -68,7 +72,14 @@
 // Declarations of local (private) data types
 //**************************************************************************************************
 
-// None.
+// Time type to store in eeprom
+typedef struct TIME_STORE_str
+{
+    uint8_t nHour;
+    uint8_t nMinutes;
+    uint8_t nSeconds;
+    uint8_t Reserved;
+}TIME_STORE;
 
 
 
@@ -85,6 +96,8 @@
 
 const U16	lmos[] = {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
 const U16	mos[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+
+#define TIME_MUTEX_DELAY_MS             (10U * 1000U)
 
 
 
@@ -170,6 +183,27 @@ void TIME_Init(void)
         sTime.Seconds = TIME_RTC_TIME_SECONDS_DEF;
         sTime.TimeFormat = TIME_RTC_TIMEFORMAT;
         HAL_RTC_SetTime(&RTC_Handle, &sTime, RTC_FORMAT_BIN);
+
+        TIME_STORE stTimeStore;
+
+        if (RESULT_OK == EMEEP_Load(RECORD_MAN_VIR_ADR_ALARM_SENS,
+                                    (U8*)&(stTimeStore),
+                                    RECORD_MAN_SIZE_VIR_ADR))
+        {
+            printf("time_drv: ALARM_SENS value was read correct\r\n");
+            printf("ALARM_SENS h%d:m%d:s%d\r\n",stTimeStore.nHour,stTimeStore.nMinutes,stTimeStore.nSeconds);
+
+            sTime.Hours += stTimeStore.nHour;
+            sTime.Minutes += stTimeStore.nMinutes;
+            sTime.Seconds += stTimeStore.nSeconds;
+        }
+        else
+        {
+            printf("time_drv ERROR: ALARM_SENS value wasn't read correct\r\n");
+            sTime.Hours += TIME_ALARM_SENS_HOURS;
+            sTime.Minutes += TIME_ALARM_SENS_MINUTES;
+            sTime.Seconds += TIME_ALARM_SENS_SECONDS;
+        }
 
         // Set alarm for sensors
         sAlarm.AlarmTime.Hours = sTime.Hours + TIME_ALARM_SENS_HOURS;
@@ -319,7 +353,6 @@ U32 TIME_GetUnixTimestamp(void)
 //**************************************************************************************************
 void TIME_SetAlarm(const TIME_type time, uint32_t nAlarmName)
 {
-    RTC_TimeTypeDef sTimeCurrent;
     RTC_AlarmTypeDef sAlarm;
 
     /*##-1- Enables the PWR Clock and Enables access to the backup domain ######*/
@@ -367,6 +400,130 @@ void TIME_SetAlarm(const TIME_type time, uint32_t nAlarmName)
     HAL_PWR_DisableBkUpAccess();
 
 } // end of TIME_SetAlarm()
+
+
+
+//**************************************************************************************************
+// @Function      TIME_StoreAlarm()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+void TIME_StoreAlarm(const TIME_type time, uint32_t nAlarmName)
+{
+    uint32_t nAdrEE = 0;
+
+    if (TIME_ALARM_SENS == nAlarmName)
+    {
+        nAdrEE = RECORD_MAN_VIR_ADR_ALARM_SENS;
+    }
+    else if (TIME_ALARM_GSM == nAlarmName)
+    {
+        nAdrEE = RECORD_MAN_VIR_ADR_ALARM_GSM;
+    }
+    else
+    {
+        DoNothing();
+    }
+
+    // Write new alarm value in EEPROM
+    // Attempt get mutex
+    if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, TIME_MUTEX_DELAY_MS / portTICK_PERIOD_MS))
+    {
+        TIME_STORE stTimeStore;
+
+        stTimeStore.nHour = time.tm_hour;
+        stTimeStore.nMinutes = time.tm_min;
+        stTimeStore.nSeconds = time.tm_sec;
+        stTimeStore.Reserved = 0U;
+
+        if (RESULT_OK == EMEEP_Store(nAdrEE,
+                                     (U8*)&(stTimeStore),
+                                     RECORD_MAN_SIZE_VIR_ADR))
+        {
+            printf("time_drv: New value ALARM saved\r\n");
+        }
+        else
+        {
+            printf("time_drv ERROR: New value ALARM didn't save\r\n");
+        }
+
+        // Return mutex
+        xSemaphoreGive(RECORD_MAN_xMutex);
+    }
+    else
+    {
+        printf("time_drv: Mutex of record manager is busy\r\n");
+    }
+} // end of TIME_StoreAlarm()
+
+
+
+//**************************************************************************************************
+// @Function      TIME_StoreAlarm()
+//--------------------------------------------------------------------------------------------------
+// @Description   None.
+//--------------------------------------------------------------------------------------------------
+// @Notes         None.
+//--------------------------------------------------------------------------------------------------
+// @ReturnValue   None.
+//--------------------------------------------------------------------------------------------------
+// @Parameters    None.
+//**************************************************************************************************
+STD_RESULT TIME_LoadAlarm(TIME_type *const time, uint32_t nAlarmName)
+{
+    STD_RESULT enResult = RESULT_NOT_OK;
+    uint32_t nAdrEE = 0;
+
+    if (TIME_ALARM_SENS == nAlarmName)
+    {
+        nAdrEE = RECORD_MAN_VIR_ADR_ALARM_SENS;
+    }
+    else if (TIME_ALARM_GSM == nAlarmName)
+    {
+        nAdrEE = RECORD_MAN_VIR_ADR_ALARM_GSM;
+    }
+    else
+    {
+        DoNothing();
+    }
+
+    if (pdTRUE == xSemaphoreTake(RECORD_MAN_xMutex, (TIME_MUTEX_DELAY_MS * 2U) / portTICK_PERIOD_MS))
+    {
+        TIME_STORE stTimeStore = {0,0,0,0};
+
+        if (RESULT_OK == EMEEP_Load(nAdrEE,
+                                     (U8*)&(stTimeStore),
+                                     RECORD_MAN_SIZE_VIR_ADR))
+        {
+            time->tm_hour = stTimeStore.nHour;
+            time->tm_min = stTimeStore.nMinutes;
+            time->tm_sec = stTimeStore.nSeconds;
+
+            enResult = RESULT_OK;
+        }
+        else
+        {
+            printf("time_drv ERROR: Value ALARM didn't load\r\n");
+
+            enResult = RESULT_NOT_OK;
+        }
+
+        // Return mutex
+        xSemaphoreGive(RECORD_MAN_xMutex);
+    }
+    else
+    {
+        printf("time_drv: Mutex of record manager is busy\r\n");
+    }
+
+    return enResult;
+} // end of TIME_LoadAlarm()
 
 
 

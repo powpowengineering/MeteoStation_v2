@@ -55,6 +55,8 @@
 // Virtual address
 #define RECORD_MAN_VIR_ADR32_LAST_RECORD             (0U)
 #define RECORD_MAN_VIR_ADR32_NEXT_RECORD             (4U)
+#define RECORD_MAN_VIR_ADR_ALARM_SENS                (8U)
+#define RECORD_MAN_VIR_ADR_ALARM_GSM                 (12U)
 
 // Size record adr
 #define RECORD_MAN_SIZE_VIR_ADR                      (4U)

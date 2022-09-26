@@ -315,18 +315,18 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
 
     // Client ID must be unique to broker. This field is required.
 //    connectInfo.pClientIdentifier = "meteostation";
-    connectInfo.pClientIdentifier = "GDQ3GiwKMyAtAh0SKhshFjk";
+    connectInfo.pClientIdentifier = SECRET_MQTT_CLIENT_ID;
     connectInfo.clientIdentifierLength = strlen(connectInfo.pClientIdentifier);
 
     // The following fields are optional.
     // Value for keep alive.
     connectInfo.keepAliveSeconds = 60;
     // Optional username and password.
-    connectInfo.pUserName = "GDQ3GiwKMyAtAh0SKhshFjk";
+    connectInfo.pUserName = SECRET_MQTT_USERNAME;
 //    connectInfo.pUserName = NULL;
     connectInfo.userNameLength = strlen( connectInfo.pUserName );
 //    connectInfo.userNameLength = 0;
-    connectInfo.pPassword = "XiBjkEwc2EIBfFk8tK3YIfkv";
+    connectInfo.pPassword = SECRET_MQTT_PASSWORD;
 //    connectInfo.pPassword = NULL;
     connectInfo.passwordLength = strlen( connectInfo.pPassword );
 //    connectInfo.passwordLength = 0;
@@ -369,7 +369,7 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         ftoa(stRecord.fTemperature, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
-        publishInfo.pTopicName = "channels/1843720/publish/fields/field1";
+        publishInfo.pTopicName = "channels/1851639/publish/fields/field1";
         publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
         publishInfo.pPayload = TASK_GSM_aBufferPrintf;
         publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);
@@ -382,7 +382,7 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         ftoa(stRecord.fHumidity, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
-        publishInfo.pTopicName = "channels/1843720/publish/fields/field2";
+        publishInfo.pTopicName = "channels/1851639/publish/fields/field2";
         publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
         publishInfo.pPayload = TASK_GSM_aBufferPrintf;
         publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);
@@ -395,7 +395,7 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         ftoa(stRecord.fPressure, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
-        publishInfo.pTopicName = "channels/1843720/publish/fields/field3";
+        publishInfo.pTopicName = "channels/1851639/publish/fields/field3";
         publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
         publishInfo.pPayload = TASK_GSM_aBufferPrintf;
         publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);
@@ -408,7 +408,7 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         ftoa(stRecord.fBatteryVoltage, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
-        publishInfo.pTopicName = "channels/1843720/publish/fields/field4";
+        publishInfo.pTopicName = "channels/1851639/publish/fields/field4";
         publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
         publishInfo.pPayload = TASK_GSM_aBufferPrintf;
         publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);
@@ -421,7 +421,7 @@ static void TASK_GSM_SendMQTTMessage(RECORD_MAN_TYPE_RECORD stRecord)
         ftoa(stRecord.fWindSpeed, TASK_GSM_aBufferPrintf, 3);
         packetId = MQTT_GetPacketId(&MQTT_Context);
         publishInfo.qos = MQTTQoS0;
-        publishInfo.pTopicName = "channels/1843720/publish/fields/field5";
+        publishInfo.pTopicName = "channels/1851639/publish/fields/field5";
         publishInfo.topicNameLength = strlen(publishInfo.pTopicName);
         publishInfo.pPayload = TASK_GSM_aBufferPrintf;
         publishInfo.payloadLength = strlen(TASK_GSM_aBufferPrintf);

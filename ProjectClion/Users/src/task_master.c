@@ -65,6 +65,8 @@
 
 #include "time_drv.h"
 
+#include "task_terminal.h"
+
 
 
 //**************************************************************************************************
@@ -113,6 +115,8 @@ static uint8_t aShowTime[50] = {0};
 
 static TIME_type sTime;
 
+static TIME_type AlarmSens;
+static TIME_type AlarmGSM;
 
 
 //**************************************************************************************************
@@ -147,14 +151,45 @@ void vTaskMaster(void *pvParameters)
 //    W25Q_EraseBlock(0,W25Q_BLOCK_MEMORY_ALL);
 //while(1);
 
+    // Load alarm sens value
+    if (RESULT_OK == TIME_LoadAlarm(&AlarmSens, TIME_ALARM_SENS))
+    {
+        DoNothing();
+    }
+    else
+    {
+        printf("task_master ERROR: TIME_LoadAlarm RESULT_NOT_OK\r\n");
+        // Set sensors alarm
+        AlarmSens.tm_hour = 0;
+        AlarmSens.tm_min = 1;
+        AlarmSens.tm_sec = 0;
+    }
+
+
+
+    // Load alarm gsm value
+    if (RESULT_OK == TIME_LoadAlarm(&AlarmGSM, TIME_ALARM_GSM))
+    {
+        DoNothing();
+    }
+    else
+    {
+        printf("task_master ERROR: TIME_LoadAlarm RESULT_NOT_OK\r\n");
+        // Set sensors alarm
+        AlarmGSM.tm_hour = 1;
+        AlarmGSM.tm_min = 0;
+        AlarmGSM.tm_sec = 0;
+    }
+
+
     for(;;)
     {
         // Update dump eeprom
 //        RECORD_MAN_UpdateDumpMem();
-        vTaskResume(TASK_READ_SEN_hHandlerTask);
-        vTaskDelay(2000/portTICK_RATE_MS);
+//        vTaskResume(TASK_READ_SEN_hHandlerTask);
+//        vTaskDelay(2000/portTICK_RATE_MS);
 
-
+        vTaskDelay(3000/portTICK_RATE_MS);
         // Show current time
         TIME_TimeShow();
 
@@ -166,11 +201,10 @@ void vTaskMaster(void *pvParameters)
             // Start measure
             vTaskResume(TASK_READ_SEN_hHandlerTask);
 
-            // Set sensors alarm
-            sTime.tm_min = 1;
-            sTime.tm_sec = 0;
+            vTaskDelay(5000/portTICK_RATE_MS);
 
-            TIME_SetAlarm(sTime, TIME_ALARM_SENS);
+            // Set Alarm sens
+            TIME_SetAlarm(AlarmSens, TIME_ALARM_SENS);
         }
         else
         {
@@ -185,19 +219,15 @@ void vTaskMaster(void *pvParameters)
             // Send data to server
             vTaskResume(TASK_GSM_hHandlerTask);
 
-            // Set sensors alarm
-            sTime.tm_hour = 1;
-            sTime.tm_min = 0;
-            sTime.tm_sec = 0;
-
-            TIME_SetAlarm(sTime, TIME_ALARM_GSM);
+            // Set Alarm GSM
+            TIME_SetAlarm(AlarmGSM, TIME_ALARM_GSM);
         }
         else
         {
             DoNothing();
         }
 
-        vTaskDelay(2000/portTICK_RATE_MS);
+
 
         // Check TASK_GSM state
         vTaskGetInfo(TASK_GSM_hHandlerTask,&xTaskStatus,pdTRUE,eInvalid );
@@ -209,16 +239,22 @@ void vTaskMaster(void *pvParameters)
 
             if (eSuspended == xTaskStatus.eCurrentState)
             {
-                // W25Q power down
-//                W25Q_PowerDown();
-//                printf("W25Q power down\r\n");
+                if (TASK_TERMINAL_TIMEOUT <= TASK_TERMINAL_nTimeOut)
+                {
 
-                // Go to StandBy
-                printf("Go to standBy mode\r\n");
-                HAL_PWREx_EnableGPIOPullUp(PWR_GPIO_C, PWR_GPIO_BIT_4);
-                HAL_PWREx_EnablePullUpPullDownConfig();
-                HAL_PWR_EnterSTANDBYMode();
-//                HAL_PWREx_EnterSHUTDOWNMode();
+                    printf("Go to standBy mode\r\n");
+
+                    // Enable pullUp for power control GSM
+                    HAL_PWREx_EnableGPIOPullUp(PWR_GPIO_C, PWR_GPIO_BIT_4);
+                    HAL_PWREx_EnablePullUpPullDownConfig();
+
+                    // Go to StandBy
+                    HAL_PWR_EnterSTANDBYMode();
+                }
+                else
+                {
+                    DoNothing();
+                }
             }
             else
             {
@@ -229,7 +265,6 @@ void vTaskMaster(void *pvParameters)
         {
             DoNothing();
         }
-
     }
 } // end of vTaskMaster()
 

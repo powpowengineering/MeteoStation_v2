@@ -59,6 +59,9 @@
 // Task handle
 extern TaskHandle_t TASK_TERMINAL_hHandlerTask;
 
+// timeout
+extern uint32_t TASK_TERMINAL_nTimeOut;
+
 
 
 //**************************************************************************************************

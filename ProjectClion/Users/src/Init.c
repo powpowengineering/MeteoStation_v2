@@ -78,8 +78,8 @@ TIM_HandleTypeDef    TimDelayHandle;
 // ADC Handler
 ADC_HandleTypeDef ADC_Handle;
 
-#define TERMINAL_RX_BUF_SIZE            (512U)
-uint8_t TERMINAL_BufRx[TERMINAL_RX_BUF_SIZE];
+//#define TERMINAL_RX_BUF_SIZE            (512U)
+//uint8_t TERMINAL_BufRx[TERMINAL_RX_BUF_SIZE];
 
 
 //**************************************************************************************************
@@ -268,25 +268,25 @@ void Init(void)
     HAL_USART_Init(&UsartTLMHandle);
 
     // Configure DMA for UART TERMINAL
-    DMA_Handle.Instance = DMA1_Channel6;
-    DMA_Handle.Init.Request = DMA_REQUEST_2;
-    DMA_Handle.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    DMA_Handle.Init.PeriphInc = DMA_PINC_DISABLE;
-    DMA_Handle.Init.MemInc = DMA_MINC_ENABLE;
-    DMA_Handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-    DMA_Handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-    DMA_Handle.Init.Mode = DMA_CIRCULAR;
-    DMA_Handle.Init.Priority = DMA_PRIORITY_LOW;
-    DMA_Handle.DmaBaseAddress = DMA1;
-    HAL_DMA_Init(&DMA_Handle);
-    HAL_DMA_Start (&DMA_Handle,
-                   LL_USART_DMA_GetRegAddr(INIT_TERMINAL_USART_NUM, LL_USART_DMA_REG_DATA_RECEIVE),
-                   (uint32_t)TERMINAL_BufRx,
-                   TERMINAL_RX_BUF_SIZE);
+//    DMA_Handle.Instance = DMA1_Channel6;
+//    DMA_Handle.Init.Request = DMA_REQUEST_2;
+//    DMA_Handle.Init.Direction = DMA_PERIPH_TO_MEMORY;
+//    DMA_Handle.Init.PeriphInc = DMA_PINC_DISABLE;
+//    DMA_Handle.Init.MemInc = DMA_MINC_ENABLE;
+//    DMA_Handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+//    DMA_Handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+//    DMA_Handle.Init.Mode = DMA_CIRCULAR;
+//    DMA_Handle.Init.Priority = DMA_PRIORITY_LOW;
+//    DMA_Handle.DmaBaseAddress = DMA1;
+//    HAL_DMA_Init(&DMA_Handle);
+//    HAL_DMA_Start (&DMA_Handle,
+//                   LL_USART_DMA_GetRegAddr(INIT_TERMINAL_USART_NUM, LL_USART_DMA_REG_DATA_RECEIVE),
+//                   (uint32_t)TERMINAL_BufRx,
+//                   TERMINAL_RX_BUF_SIZE);
 
     // Configure UART for TERMINAL
     UartTERMINALHandle.Instance            = INIT_TERMINAL_USART_NUM;
-    UartTERMINALHandle.Init.BaudRate       = 9600;
+    UartTERMINALHandle.Init.BaudRate       = 115200;
     UartTERMINALHandle.Init.WordLength     = USART_WORDLENGTH_8B;
     UartTERMINALHandle.Init.StopBits       = USART_STOPBITS_1;
     UartTERMINALHandle.Init.Parity         = USART_PARITY_NONE;
@@ -296,6 +296,7 @@ void Init(void)
     // Init UART TERMINAL
     HAL_UART_Init(&UartTERMINALHandle);
 //    LL_USART_EnableDMAReq_RX(INIT_TERMINAL_USART_NUM);
+    LL_USART_EnableIT_RXNE(INIT_TERMINAL_USART_NUM);
 
     // Configure UART for GSM
     UartGSMHandler.Instance            = INIT_GSM_USART_NUM;
@@ -391,6 +392,9 @@ void Init(void)
 
     // Init RTC
     TIME_Init();
+
+    //Enable interrupt TERMINAL UART
+    HAL_NVIC_EnableIRQ(USART2_IRQn);
 }
 // end of Init()
 
