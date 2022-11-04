@@ -204,8 +204,8 @@ add_executable( ${PROJECT_NAME}
 #        ${E_PAPER_TEST}
 #        ${E_PAPER_GUI}
         ${EEPROM_EMULATION}
-        ${SRC_RTT_DIR}
-        ${SRC_RTT_ASM_DIR}
+#        ${SRC_RTT_DIR}
+#        ${SRC_RTT_ASM_DIR}
 
         ${PRINTF_SOURCES}
         ${FREERTOS_SOURCES}

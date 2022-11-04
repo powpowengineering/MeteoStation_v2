@@ -1,3 +1,4 @@
+#include <sys/cdefs.h>
 //**************************************************************************************************
 // @Module        TASK_MASTER
 // @Filename      task_master.c
@@ -144,7 +145,7 @@ static TIME_type AlarmGSM;
 //--------------------------------------------------------------------------------------------------
 // @Parameters    None.
 //**************************************************************************************************
-void vTaskMaster(void *pvParameters)
+_Noreturn void vTaskMaster(void *pvParameters)
 {
     TaskStatus_t xTaskStatus;
 
@@ -152,33 +153,33 @@ void vTaskMaster(void *pvParameters)
 //while(1);
 
     // Load alarm sens value
-    if (RESULT_OK == TIME_LoadAlarm(&AlarmSens, TIME_ALARM_SENS))
+    if (0U)//(RESULT_OK == TIME_LoadAlarm(&AlarmSens, TIME_ALARM_SENS))
     {
         DoNothing();
     }
     else
     {
-        printf("task_master ERROR: TIME_LoadAlarm RESULT_NOT_OK\r\n");
+//        printf("task_master ERROR: TIME_LoadAlarm RESULT_NOT_OK\r\n");
         // Set sensors alarm
-        AlarmSens.tm_hour = 0;
-        AlarmSens.tm_min = 1;
-        AlarmSens.tm_sec = 0;
+        AlarmSens.tm_hour = TIME_ALARM_SENS_HOURS;
+        AlarmSens.tm_min = TIME_ALARM_SENS_MINUTES;
+        AlarmSens.tm_sec = TIME_ALARM_SENS_SECONDS;
     }
 
 
 
     // Load alarm gsm value
-    if (RESULT_OK == TIME_LoadAlarm(&AlarmGSM, TIME_ALARM_GSM))
+    if (0)//(RESULT_OK == TIME_LoadAlarm(&AlarmGSM, TIME_ALARM_GSM))
     {
         DoNothing();
     }
     else
     {
-        printf("task_master ERROR: TIME_LoadAlarm RESULT_NOT_OK\r\n");
+//        printf("task_master ERROR: TIME_LoadAlarm RESULT_NOT_OK\r\n");
         // Set sensors alarm
-        AlarmGSM.tm_hour = 1;
-        AlarmGSM.tm_min = 0;
-        AlarmGSM.tm_sec = 0;
+        AlarmGSM.tm_hour = TIME_ALARM_GSM_HOURS;
+        AlarmGSM.tm_min = TIME_ALARM_GSM_MINUTES;
+        AlarmGSM.tm_sec = TIME_ALARM_GSM_SECONDS;
     }
 
 
